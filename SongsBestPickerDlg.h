@@ -27,7 +27,11 @@ protected:
 	HICON			m_hIcon;
 	
 	CSystemTray				m_oTrayIcon; 
-	CListCtrl				m_oHotkeyList;
+	CListCtrl				m_oSongList;
+	CListCtrl				m_oStatsList;
+	CListCtrl				m_oCurrentPodList;
+
+
 	std::map<int, CString>	m_mapHotkeys;
 	
 	bool					m_bHotkeysApplied = false;

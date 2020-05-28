@@ -101,6 +101,13 @@
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="SqlDefs.h" />
+    <ClInclude Include="Song.h" />
+    <ClInclude Include="SongManager.h" />
+    <ClInclude Include="SQLite\CppSQLite3-Unicode.h" />
+    <ClInclude Include="SQLite\sqlite3.h" />
+    <ClInclude Include="SQLite\sqlite3ext.h" />
+    <ClInclude Include="Utils.h" />
     <ClInclude Include="SongsBestPicker.h" />
     <ClInclude Include="SongsBestPickerDlg.h" />
     <ClInclude Include="Resource.h" />
@@ -109,6 +116,14 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Song.cpp" />
+    <ClCompile Include="SongManager.cpp" />
+    <ClCompile Include="SQLite\CppSQLite3-Unicode.cpp" />
+    <ClCompile Include="SQLite\sqlite3.c">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="Utils.cpp" />
     <ClCompile Include="SongsBestPicker.cpp" />
     <ClCompile Include="SongsBestPickerDlg.cpp" />
     <ClCompile Include="stdafx.cpp">
@@ -118,21 +133,20 @@
     <ClCompile Include="SystemTray.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="DougHotkeys.rc" />
+    <ResourceCompile Include="SongsBestPicker.rc" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="res\DougHotkeys.rc2" />
+    <None Include="res\SongsBestPicker.rc2" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="R:\DougsHotkeys.ico" />
-    <Image Include="res\DougHotkeys.ico" />
+    <Image Include="res\SongsBestPicker.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
   <ProjectExtensions>
     <VisualStudio>
-      <UserProperties RESOURCE_FILE="DougHotkeys.rc" />
+      <UserProperties RESOURCE_FILE="SongsBestPicker.rc" />
     </VisualStudio>
   </ProjectExtensions>
 </Project>

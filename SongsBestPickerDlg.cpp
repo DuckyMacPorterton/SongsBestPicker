@@ -178,7 +178,9 @@ CSongsBestPickerDlg::CSongsBestPickerDlg(CWnd* pParent /*=NULL*/)
 void CSongsBestPickerDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
-	DDX_Control(pDX, IDC_HOTKEY_LIST, m_oHotkeyList);
+	DDX_Control(pDX, IDC_SONG_LIST,			m_oSongList);
+	DDX_Control(pDX, IDC_DETAILS_LIST,		m_oStatsList);
+	DDX_Control(pDX, IDC_CURRENT_POD_LIST,	m_oCurrentPodList);
 }
 
 BEGIN_MESSAGE_MAP(CSongsBestPickerDlg, CDialogEx)
@@ -212,13 +214,14 @@ BOOL CSongsBestPickerDlg::OnInitDialog()
 	//  Setup our list control
 
 	m_oListCtrlFont.CreatePointFont (90, _T("Courier New"));
-	m_oHotkeyList.SetFont (&m_oListCtrlFont);
+	m_oSongList.SetFont (&m_oListCtrlFont);
 
 	CRect rcList;
-	m_oHotkeyList.GetClientRect (rcList);
+	m_oSongList.GetClientRect (rcList);
 
-	m_oHotkeyList.InsertColumn (0, _T("Action"),	LVCFMT_CENTER,  (int) (rcList.Width () * 0.49));
-	m_oHotkeyList.InsertColumn (1, _T("Key"),		LVCFMT_LEFT,	(int) (rcList.Width () * 0.49));
+	m_oSongList.InsertColumn (0, L"Song",		LVCFMT_LEFT,	(int) (rcList.Width () * 0.59));
+	m_oSongList.InsertColumn (1, L"Record",		LVCFMT_CENTER,	(int) (rcList.Width () * 0.20));
+	m_oSongList.InsertColumn (1, L"Rating",		LVCFMT_CENTER,	(int) (rcList.Width () * 0.20));
 
 
 	//
@@ -344,17 +347,17 @@ void CSongsBestPickerDlg::ApplyHotkeys ()
 	if (NULL != pWnd)
 		pWnd->SetWindowText (_T("Remove Hotkeys"));
 
-	if (NULL != m_oHotkeyList.GetSafeHwnd ())
+	if (NULL != m_oSongList.GetSafeHwnd ())
 	{
-		m_oHotkeyList.DeleteAllItems ();
+		m_oSongList.DeleteAllItems ();
 
 		for (auto it  = m_mapHotkeys.begin (); it != m_mapHotkeys.end (); it ++)
 		{
 			CString strID = GetHotkeyCommandName ((*it).first);
 			CString strKey	= (*it).second;
 
-			int nIndex = m_oHotkeyList.InsertItem (0, strID);
-			m_oHotkeyList.SetItemText (nIndex, 1, strKey);
+			int nIndex = m_oSongList.InsertItem (0, strID);
+			m_oSongList.SetItemText (nIndex, 1, strKey);
 		}
 
 	}
@@ -415,9 +418,9 @@ void CSongsBestPickerDlg::RemoveHotkeys ()
 	if (NULL != pWnd)
 		pWnd->SetWindowText(_T("Apply Hotkeys"));
 
-	if (NULL != m_oHotkeyList.GetSafeHwnd ())
+	if (NULL != m_oSongList.GetSafeHwnd ())
 	{
-		m_oHotkeyList.DeleteAllItems ();
+		m_oSongList.DeleteAllItems ();
 	}
 }
 
