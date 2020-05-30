@@ -12,6 +12,12 @@
 #endif
 
 
+#define SONG_COL_NAME		0
+#define SONG_COL_WONLOSS	1
+#define SONG_COL_RATING		2
+#define SONG_COL_MP3		3
+
+
 //
 //  Resize amounts
 
@@ -179,7 +185,7 @@ void CSongsBestPickerDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
 	DDX_Control(pDX, IDC_SONG_LIST,			m_oSongList);
-	DDX_Control(pDX, IDC_DETAILS_LIST,		m_oStatsList);
+	DDX_Control(pDX, IDC_STATS,				m_oStatsList);
 	DDX_Control(pDX, IDC_CURRENT_POD_LIST,	m_oCurrentPodList);
 }
 
@@ -189,12 +195,18 @@ BEGIN_MESSAGE_MAP(CSongsBestPickerDlg, CDialogEx)
 	ON_WM_HOTKEY()
 	ON_WM_KEYUP()
 	ON_WM_QUERYDRAGICON()
-	ON_BN_CLICKED(IDOK, &CSongsBestPickerDlg::OnBnClickedOk)
-	ON_BN_CLICKED(IDCANCEL, &CSongsBestPickerDlg::OnBnClickedCancel)
-	ON_BN_CLICKED(ID_APPLY_HOTKEYS, &CSongsBestPickerDlg::OnBnClickedApplyHotkeys)
 
-	ON_MESSAGE (ID_MY_NOTIFY, OnTrayNotification)
-	ON_COMMAND(ID_DOUG_SHOWWINDOW, OnShowMyWindow)
+	ON_BN_CLICKED(IDOK,				&CSongsBestPickerDlg::OnBnClickedOk)
+	ON_BN_CLICKED(IDCANCEL,			&CSongsBestPickerDlg::OnBnClickedCancel)
+	ON_BN_CLICKED(ID_APPLY_HOTKEYS, &CSongsBestPickerDlg::OnBnClickedApplyHotkeys)
+	ON_COMMAND (ID_FILE_EXIT,		&CSongsBestPickerDlg::OnBnClickedOk)
+
+	ON_MESSAGE (ID_MY_NOTIFY,			OnTrayNotification)
+	ON_COMMAND(ID_DOUG_SHOWWINDOW,		OnShowMyWindow)
+	ON_COMMAND(ID_IMPORTFROMM3UFILE,	OnImportFromM3UFile)
+	ON_COMMAND(ID_RESETSONGSTATISTICS,	OnResetSongStatistics)
+	ON_COMMAND(ID_DELETESONGLIST,		OnDeleteSongList)
+
 	ON_WM_TIMER()
 END_MESSAGE_MAP()
 
@@ -213,15 +225,24 @@ BOOL CSongsBestPickerDlg::OnInitDialog()
 	//
 	//  Setup our list control
 
-	m_oListCtrlFont.CreatePointFont (90, _T("Courier New"));
+	m_oListCtrlFont.CreatePointFont (90, L"Courier New");
 	m_oSongList.SetFont (&m_oListCtrlFont);
 
 	CRect rcList;
 	m_oSongList.GetClientRect (rcList);
 
-	m_oSongList.InsertColumn (0, L"Song",		LVCFMT_LEFT,	(int) (rcList.Width () * 0.59));
-	m_oSongList.InsertColumn (1, L"Record",		LVCFMT_CENTER,	(int) (rcList.Width () * 0.20));
-	m_oSongList.InsertColumn (1, L"Rating",		LVCFMT_CENTER,	(int) (rcList.Width () * 0.20));
+	m_oSongList.InsertColumn (SONG_COL_NAME,	L"Song",	LVCFMT_LEFT,	(int) (rcList.Width () * 0.5));
+	m_oSongList.InsertColumn (SONG_COL_WONLOSS,	L"Record",	LVCFMT_CENTER,	(int) (rcList.Width () * 0.19));
+	m_oSongList.InsertColumn (SONG_COL_RATING,	L"Rating",	LVCFMT_CENTER,	(int) (rcList.Width () * 0.19));
+	m_oSongList.InsertColumn (SONG_COL_MP3,		L"MP3",		LVCFMT_LEFT,	(int) (rcList.Width () * 0.11));
+
+	//
+	//  For anything to work, we need a valid database.  Confirm that we have one.
+
+	if (! m_oSongManager.GetError ().IsEmpty ())
+		AfxMessageBox (L"Error: " + m_oSongManager.GetError ());
+	else
+		UpdateSongList ();
 
 
 	//
@@ -229,10 +250,11 @@ BOOL CSongsBestPickerDlg::OnInitDialog()
 
 	m_oTrayIcon.Create (this, ID_MY_NOTIFY, _T("Doug's Rockin' Hotkeys!"), m_hIcon, IDR_MENU_DOUGS_HOTKEYS);
 
+
 	//
 	//  And apply the hotkeys
 
-	ApplyHotkeys ();
+//	ApplyHotkeys ();
 
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
@@ -402,6 +424,121 @@ bool CSongsBestPickerDlg::AddHotkey (int nID, UINT nModifiers, UINT nVirtualKey,
 	m_mapHotkeys[nID] = strKeyName;
 	return true;
 }
+
+
+//************************************
+// Method:    OnImportFromM3UFile
+// FullName:  CSongsBestPickerDlg::OnImportFromM3UFile
+// Access:    public 
+// Returns:   void
+// Qualifier:
+//************************************
+void CSongsBestPickerDlg::OnImportFromM3UFile()
+{
+	CFileDialog oFD (true, L"*.*");
+	if (IDOK != oFD.DoModal ())
+		return;
+
+	if (! m_oSongManager.InitSongsFromTextFile (oFD.GetPathName (), EFileFormat::eM3U))
+		return;
+
+	UpdateSongList ();
+
+} // end on import from m3u file
+
+
+
+//************************************
+// Method:    OnDeleteSongList
+// FullName:  CSongsBestPickerDlg::OnDeleteSongList
+// Access:    public 
+// Returns:   void
+// Qualifier:
+//************************************
+void CSongsBestPickerDlg::OnDeleteSongList()
+{
+	if (IDYES != AfxMessageBox (L"This will delete all songs and all song statistics.  That's deleting EVERYTHING.\r\n\r\nDo you want to delete everything?", MB_YESNO | MB_DEFBUTTON2))
+		return;
+
+	m_oSongManager.DeleteAllSongs ();
+
+} // end on delete song list
+
+
+
+//************************************
+// Method:    OnResetSongStatistics
+// FullName:  CSongsBestPickerDlg::OnResetSongStatistics
+// Access:    public 
+// Returns:   void
+// Qualifier:
+//************************************
+void CSongsBestPickerDlg::OnResetSongStatistics()
+{
+	AfxMessageBox (L"Not supported yet");
+
+} // end on reset song statistics
+
+
+
+
+
+//************************************
+// Method:    UpdateSongList
+// FullName:  CSongsBestPickerDlg::UpdateSongList
+// Access:    public 
+// Returns:   void
+// Qualifier:
+//
+//
+//
+//************************************
+void CSongsBestPickerDlg::UpdateSongList()
+{
+	//
+	//  For now, assume we'll have few enough songs that we don't need
+	//  to do a virtual list control
+
+	m_oSongList.DeleteAllItems ();
+
+	int		nLastID		= -1;
+	CString strSongName, strPathToMp3, strWonLoss;
+	int		nSongCount	= 0, nWins = 0, nLosses = 0;
+
+	if (! m_oSongManager.GetSongCount (nSongCount)) {
+		AfxMessageBox (m_oSongManager.GetError ());
+		return;
+	}
+
+	//
+	// Load 'em up!
+
+	for (int i = 0; i < nSongCount; i ++)
+	{
+		if (! m_oSongManager.GetNextSong (strSongName, strPathToMp3, nLastID, nLastID))
+		{
+			AfxMessageBox (m_oSongManager.GetError ());
+			m_oSongList.DeleteAllItems ();
+			return;
+		}
+
+		int nIndex = m_oSongList.InsertItem (i, strSongName);
+		m_oSongList.SetItemData (nIndex, nLastID);
+		m_oSongList.SetItemText (nIndex, SONG_COL_MP3, strPathToMp3);
+
+		if (! m_oSongManager.GetWonLossRecord (nLastID, nWins, nLosses)) {
+			AfxMessageBox (m_oSongManager.GetError ());
+			return;
+		}
+
+		strWonLoss.Format (L"%2d=%2d", nWins, nLosses);
+		m_oSongList.SetItemText (nIndex, SONG_COL_WONLOSS, strWonLoss);
+
+	} // end loop through songs
+
+} // end CSongsBestPickerDlg::UpdateSongList
+
+
 
 
 void CSongsBestPickerDlg::RemoveHotkeys ()
@@ -599,6 +736,9 @@ CString CSongsBestPickerDlg::GetKeyName (unsigned int virtualKey)
     }
 #endif
 }
+
+
+
 
 
 

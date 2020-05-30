@@ -9,7 +9,7 @@
 //  This makes sure that our SQLite database has the correct table
 //  definitions for us to save our data.
 //
-bool CUtils::EnsureDBTablesExist (CString& rstrError, CMyCppSQLite3DB* pDB)
+bool CUtils::EnsureDBTablesExist (CString& rstrError, CMyCppSQLite3DBPtr pDB)
 {
 	//
 	//  This checks all the tables that always exist.  There are some more that will
@@ -57,7 +57,7 @@ bool CUtils::EnsureDBTablesExist (CString& rstrError, CMyCppSQLite3DB* pDB)
 //  Creates a database table from our table definition struct
 //  Returns true on success, false on failure
 //
-bool CUtils::CreateDBTable (CString& rstrError, CMyCppSQLite3DB* pDB, CString strTableName, TableDefinitionStruct TableInfo[])
+bool CUtils::CreateDBTable (CString& rstrError, CMyCppSQLite3DBPtr pDB, CString strTableName, TableDefinitionStruct TableInfo[])
 {
 	//
 	//  We do the primary key separately in case we have a multiple field
@@ -150,7 +150,7 @@ int CUtils::GetNumFieldsInTable (TableDefinitionStruct TableDef[])
 //
 //  Makes sure all the correct columns exist in strTableName
 //
-bool CUtils::EnsureAllColsExist (CString& rstrError, CMyCppSQLite3DB* pDB, CString strTableName, TableDefinitionStruct TableInfo[])
+bool CUtils::EnsureAllColsExist (CString& rstrError, CMyCppSQLite3DBPtr pDB, CString strTableName, TableDefinitionStruct TableInfo[])
 {
 
 	int numFields = CUtils::GetNumFieldsInTable (TableInfo);
@@ -180,7 +180,7 @@ bool CUtils::EnsureAllColsExist (CString& rstrError, CMyCppSQLite3DB* pDB, CStri
 //
 //  Returns true on success, false on failure.
 //
-bool CUtils::EnsureColExists (CString& rstrError, CMyCppSQLite3DB* pDB, CString strTableName, CString strColName, CString strDataType /* = _T("INTEGER") */, int nDefaultValue /* = VP_DEFAULT_UNUSED */)
+bool CUtils::EnsureColExists (CString& rstrError, CMyCppSQLite3DBPtr pDB, CString strTableName, CString strColName, CString strDataType /* = _T("INTEGER") */, int nDefaultValue /* = VP_DEFAULT_UNUSED */)
 {
 	CString strStmt;
 	try
@@ -218,7 +218,7 @@ bool CUtils::EnsureColExists (CString& rstrError, CMyCppSQLite3DB* pDB, CString 
 //  Returns true if strColName is a column in table strTableName,
 //  false if not.
 //
-bool CUtils::DoesColExist (CString& rstrError, CMyCppSQLite3DB* pDB, CString strTableName, CString strColName)
+bool CUtils::DoesColExist (CString& rstrError, CMyCppSQLite3DBPtr pDB, CString strTableName, CString strColName)
 {
 	CString strStmt;
 	try
@@ -246,7 +246,7 @@ bool CUtils::DoesColExist (CString& rstrError, CMyCppSQLite3DB* pDB, CString str
 
 
 
-/* static */ bool CUtils::DoesTableExist (CString& rstrError, CMyCppSQLite3DB* pDB, CString strTableName)
+/* static */ bool CUtils::DoesTableExist (CString& rstrError, CMyCppSQLite3DBPtr pDB, CString strTableName)
 {
 	if (NULL == pDB)
 		return false;
@@ -320,6 +320,75 @@ CString	CUtils::GetProgramFilesDir ()
 	return RootDir;
 
 } // end GetProgramFilesDir
+
+
+
+
+
+
+
+
+
+
+//////////////////////////////////////////////////////////////
+//
+//  Takes a full pathname or less and returns just the 
+//  filename up to the first period.
+//
+//  So c:\program files\vantagepoint\vp.exe
+//  Returns vp
+//
+//  bRemoveAllExtensions handles files w/ multiple extensions:
+//  c:\path\to\file.my.old.ext
+//
+//  If bRemoveAllExtensions is true, it returns
+//  file
+//  If bRemoveAllExtensions is false it returns
+//  file.my.old
+//
+CString CUtils::GetFileNameFromPath (CString strFilename, bool bRemoveAllExtensions /* = true */)
+{
+	//
+	//  First get rid of the path up to the filename
+
+	CString strNoPath = strFilename;
+	int nLastBS = strFilename.ReverseFind ('\\');
+	if (nLastBS != -1)
+		strNoPath = strFilename.Mid (nLastBS + 1);
+
+	if (! bRemoveAllExtensions)
+		return strNoPath;
+
+	//
+	//  Now get rid of the extension
+
+	int nLastDot = strNoPath.ReverseFind ('.');
+
+	//
+	//  Reverse find annoys me as it doesn't let me start anywhere except last
+
+	for (int nChar = nLastDot - 1; nChar >= 0; nChar--)
+	{
+		if (strNoPath[nChar] == '.')
+			nLastDot = nChar;
+	}
+
+	CString strNoExt = strNoPath;
+	if (nLastDot != -1)
+		strNoExt = strNoPath.Left (nLastDot);
+	return strNoExt;
+
+
+} // end remove path and extension from filename
+
+
+
+
+
+
+
+
+
 
 
 

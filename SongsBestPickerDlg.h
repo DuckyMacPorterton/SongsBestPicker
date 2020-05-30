@@ -7,6 +7,8 @@
 #include "SystemTray.h"
 #include "afxcmn.h"
 #include <map>
+#include "SongManager.h"
+#include "MyListCtrl.h"
 
 // CDougHotkeysDlg dialog
 class CSongsBestPickerDlg : public CDialogEx
@@ -27,9 +29,12 @@ protected:
 	HICON			m_hIcon;
 	
 	CSystemTray				m_oTrayIcon; 
-	CListCtrl				m_oSongList;
-	CListCtrl				m_oStatsList;
-	CListCtrl				m_oCurrentPodList;
+	CMyListCtrl				m_oSongList;
+	CMyListCtrl				m_oStatsList;
+	CMyListCtrl				m_oCurrentPodList;
+
+	CSongManager			m_oSongManager;
+
 
 
 	std::map<int, CString>	m_mapHotkeys;
@@ -42,11 +47,12 @@ protected:
 	UINT					m_nHotkeyDownTimerId	= 0;
 
 
-	// Generated message map functions
-	virtual BOOL OnInitDialog();
-	afx_msg void OnSysCommand(UINT nID, LPARAM lParam);
-	afx_msg void OnPaint();
-	afx_msg HCURSOR OnQueryDragIcon();
+
+protected:
+	virtual BOOL	OnInitDialog();
+	void			OnSysCommand(UINT nID, LPARAM lParam);
+	void			OnPaint();
+	HCURSOR			OnQueryDragIcon();
 	DECLARE_MESSAGE_MAP()
 
 public:
@@ -55,17 +61,25 @@ public:
 	void	OnShowMyWindow ();
 	bool	AddHotkey (int nID, UINT nModifiers, UINT nVirtualKey, CString strNameForError);
 
+	void	OnImportFromM3UFile		();
+	void	OnDeleteSongList		();
+	void	OnResetSongStatistics	();
+
+	void	UpdateSongList ();
+
+
+
 	void	MoveWindowForHotkey (UINT nHotkey, int nLargeMoveMultiplier = 1, int nSmallMoveMultiplier = 1);
 
 	CString GetKeyName (unsigned int virtualKey);
 
-	afx_msg void OnBnClickedOk();
-	afx_msg void OnBnClickedCancel();
-	afx_msg void OnBnClickedApplyHotkeys();
-	afx_msg void OnHotKey(UINT nHotKeyId, UINT nKey1, UINT nKey2);
+	void	OnBnClickedOk();
+	void	OnBnClickedCancel();
+	void	OnBnClickedApplyHotkeys();
+	void	OnHotKey(UINT nHotKeyId, UINT nKey1, UINT nKey2);
 
-	afx_msg LRESULT	OnTrayNotification (WPARAM wParam, LPARAM lParam);
-	afx_msg void OnKeyUp( UINT nChar, UINT nRepCnt, UINT nFlags );
-			void OnTimer (UINT_PTR nIDEvent);
-			BOOL PreTranslateMessage (MSG* pMsg);
+	LRESULT	OnTrayNotification (WPARAM wParam, LPARAM lParam);
+	void	OnKeyUp( UINT nChar, UINT nRepCnt, UINT nFlags );
+	void	OnTimer (UINT_PTR nIDEvent);
+	BOOL	PreTranslateMessage (MSG* pMsg);
 };

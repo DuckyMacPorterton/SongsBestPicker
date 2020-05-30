@@ -101,12 +101,16 @@
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="MyListCtrl.h" />
     <ClInclude Include="SqlDefs.h" />
     <ClInclude Include="Song.h" />
     <ClInclude Include="SongManager.h" />
     <ClInclude Include="SQLite\CppSQLite3-Unicode.h" />
     <ClInclude Include="SQLite\sqlite3.h" />
     <ClInclude Include="SQLite\sqlite3ext.h" />
+    <ClInclude Include="StdioFileEx\ggets.h" />
+    <ClInclude Include="StdioFileEx\StdioFileEx.h" />
+    <ClInclude Include="StdioFileEx\TemplateSmartPtr.h" />
     <ClInclude Include="Utils.h" />
     <ClInclude Include="SongsBestPicker.h" />
     <ClInclude Include="SongsBestPickerDlg.h" />
@@ -116,6 +120,7 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="MyListCtrl.cpp" />
     <ClCompile Include="Song.cpp" />
     <ClCompile Include="SongManager.cpp" />
     <ClCompile Include="SQLite\CppSQLite3-Unicode.cpp" />
@@ -123,6 +128,8 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="StdioFileEx\ggets.cpp" />
+    <ClCompile Include="StdioFileEx\StdioFileEx.cpp" />
     <ClCompile Include="Utils.cpp" />
     <ClCompile Include="SongsBestPicker.cpp" />
     <ClCompile Include="SongsBestPickerDlg.cpp" />

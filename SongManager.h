@@ -4,7 +4,11 @@
 #include "Song.h"
 
 
-typedef std::map<UINT, CSongPtr>		CSongMap;	//  So, UINT == other team ID, int == margin of victory.  + == win, - == loss
+enum class EFileFormat
+{
+	eM3U,
+	eTab,
+};
 
 
 class CSongManager
@@ -13,27 +17,32 @@ public:
 	CSongManager ();
 	~CSongManager ();
 
-	bool	LoadFromTextFile (bool bOverwriteExistingData = false);
 	CString	GetError () {return m_strError;};
 
-protected:
-	bool	LoadFromDB ();
-	bool	SaveToDB ();
+	bool	InitSongsFromTextFile	(CString strTextFile, EFileFormat eFileFormat, bool bOverwriteExistingData = false);
+	bool	DeleteAllSongs			();
 
-	bool	LoadGamesFromDB (CMyCppSQLite3DBPtr pDB, CString &rstrError);
 
-	void	SetGameResult (UINT nSong1ID, UINT nSong2ID, int nSong1MarginOfVictory);
+	bool	GetWonLossRecord (int nSongID, int& rnWins, int& rnLosses);
+
+	bool	GetSongCount	(int& rnSongCount);
+	bool	GetNextSong		(CString& rstrSongName, CString& rstrPathToMp3, int& rnSongID, int nPrevSongID = -1);
+
+	void	SetGameResult	(int nSong1ID, int nSong2ID, int nSong1MarginOfVictory);
 //	bool	GetGameResult (UINT nOpponentID, int& rnMarginOfVictory);
 
 
 	bool	SetError (CString strError);
+
+protected:
+	bool	ReadNextSongM3U (CStdioFile& roFileIn, CString& rstrSongName, CString& rstrPathToMp3);
+	bool	ReadnextSongTab (CStdioFile& roFileIn, CString& rstrSongName, CString& rstrPathToMp3);
 
 
 protected:
 	CString				m_strError;
 	CMyCppSQLite3DBPtr	m_pDB;
 
-	CSongMap			m_mapIdToSong;
 };
 
 

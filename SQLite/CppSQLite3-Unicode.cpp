@@ -210,7 +210,7 @@ void CppSQLite3DB::open (CppSQLite3DB* pMasterDBConnection)
 	m_bIsPrimaryConnection	= false;
 
 	CString strFilename = pMasterDBConnection->GetDBFilename ();
-	open (strFilename, false);
+	open (strFilename);
 
 } // end open
 
@@ -306,7 +306,7 @@ bool CppSQLite3DB::open (byte* pBlob, INT64 nBlobSize, CString& rstrError)
 
 
 
-void CppSQLite3DB::close(bool bReleaseOwnership /* = true */)
+void CppSQLite3DB::close ()
 {
 	if (mpDB)
 	{
@@ -493,6 +493,30 @@ bool CppSQLite3DB::IsAutoCommitOn()
 	checkDB();
 	return sqlite3_get_autocommit(mpDB) ? true : false;
 }
+
+
+
+
+
+
+bool CppSQLite3DB::TryToReconnect ()
+{
+	try
+	{
+		close ();
+		open (m_strDBFilename);
+		return true;
+	}
+	catch (CppSQLite3Exception)
+	{
+		return false;
+	}
+} // end TryToReconnect
+
+
+
+
+
 
 
 //////////////////////// CppSQLite3Statement  ///////////////////////////////////////////

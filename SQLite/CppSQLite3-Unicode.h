@@ -121,7 +121,7 @@ public:
     virtual void	open (LPCTSTR szFile);
 			bool	open (byte* pBlob, INT64 nBlobSize, CString& rstrError);	// doesn't throw exceptions, just returns success/failure
 
-    virtual void	close(bool bReleaseOwnership = true);
+    virtual void	close ();
 
 	virtual bool	tableExists(LPCTSTR szTable);
     virtual int		execDML(LPCTSTR szSQL, bool bTryToReconnect = true);
@@ -146,7 +146,6 @@ public:
 
 	CString GetDBFilename () {return m_strDBFilename;};
 	bool	TryToReconnect ();
-	bool	TryToReconnectIndividual (bool bReleaseOwnership = false);
 
 //	bool	GetDoesVPHaveLock () {return m_bVPLocked;};
 //	void	SetVPHasLock (bool b) {m_bVPLocked = b;};
