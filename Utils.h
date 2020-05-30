@@ -1,6 +1,7 @@
 #pragma once
 #include "SqlDefs.h"
 #include "SQLite/CppSQLite3-Unicode.h"
+#include <Mlang.h>
 
 
 class CUtils
@@ -21,6 +22,22 @@ public:
 
 	static CString	GetFileNameFromPath (CString strFullPath, bool bRemoveAllExtensions = true);
 
+	static bool		GetIsCharInsideSubExpression (CString strHaystack, int nCharIndex, CString strExpressionStart, CString strExpressionEnd, bool bSupportQuoting = false, int nStartAtIndex = 0);
+	static int		CountInstancesOfString (CString strBig, CString strLittle, int nCharsToCheck = -1, bool bSkipQuotedBsChars = false);
+
+	static CStringA UTF16toUTF8 (const CStringW& utf16);
+	static CStringW UTF8toUTF16 (const CStringA& utf8);
+
+	static int		GetLastValidUtfCharacterByte (CStringA astrToTest);
+	static bool		GetIsValidUtf8String (CStringA astrToTest);
+
+	static bool		DetectCodePageForString (char* pText, UINT& rnCodePage, UINT nDefaultCodePage = CP_UTF8, UINT nDefaultFlags = MLDETECTCP_8BIT);
+
+
+	static bool		FileExists (CString strName);
+	static bool		FindFile (CString& rstrPathToSong);
+
+
 
 	static void		EloRating		(float& Ra, float& Rb, int K, bool d);
 	static float	EloProbability	(float rating1, float rating2);
@@ -29,3 +46,16 @@ public:
 
 };
 
+
+
+class CRecursionCounterAuto
+{
+public:
+	CRecursionCounterAuto (int* pnCounter) {m_pnCounter = pnCounter; (*m_pnCounter) ++;};
+	~CRecursionCounterAuto () {(*m_pnCounter) --;};
+
+	int GetRecursionDepth () {return *m_pnCounter;};
+
+protected:
+	int*	m_pnCounter;
+};

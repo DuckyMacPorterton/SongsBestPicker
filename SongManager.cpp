@@ -40,6 +40,30 @@ CSongManager::~CSongManager ()
 
 }
 
+
+
+//************************************
+// Method:    GetError
+// FullName:  CSongManager::GetError
+// Access:    public 
+// Returns:   CString
+// Qualifier:
+// Parameter: bool bClearError
+//
+//
+//
+//************************************
+CString CSongManager::GetError (bool bClearError /*= false*/)
+{
+	CString strErr = m_strError;
+	if (bClearError)
+		m_strError.Empty ();
+	return strErr;
+
+} // end CSongManager::GetError
+
+
+
 //************************************
 // Method:    SetError
 // FullName:  CSongManager::SetError
@@ -52,7 +76,7 @@ bool CSongManager::SetError (CString strError)
 {
 	if (! m_strError.IsEmpty ())
 		m_strError += L"\n";
-
+	m_strError += strError;
 	return false;
 }
 
@@ -75,41 +99,44 @@ bool CSongManager::InitSongsFromTextFile (CString strTextFile, EFileFormat eFile
 
 	try
 	{
+		m_pDB->execDML (L"begin transaction");
+
 		//
 		//  Phew.  Do we only want to support playlist format?  I think let's also support
 		//  a tab delimited format.
 
-		CFileException oFileExcept;
-		CStdioFile oFileIn;
-		if (! oFileIn.Open (strTextFile, CFile::modeRead, &oFileExcept))
+		CFileException	oFileExcept;
+		CStdioFileExPtr	pFileIn	= CStdioFileExPtr (new CStdioFileEx);
+		if (! pFileIn->Open (strTextFile, CFile::modeRead, &oFileExcept))
 			return SetError (CUtils::GetErrorMessageFromException (&oFileExcept));
 
-		CString strSongName, strPathToMp3;
-		while (ReadNextSongM3U (oFileIn, strSongName, strPathToMp3))
+		CString strInsert, strSongName, strPathToMp3;
+		strInsert.Format (L"insert into %s (%s, %s, %s) values (null, ?, ?)", TBL_SONGS, COL_ID, COL_SONGS, COL_PATH_TO_MP3);
+		CppSQLite3Statement stmtQuery = m_pDB->compileStatement (strInsert);
+
+		while (ReadNextSongM3U (*pFileIn, strSongName, strPathToMp3))
 		{
 			//
 			//  Add to our database.  null for the ID makes it auto-choose, though not technically "autoincrement"
 
-			CString strInsert;
-			strInsert.Format (L"insert into %s (%s, %s, %s) values (null, %s, %s)", TBL_SONGS, 
-				COL_ID, COL_SONGS, COL_PATH_TO_MP3,
-				strSongName, strPathToMp3);
-
-			m_pDB->execDML (strInsert);
+			stmtQuery.bind (1, strSongName);
+			stmtQuery.bind (2, strPathToMp3);
+			stmtQuery.execDML ();
 
 		} // end file read loop
 
-		return false;
+		m_pDB->execDML (L"commit transaction");
+		return true;
 	}
 	catch (CppSQLite3Exception& e)
 	{
-		SetError (e.errorMessage ());
-		return false;
+		m_pDB->execDML (L"rollback transaction");
+		return SetError (e.errorMessage ());
 	}
 	catch (CException* e)
 	{
-		SetError (CUtils::GetErrorMessageFromException (e, true));
-		return false;
+		m_pDB->execDML (L"rollback transaction");
+		return SetError (CUtils::GetErrorMessageFromException (e, true));
 	}
 } // end init songs from text file
 
@@ -141,17 +168,15 @@ bool CSongManager::DeleteAllSongs()
 		strDelete.Format (L"delete from %s", TBL_CURRENT_SCHEDULE);
 		m_pDB->execDML (strDelete);
 
-		return false;
+		return true;
 	}
 	catch (CppSQLite3Exception& e)
 	{
-		SetError (e.errorMessage ());
-		return false;
+		return SetError (e.errorMessage ());
 	}
 	catch (CException* e)
 	{
-		SetError (CUtils::GetErrorMessageFromException (e, true));
-		return false;
+		return SetError (CUtils::GetErrorMessageFromException (e, true));
 	}
 } // end delete all songs
 
@@ -178,10 +203,10 @@ bool CSongManager::GetWonLossRecord (int nSongID, int& rnWins, int& rnLosses)
 	try
 	{
 		CString strQueryWins, strQueryLosses;
-		strQueryWins.Format (L"SELECT count(*) FROM %s where (%s=%d and Margin > 0) or (%s=%d and Margin < 0)", TBL_GAME_HISTORY, 
-			COL_SONG_1_ID, nSongID, COL_SONG_2_ID, nSongID);
-		strQueryLosses.Format (L"SELECT count(*) FROM %s where (%s=%d and Margin < 0) or (%s=%d and Margin > 0)", TBL_GAME_HISTORY, 
-			COL_SONG_1_ID, nSongID, COL_SONG_2_ID, nSongID);
+		strQueryWins.Format (L"SELECT count(*) FROM %s where (%s=%d and %s > 0) or (%s=%d and %s < 0)", TBL_GAME_HISTORY, 
+			COL_SONG_1_ID, nSongID, COL_GAME_SCORE_MARGIN, COL_SONG_2_ID, nSongID, COL_GAME_SCORE_MARGIN);
+		strQueryLosses.Format (L"SELECT count(*) FROM %s where (%s=%d and %s < 0) or (%s=%d and %s > 0)", TBL_GAME_HISTORY, 
+			COL_SONG_1_ID, nSongID, COL_GAME_SCORE_MARGIN, COL_SONG_2_ID, nSongID, COL_GAME_SCORE_MARGIN);
 	
 		rnWins		= m_pDB->execScalar (strQueryWins);
 		rnLosses	= m_pDB->execScalar (strQueryLosses);
@@ -190,13 +215,11 @@ bool CSongManager::GetWonLossRecord (int nSongID, int& rnWins, int& rnLosses)
 	}
 	catch (CppSQLite3Exception& e)
 	{
-		SetError (e.errorMessage ());
-		return false;
+		return SetError (e.errorMessage ());
 	}
 	catch (CException* e)
 	{
-		SetError (CUtils::GetErrorMessageFromException (e, true));
-		return false;
+		return SetError (CUtils::GetErrorMessageFromException (e, true));
 	}
 
 } // end CSongManager::GetWonLossRecord
@@ -214,7 +237,7 @@ bool CSongManager::GetWonLossRecord (int nSongID, int& rnWins, int& rnLosses)
 // Parameter: CString & rstrSongName
 // Parameter: CString & rstrPathToMp3
 //************************************
-bool CSongManager::ReadNextSongM3U (CStdioFile& roFileIn, CString& rstrSongName, CString& rstrPathToMp3)
+bool CSongManager::ReadNextSongM3U (CStdioFileEx& roFileIn, CString& rstrSongName, CString& rstrPathToMp3)
 {
 	rstrSongName.Empty ();
 	rstrPathToMp3.Empty ();
@@ -229,6 +252,8 @@ bool CSongManager::ReadNextSongM3U (CStdioFile& roFileIn, CString& rstrSongName,
 	CString strLine, strLineLower;
 	while (roFileIn.ReadString (strLine))
 	{
+		strLine.Trim ();
+
 		strLineLower = strLine;
 		strLineLower.MakeLower ();
 
@@ -242,7 +267,8 @@ bool CSongManager::ReadNextSongM3U (CStdioFile& roFileIn, CString& rstrSongName,
 			if (-1 == nComma)
 				continue;
 
-			rstrSongName = strLine.Mid (strExtInf.GetLength () + nComma + 1);
+			rstrSongName = strLine.Mid (nComma + 1);
+			rstrSongName.Trim ();
 
 		} // end if is ExtInf line
 
@@ -257,10 +283,16 @@ bool CSongManager::ReadNextSongM3U (CStdioFile& roFileIn, CString& rstrSongName,
 			//
 			//  Presumably the path to our file
 
-			rstrPathToMp3 = strLineLower;
+			rstrPathToMp3 = strLine;
+			rstrPathToMp3.Trim ();
 			if (rstrSongName.IsEmpty ())
 				rstrSongName = CUtils::GetFileNameFromPath (rstrPathToMp3, true);
 
+			//
+			//  See if we can turn this into a real full path, if it's not...  winamp doesn't have a drive letter
+			//  on there, for instance
+
+			CUtils::FindFile (rstrPathToMp3);
 			return true; // All done.
 		}
 	} // end read line loop
@@ -284,7 +316,7 @@ bool CSongManager::ReadNextSongM3U (CStdioFile& roFileIn, CString& rstrSongName,
 // Parameter: CString & rstrSongName
 // Parameter: CString & rstrPathToMp3
 //************************************
-bool CSongManager::ReadnextSongTab (CStdioFile& roFileIn, CString& rstrSongName, CString& rstrPathToMp3)
+bool CSongManager::ReadnextSongTab (CStdioFileEx& roFileIn, CString& rstrSongName, CString& rstrPathToMp3)
 {
 	return SetError (L"Tab Delimited files not yet supported");
 
@@ -314,13 +346,11 @@ bool CSongManager::GetSongCount (int& rnSongCount)
 	}
 	catch (CppSQLite3Exception& e)
 	{
-		SetError (e.errorMessage ());
-		return false;
+		return SetError (e.errorMessage ());
 	}
 	catch (CException* e)
 	{
-		SetError (CUtils::GetErrorMessageFromException (e, true));
-		return false;
+		return SetError (CUtils::GetErrorMessageFromException (e, true));
 	}
 } // end get song count
 
@@ -361,13 +391,11 @@ bool CSongManager::GetNextSong(CString& rstrSongName, CString& rstrPathToMp3, in
 	}
 	catch (CppSQLite3Exception& e)
 	{
-		SetError (e.errorMessage ());
-		return false;
+		return SetError (e.errorMessage ());
 	}
 	catch (CException* e)
 	{
-		SetError (CUtils::GetErrorMessageFromException (e, true));
-		return false;
+		return SetError (CUtils::GetErrorMessageFromException (e, true));
 	}
 
 } // end get next song

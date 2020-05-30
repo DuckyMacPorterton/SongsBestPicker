@@ -40,7 +40,7 @@
 #include "StdioFileEx.h"
 #include "ggets.h"
 
-#include "..\VPUtils.h"
+#include "..\Utils.h"
 
 #ifdef _DEBUG
 #undef THIS_FILE
@@ -306,7 +306,7 @@ BOOL CStdioFileEx::ReadString (CString& rString, UINT nMax /* = 0 */, CString st
 					(strTextQualifier == strFullLine.Right (strTextQualifier.GetLength ())) )
 					break;
 
-				if (! CVPUtils::GetIsCharInsideSubExpression (strFullLine, strFullLine.GetLength () - 1, strTextQualifier, strTextQualifier)) 
+				if (! CUtils::GetIsCharInsideSubExpression (strFullLine, strFullLine.GetLength () - 1, strTextQualifier, strTextQualifier)) 
 					break;
 			} while (true);
 			
@@ -338,7 +338,7 @@ BOOL CStdioFileEx::ReadString (CString& rString, UINT nMax /* = 0 */, CString st
 					(strTextQualifier == strFullLine.Right (strTextQualifier.GetLength ())) )
 					break;
 
-				if (! CVPUtils::GetIsCharInsideSubExpression (strFullLine, strFullLine.GetLength () - 1, strTextQualifier, strTextQualifier)) 
+				if (! CUtils::GetIsCharInsideSubExpression (strFullLine, strFullLine.GetLength () - 1, strTextQualifier, strTextQualifier)) 
 					break;
 			} while (true);
 			
@@ -1130,7 +1130,7 @@ BOOL CStdioFileEx::ReadMultiByteLine(OUT CString& sOutputLine, UINT nMax /* = 0 
 				//
 				//  We filed our buffer.  Check it out
 
-				INT64 nLastValidIndex = CVPUtils::GetLastValidUtfCharacterByte (pszMultiByteString);
+				int nLastValidIndex = CUtils::GetLastValidUtfCharacterByte (pszMultiByteString);
 				if (nLastValidIndex < nLen - 1)
 				{
 					//
@@ -1140,7 +1140,7 @@ BOOL CStdioFileEx::ReadMultiByteLine(OUT CString& sOutputLine, UINT nMax /* = 0 
 					pszMultiByteString[nLastValidIndex + 1] = (char) NULL;
 
 					ULONGLONG	nCurPos				= GetPosition ();
-					int			nBytesToRollBack	= nLen - nLastValidIndex - 1;
+					ULONGLONG	nBytesToRollBack	= nLen - nLastValidIndex - 1;
 					
 					nCurPos	-= nBytesToRollBack;
 					this->Seek (nCurPos, SEEK_SET);
@@ -1437,7 +1437,7 @@ bool CStdioFileEx::DetectCodePage (UINT& rnCodePage)
 
 	arrBuffer[nBytesRead - 1] = (char) NULL;
 
-	bool bSuccess = CVPUtils::DetectCodePageForString (&(arrBuffer[0]), rnCodePage);
+	bool bSuccess = CUtils::DetectCodePageForString (&(arrBuffer[0]), rnCodePage);
 //	TRACE ("Code page is %d\n", rnCodePage);
 
 	Seek (nPos, CFile::begin);
@@ -1447,52 +1447,3 @@ bool CStdioFileEx::DetectCodePage (UINT& rnCodePage)
 
 
 
-
-
-//************************************
-// Method:    CountLines
-// FullName:  CountLines
-// Access:    virtual public 
-// Returns:   ULONGLONG
-// Qualifier:
-//
-//  This is awful.  It will be slow.  But we are treating
-//  CSV files as databases, meaning we are keeping track of what
-//  line we're on.  So knowing this really helps us.
-//
-//  It's even worse, though, because we can't just check for
-//  \n's since if we're reading unicode, that will break things as
-//  we could easily hit that in a byte that doesn't mean newline
-//
-//  If there's a text qualifier, don't count newlines inside pairs of that
-//
-//************************************
-ULONGLONG CStdioFileEx::CountLines (CString strTextQualifier /* = L"" */)
-{
-	if (0 != m_nLineCount)
-		return m_nLineCount;
-
-	CTime tStart = CTime::GetCurrentTime ();
-
-	CString		strLine;
-	
-	strLine.GetBufferSetLength (1024 * 1024);	// Trying to allocate a 1MB block
-	strLine.ReleaseBuffer (0);			
-	
-	while (! feof (m_pStream))
-	{
-		if (ReadString (strLine, 1024 * 1024, strTextQualifier))
-		{
-			int nStringLen = strLine.GetLength ();
-
-			if ((nStringLen >= 1) && 
-				(strLine[nStringLen - 1] == '\n')) // || strLine[nStringLen - 1] == '\r'))
-				m_nLineCount ++;		
-		}
-	}
-
-	CTimeSpan tsTotalTime = CTime::GetCurrentTime () - tStart;
-	CVPUtils::AddToVPSysLog (L"Count lines took " + tsTotalTime.Format (L"%H:%M:%S") + L" for " + CVPUtils::N2S (m_nLineCount) + L" lines", VP_CURRENT_FUNCTION_LINE);
-	return m_nLineCount;
-
-} // end count lines

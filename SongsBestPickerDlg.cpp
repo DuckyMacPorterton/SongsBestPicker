@@ -236,6 +236,8 @@ BOOL CSongsBestPickerDlg::OnInitDialog()
 	m_oSongList.InsertColumn (SONG_COL_RATING,	L"Rating",	LVCFMT_CENTER,	(int) (rcList.Width () * 0.19));
 	m_oSongList.InsertColumn (SONG_COL_MP3,		L"MP3",		LVCFMT_LEFT,	(int) (rcList.Width () * 0.11));
 
+	m_oSongList.SetExtendedStyle (m_oSongList.GetExtendedStyle () | LVS_EX_FULLROWSELECT);
+
 	//
 	//  For anything to work, we need a valid database.  Confirm that we have one.
 
@@ -440,9 +442,9 @@ void CSongsBestPickerDlg::OnImportFromM3UFile()
 		return;
 
 	if (! m_oSongManager.InitSongsFromTextFile (oFD.GetPathName (), EFileFormat::eM3U))
-		return;
-
-	UpdateSongList ();
+		AfxMessageBox (m_oSongManager.GetError (true));
+	else
+		UpdateSongList ();
 
 } // end on import from m3u file
 
@@ -460,7 +462,8 @@ void CSongsBestPickerDlg::OnDeleteSongList()
 	if (IDYES != AfxMessageBox (L"This will delete all songs and all song statistics.  That's deleting EVERYTHING.\r\n\r\nDo you want to delete everything?", MB_YESNO | MB_DEFBUTTON2))
 		return;
 
-	m_oSongManager.DeleteAllSongs ();
+	if (m_oSongManager.DeleteAllSongs ())
+		UpdateSongList ();
 
 } // end on delete song list
 
@@ -499,8 +502,6 @@ void CSongsBestPickerDlg::UpdateSongList()
 	//  For now, assume we'll have few enough songs that we don't need
 	//  to do a virtual list control
 
-	m_oSongList.DeleteAllItems ();
-
 	int		nLastID		= -1;
 	CString strSongName, strPathToMp3, strWonLoss;
 	int		nSongCount	= 0, nWins = 0, nLosses = 0;
@@ -511,6 +512,12 @@ void CSongsBestPickerDlg::UpdateSongList()
 	}
 
 	//
+	//  Clear it out
+
+	m_oSongList.SetRedraw (false);
+	m_oSongList.DeleteAllItems ();
+
+	//
 	// Load 'em up!
 
 	for (int i = 0; i < nSongCount; i ++)
@@ -519,6 +526,8 @@ void CSongsBestPickerDlg::UpdateSongList()
 		{
 			AfxMessageBox (m_oSongManager.GetError ());
 			m_oSongList.DeleteAllItems ();
+			m_oSongList.SetRedraw (true);
+			m_oSongList.UpdateWindow ();
 			return;
 		}
 
@@ -528,13 +537,18 @@ void CSongsBestPickerDlg::UpdateSongList()
 
 		if (! m_oSongManager.GetWonLossRecord (nLastID, nWins, nLosses)) {
 			AfxMessageBox (m_oSongManager.GetError ());
+			m_oSongList.SetRedraw (true);
+			m_oSongList.UpdateWindow ();
 			return;
 		}
 
-		strWonLoss.Format (L"%2d=%2d", nWins, nLosses);
+		strWonLoss.Format (L"%2d / %2d", nWins, nLosses);
 		m_oSongList.SetItemText (nIndex, SONG_COL_WONLOSS, strWonLoss);
 
 	} // end loop through songs
+
+	m_oSongList.SetRedraw (true);
+	m_oSongList.UpdateWindow ();
 
 } // end CSongsBestPickerDlg::UpdateSongList
 

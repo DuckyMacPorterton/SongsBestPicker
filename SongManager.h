@@ -2,6 +2,7 @@
 #include "SQLite/CppSQLite3-Unicode.h"
 #include <map>
 #include "Song.h"
+#include "StdioFileEx/StdioFileEx.h"
 
 
 enum class EFileFormat
@@ -17,7 +18,7 @@ public:
 	CSongManager ();
 	~CSongManager ();
 
-	CString	GetError () {return m_strError;};
+	CString	GetError (bool bClearError = false);
 
 	bool	InitSongsFromTextFile	(CString strTextFile, EFileFormat eFileFormat, bool bOverwriteExistingData = false);
 	bool	DeleteAllSongs			();
@@ -35,9 +36,8 @@ public:
 	bool	SetError (CString strError);
 
 protected:
-	bool	ReadNextSongM3U (CStdioFile& roFileIn, CString& rstrSongName, CString& rstrPathToMp3);
-	bool	ReadnextSongTab (CStdioFile& roFileIn, CString& rstrSongName, CString& rstrPathToMp3);
-
+	bool	ReadNextSongM3U (CStdioFileEx& roFileIn, CString& rstrSongName, CString& rstrPathToMp3);
+	bool	ReadnextSongTab (CStdioFileEx& roFileIn, CString& rstrSongName, CString& rstrPathToMp3);
 
 protected:
 	CString				m_strError;

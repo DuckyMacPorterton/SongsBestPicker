@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Utils.h"
+#include <direct.h>
 
 
 //////////////////////////////////////////////////////////////////////
@@ -380,6 +381,428 @@ CString CUtils::GetFileNameFromPath (CString strFilename, bool bRemoveAllExtensi
 
 
 } // end remove path and extension from filename
+
+
+
+
+
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////
+//
+//  GET IS CHAR INSIDE SUB EXPRESSION
+//
+//  For example, find out if a , is inside "'s, like in this:
+//
+//  "My dog, fred, is happy!", "String two", "String three"
+//
+//  If they ask about that comma between dog and fred (and pass in " as cExpressionStart and
+//  cExpressionEnd), we return true.
+//
+//  bSupportQuotes is necessary but problematic (read:  a pain), but if we want to support having quotes
+//  inside a quoted string, well...
+//
+//  Returns true if char at nCharIndex in strHaystack is inside a sub expression, false if not.
+//
+//
+/* static */ bool CUtils::GetIsCharInsideSubExpression (CString strHaystack, int nCharIndex, CString strExpressionStart, CString strExpressionEnd, bool bSupportQuoting /* = false */, int nStartAtIndex /* = 0 */)
+{
+	//
+	//  Count non-quoted ('s before nOpStartIndex
+	//  and
+	//  Count non-quoted )'s before nOpStartIndex
+	//
+	//  If they're not equal, we're in a sub query
+	//
+	//  Note that I decided not to support \quoting at the moment
+
+	if (strExpressionStart == strExpressionEnd)
+	{
+		bool	bInsideSubExpression	= false;
+		int		nNextCharIndex			= strHaystack.Find (strExpressionStart, nStartAtIndex);
+		while ((nNextCharIndex < nCharIndex) && (nNextCharIndex != -1))
+		{
+			//
+			//  If the char we found to start our expression (so, if looking to see if nCharIndex
+			//  is inside "double quotes", this is talking about finding the first double quote) 
+			//  is itself inside double quotes, don't count it
+
+			if ((strExpressionStart == L"\"") || (! GetIsCharInsideSubExpression (strHaystack, nNextCharIndex, L"\"", L"\"", bSupportQuoting)))
+			{
+				//
+				//  Is it quoted?  Annoyingly, we should probably check to see if THAT \ is quoted.   But not now.
+				//  If it's \quoted, then it means the - ack.  I've massively confused myself.
+
+				if (!bSupportQuoting || ((nNextCharIndex > 0) && (strHaystack[nNextCharIndex - 1] != '\\')))
+				{
+					bInsideSubExpression = !bInsideSubExpression;
+				} 
+			}
+
+			nNextCharIndex	= strHaystack.Find (strExpressionStart, nNextCharIndex + 1);
+		} // end loop through cExpressionStart chars in our string
+
+		return bInsideSubExpression;
+
+	} // end if cExpressionStart == cExpressionEnd
+
+	else
+	{
+		//
+		//  cExpressionStart and cExpressionEnd are different.
+
+		int nLeftParen	= CountInstancesOfString (strHaystack, strExpressionStart,	nCharIndex, bSupportQuoting);
+		int nRightParen = CountInstancesOfString (strHaystack, strExpressionEnd,	nCharIndex, bSupportQuoting);
+
+		return (nLeftParen != nRightParen);
+	}
+
+} // end get is char inside sub expression
+
+
+
+
+////////////////////////////////////////////////////////////////////
+//
+//  This goofy routine counts the number of times a string appears
+//  in a string (or part of a string).   This routine is case sensitive
+//
+int CUtils::CountInstancesOfString (CString strBig, CString strLittle, int nCharsToCheck /*= -1*/, bool bSkipQuotedBsChars /* = false */)
+{
+	int i = -1;
+	int nFound = 0;
+
+	do
+	{
+		if ((-1 != nCharsToCheck) && (i >= nCharsToCheck))
+			break;
+
+		if ((i = strBig.Find (strLittle, i + 1)) != -1)
+		{
+			if ((-1 != nCharsToCheck) && (i >= nCharsToCheck))
+				break;
+
+			if (bSkipQuotedBsChars && (i > 0) && strBig[i-1] == '\\')
+				continue;
+
+			nFound ++;
+		}
+	} while (i != -1);
+
+	return nFound;
+} // end Count Instances of TCHAR
+
+
+
+
+
+
+
+
+//////////////////////////////////////////////////////////////////////
+//
+//    U   T   F 1 6 T O   U   T   F 8
+//
+//
+CStringA CUtils::UTF16toUTF8(const CStringW& utf16)
+{
+   CStringA utf8;
+   int len = WideCharToMultiByte(CP_UTF8, 0, utf16, -1, NULL, 0, 0, 0);
+   if (len>1)
+   { 
+      char *ptr = utf8.GetBuffer(len-1);
+      if (ptr) WideCharToMultiByte(CP_UTF8, 0, utf16, -1, ptr, len, 0, 0);
+      utf8.ReleaseBuffer();
+   }
+   return utf8;
+
+} // end UTF16toUTF
+
+
+CStringW CUtils::UTF8toUTF16(const CStringA& utf8)
+{
+   CStringW utf16;
+   int len = MultiByteToWideChar(CP_UTF8, 0, utf8, -1, NULL, 0);
+   if (len>1)
+   { 
+      wchar_t *ptr = utf16.GetBuffer(len-1);
+      if (ptr) MultiByteToWideChar(CP_UTF8, 0, utf8, -1, ptr, len);
+      utf16.ReleaseBuffer();
+   }
+   return utf16;
+}
+
+
+//////////////////////////////////////////////////////////////////////
+//
+//  This is sort of a front end / manager for GetIsValidUtf8String.
+//  It makes multiple calls to GetIsValidUtf8String to determine
+//  the last valid byte.
+//
+/* static */ int CUtils::GetLastValidUtfCharacterByte (CStringA astrToTest)
+{
+	//
+	//  Check what we think is the last character.
+	//  UTF-8 characters are, at most, 4 bytes.
+
+	for (int i = 1; i <= 4; i ++)
+	{
+		if (i > astrToTest.GetLength ())
+			return -1;
+
+		CStringA strSubString = astrToTest.Right (i);
+		if (GetIsValidUtf8String (strSubString))
+			return astrToTest.GetLength () - 1;
+	}
+
+	//
+	//  If we got to here it means that we have a partial utf-8 character as our last
+	//  character.  So back off until we find the end of a valid character
+	//
+	//  -2 because -1 would be the last character, which we just checked above.  We could
+	//  have included that in this loop, but I find it more readable this way, and the 
+	//  overwhelming majority of the time, we'll end in a valid char, which will be caught
+	//  up top.
+
+	for (int nStartChar = astrToTest.GetLength () - 2; nStartChar >= 0; nStartChar --)
+	{
+		//
+		//  Does this loop look familiar to you?
+
+		for (int i = 1; i <= 4; i++)
+		{
+			if (nStartChar - 1 + 1 < 0)
+				return -1;
+
+			CStringA strSubString = astrToTest.Mid (nStartChar - i + 1, i);
+			if (GetIsValidUtf8String(strSubString))
+			{
+				return nStartChar;	//  Last valid byte is nStartChar, even if it took more than 1 byte to make this one valid
+			}
+		}
+	} // end loop through start characters, walking backwards through the string
+
+	//
+	//  If we got here, we don't have any valid characters.
+
+	return -1;
+
+} // end get last valid utf character byte
+
+
+//////////////////////////////////////////////////////////////////////
+//
+//  As you can probably guess by the variable names, Doug did not write
+//  this.
+//
+/* static */ bool CUtils::GetIsValidUtf8String (CStringA astrToTest)
+{
+    int c,i,ix,n,j;
+    for (i=0, ix = astrToTest.GetLength(); i < ix; i++)
+    {
+        c = (unsigned char) astrToTest[i];
+        //if (c==0x09 || c==0x0a || c==0x0d || (0x20 <= c && c <= 0x7e) ) n = 0; // is_printable_ascii
+        if (0x00 <= c && c <= 0x7f) n=0; // 0bbbbbbb
+        else if ((c & 0xE0) == 0xC0) n=1; // 110bbbbb
+        else if ( c==0xed && i<(ix-1) && ((unsigned char)astrToTest[i+1] & 0xa0)==0xa0) return false; //U+d800 to U+dfff
+        else if ((c & 0xF0) == 0xE0) n=2; // 1110bbbb
+        else if ((c & 0xF8) == 0xF0) n=3; // 11110bbb
+        //else if (($c & 0xFC) == 0xF8) n=4; // 111110bb //byte 5, unnecessary in 4 byte UTF-8
+        //else if (($c & 0xFE) == 0xFC) n=5; // 1111110b //byte 6, unnecessary in 4 byte UTF-8
+        else return false;
+        for (j=0; j<n && i<ix; j++) { // n bytes matching 10bbbbbb follow ?
+            if ((++i == ix) || (( (unsigned char)astrToTest[i] & 0xC0) != 0x80))
+                return false;
+        }
+    }
+    return true;
+
+} // end get is valid utf 8 string
+
+
+
+
+
+
+//////////////////////////////////////////////////////////////////////
+//
+//    D E T E C T   C O D E   P A G E   F O R   S T R I N G 
+//
+//
+bool CUtils::DetectCodePageForString (char* pText, UINT& rnCodePage, UINT nDefaultCodePage /* = CP_UTF8 */, UINT nDefaultFlags /* = MLDETECTCP_8BIT */)
+{
+#ifdef AlwaysUtf8
+	return 65001;
+#endif
+
+	static int nRecursionCounter = 0;
+	CRecursionCounterAuto RecursionCounter (&nRecursionCounter);
+	if (nRecursionCounter > 2)
+		return false;
+
+	bool				bRetVal = false;
+
+#define DETECT_INFO_ARRAY_SIZE	8
+
+	DetectEncodingInfo	arrInfo[DETECT_INFO_ARRAY_SIZE];
+	memset (&arrInfo, 0, sizeof (DetectEncodingInfo) * DETECT_INFO_ARRAY_SIZE);
+
+	//
+	//  Need this as an int for the call to DetectInputCodepage
+
+	int nDetectInfoArraySize = DETECT_INFO_ARRAY_SIZE;
+
+	CoInitialize (NULL);
+	 
+	{ 
+		CComPtr<IMultiLanguage2> MultiLanguage;
+		HRESULT hRes = MultiLanguage.CoCreateInstance (CLSID_CMultiLanguage); // __uuidof (MultiLanguage2));
+		if (SUCCEEDED (hRes))
+		{
+//			UINT nFlags = MLDETECTCP_8BIT; // MLDETECTCP_HTML; // MLDETECTCP_8BIT;
+			int	nBytesInString = (int) strlen (pText);
+
+			if (SUCCEEDED (MultiLanguage->DetectInputCodepage (nDefaultFlags, nDefaultCodePage, pText, &nBytesInString, &(arrInfo[0]), &nDetectInfoArraySize)))
+			{
+				for (int i = 0; i < nDetectInfoArraySize; i ++)
+				{
+					MIMECPINFO	CodePageInfo;
+
+					if (SUCCEEDED (MultiLanguage->GetCodePageInfo (arrInfo[i].nCodePage, arrInfo[i].nLangID, &CodePageInfo)))
+					{
+//						TRACE (_T("Found code page %d: %s\n"), CodePageInfo.uiCodePage, CodePageInfo.wszDescription);
+
+						//
+						//  If this is not one of our standard, happy code pages, give it a shot with the HTML flag
+						//  and see what it finds
+
+						if (
+							(CodePageInfo.uiCodePage != 65000) && 
+							(CodePageInfo.uiCodePage != 65001) && 
+							(CodePageInfo.uiCodePage != 20127) && 
+							(CodePageInfo.uiCodePage != 1252)) 
+						{
+							//
+							//  If we didn't find any standard code page that way, go back to using
+							//  our the one we found using MLDETECTCP_8BIT
+
+							DetectCodePageForString (pText, rnCodePage, CP_UTF8, MLDETECTCP_HTML);
+							if ((rnCodePage != 65000) &&
+								(rnCodePage != 65001) && 
+								(rnCodePage != 20127) && 
+								(rnCodePage != 1252)) 
+								rnCodePage = CodePageInfo.uiCodePage;
+						}
+						else
+							rnCodePage = CodePageInfo.uiCodePage;
+
+						//
+						//  Blatant hack -- don't allow it to be treated as UTF-7 (65000), that will
+						//  break things for us.  We do not support UTF-7.  So force it to be UTF-8.
+						//
+						//  Also don't let it be US-ASCII.  In that case force it to be UTF-8 
+
+						if (65000 == rnCodePage)
+							rnCodePage = 65001;
+						else if (20127 == rnCodePage)
+							rnCodePage = 65001;
+
+						bRetVal = true;
+						break;
+					}
+				}
+			}
+		}
+	} // end to kill MultiLanguage before CoUninitialize
+
+	CoUninitialize ();
+
+	return bRetVal;
+
+} // end DetectCodePageForString
+
+
+
+
+/***********************************************
+
+  C H E C K   I F   F I L E   E X I S T S
+
+  Checks to see if a file or directory exists
+
+***********************************************/
+bool CUtils::FileExists (CString strName)
+{
+
+  struct _stat64 FileStatus;
+
+  if (_tstat64 (strName, &FileStatus) == 0)
+    return true;
+  else
+    return false;
+} // end if file exists
+
+
+
+
+//************************************
+// Method:    FindFile
+// FullName:  CUtils::FindFile
+// Access:    public static 
+// Returns:   bool
+// Qualifier:
+// Parameter: CString & rstrPathToSong
+//
+//
+//
+//************************************
+bool CUtils::FindFile (CString& rstrPathToSong)
+{
+	if (FileExists (rstrPathToSong))
+		return true;
+
+	//
+	//  Otherwise, if their path doesn't have a drive letter, check each drive at that same path.   
+
+	if (rstrPathToSong.Find (':') != -1)
+		return false;
+
+	bool	bFound			= false;
+	int		nCurrentDrive	= _getdrive();
+
+	for (int drive = 1; drive < 26; drive++)
+	{
+		if (_chdrive(drive) == 0)
+		{
+			CString strTestThisPath;
+			strTestThisPath.Format(L"%c:%s", drive + 'A' - 1, rstrPathToSong);
+
+			if (FileExists (strTestThisPath)) {
+				bFound = true;
+				rstrPathToSong = strTestThisPath;
+				break;
+			}
+		}
+	} // end loop through drives
+
+	// Restore original drive.
+	_chdrive (nCurrentDrive);
+
+	return bFound;
+
+} // end find file
+
+
+
+
+
+
+
+
+
+
+
 
 
 

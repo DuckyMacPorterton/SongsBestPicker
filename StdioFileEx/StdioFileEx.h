@@ -38,8 +38,8 @@
 
 
 #include "TemplateSmartPtr.h"
-#include "..\ImportEngine\ImportEngineTypedefs.h"
-
+#include <memory>
+#define VPIE_MAX_NUM_CHARS_TO_READ	65536
 
 #define	MS_COMPILER_VS2005	1400		// v8.0
 
@@ -92,8 +92,6 @@ public:
 	virtual STDIOEXLONG		Seek(LONGLONG lOff, UINT nFrom);
 	virtual ULONGLONG		GetPosition ();
 	virtual ULONGLONG		GetLength ();
-
-			ULONGLONG		CountLines (CString strTextQualifier = L"");
 
 	bool					IsFileUnicodeText()	{ return m_bIsUnicodeText; }	
 	bool					DetectCodePage (UINT& rnCodePage);
@@ -322,6 +320,10 @@ protected:
 
 	int			m_nLineCount = 0;	//  Only for CountLines, which is only used by our MyAdoTable.
 };
+
+typedef std::shared_ptr<CStdioFileEx>		CStdioFileExPtr;
+
+
 
 // Helper class to switch code pages (for multibyte functions) and then guarantee
 // the restoration of the original page even in the event of exceptions.
