@@ -9,43 +9,57 @@
 #include <map>
 #include "SongManager.h"
 #include "MyListCtrl.h"
+#include "ThreadPool.h"
 
-// CDougHotkeysDlg dialog
+enum class ESongPlayStatus {
+	eNotStarted,
+	ePlaying,
+	ePaused,
+	eStopped
+};
+
+
+
 class CSongsBestPickerDlg : public CDialogEx
 {
-// Construction
 public:
-	CSongsBestPickerDlg(CWnd* pParent = NULL);	// standard constructor
+	CSongsBestPickerDlg (CWnd* pParent = NULL);
 
-// Dialog Data
-	enum { IDD = IDD_DOUGHOTKEYS_DIALOG };
+	enum { IDD = IDD_MAIN_DIALOG};
 
-	protected:
-	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV support
-
-
-// Implementation
 protected:
-	HICON			m_hIcon;
-	
-	CSystemTray				m_oTrayIcon; 
-	CMyListCtrl				m_oSongList;
-	CMyListCtrl				m_oStatsList;
-	CMyListCtrl				m_oCurrentPodList;
+	virtual void DoDataExchange(CDataExchange* pDX);
 
-	CSongManager			m_oSongManager;
+
+protected:
+	HICON			m_hIcon			= NULL;
+	CFont			m_oListCtrlFont;
+	HWND			m_hMainDlgWnd	= NULL;
+
+	CSystemTray		m_oTrayIcon; 
+	CMyListCtrl		m_oSongList;
+	CMyListCtrl		m_oStatsList;
+	CMyListCtrl		m_oCurrentPodList;
+
+	CSongManager	m_oSongManager;
+
+	int				m_nCurSongListCtrlIndex	= -1;
+	CString			m_strCurSongName;
+	CString			m_strCurSongPathToMp3;
+	CString			m_strSongPlaybackPos;
+	CString			m_strSongPlaybackLen;
+
+	ESongPlayStatus	m_eSongPlayingStatus			= ESongPlayStatus::eNotStarted;
+	UINT			m_nSongPlayingStatusTimerID		= 0;
+
 
 
 
 	std::map<int, CString>	m_mapHotkeys;
-	
 	bool					m_bHotkeysApplied = false;
-
-	CFont					m_oListCtrlFont;
 
 	UINT					m_nHotkeyCurrentlyDown	= 0;
 	UINT					m_nHotkeyDownTimerId	= 0;
-
 
 
 protected:
@@ -56,6 +70,10 @@ protected:
 	DECLARE_MESSAGE_MAP()
 
 public:
+	void	PlaySong (CString strFileToPlay);
+	void	PauseSong ();
+	void	StopSong ();
+
 	void	ApplyHotkeys ();
 	void	RemoveHotkeys ();
 	void	OnShowMyWindow ();
@@ -65,7 +83,12 @@ public:
 	void	OnDeleteSongList		();
 	void	OnResetSongStatistics	();
 
-	void	UpdateSongList ();
+	void	UpdateSongList				();
+	void	UpdateCurrentPod			(int nSongID = -1);
+	void	UpdateStatsForCurrentSong	(int nSongID = -1);
+	void	UpdatePlayerStatus			();
+
+	LRESULT	OnMciNotify (WPARAM wParam, LPARAM lParam);
 
 
 
@@ -73,13 +96,17 @@ public:
 
 	CString GetKeyName (unsigned int virtualKey);
 
-	void	OnBnClickedOk();
-	void	OnBnClickedCancel();
-	void	OnBnClickedApplyHotkeys();
 	void	OnHotKey(UINT nHotKeyId, UINT nKey1, UINT nKey2);
 
 	LRESULT	OnTrayNotification (WPARAM wParam, LPARAM lParam);
 	void	OnKeyUp( UINT nChar, UINT nRepCnt, UINT nFlags );
 	void	OnTimer (UINT_PTR nIDEvent);
 	BOOL	PreTranslateMessage (MSG* pMsg);
+	
+	void	OnBnClickedOk();
+	void	OnBnClickedCancel();
+	void	OnBnClickedApplyHotkeys();
+
+	void	OnItemChangedSongList(NMHDR* pNMHDR, LRESULT* pResult);
+	void	OnBnClickedPlaySong();
 };

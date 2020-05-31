@@ -6,17 +6,21 @@
 #include "SongsBestPicker.h"
 #include "SongsBestPickerDlg.h"
 #include "afxdialogex.h"
+#include <mciapi.h>
+#include "Utils.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
 
 
-#define SONG_COL_NAME		0
-#define SONG_COL_WONLOSS	1
-#define SONG_COL_RATING		2
-#define SONG_COL_MP3		3
+#define LIST_SONG_COL_NAME		0
+#define LIST_SONG_COL_WONLOSS	1
+#define LIST_SONG_COL_RATING	2
+#define LIST_SONG_COL_MP3		3
 
+#define SONG_STATUS_TIMER_ID	3
+#define SONG_STATUS_TIMER_MS	1000
 
 //
 //  Resize amounts
@@ -147,11 +151,6 @@ CString GetLastErrorAsString()
 
 
 
-
-
-
-
-
 BOOL CSongsBestPickerDlg::PreTranslateMessage (MSG* pMsg)
 {
 	//
@@ -175,8 +174,12 @@ BOOL CSongsBestPickerDlg::PreTranslateMessage (MSG* pMsg)
 }
 
 
-CSongsBestPickerDlg::CSongsBestPickerDlg(CWnd* pParent /*=NULL*/)
+CSongsBestPickerDlg::CSongsBestPickerDlg (CWnd* pParent /*=NULL*/)
 	: CDialogEx(CSongsBestPickerDlg::IDD, pParent)
+	, m_strCurSongName		(L"")
+	, m_strCurSongPathToMp3	(L"")
+	, m_strSongPlaybackPos(_T(""))
+	, m_strSongPlaybackLen(_T(""))
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
@@ -187,6 +190,10 @@ void CSongsBestPickerDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_SONG_LIST,			m_oSongList);
 	DDX_Control(pDX, IDC_STATS,				m_oStatsList);
 	DDX_Control(pDX, IDC_CURRENT_POD_LIST,	m_oCurrentPodList);
+	DDX_Text(pDX, IDC_EDIT1,				m_strCurSongName);
+	DDX_Text(pDX, IDC_EDIT2,				m_strCurSongPathToMp3);
+	DDX_Text(pDX, IDC_SONG_POS,				m_strSongPlaybackPos);
+	DDX_Text(pDX, IDC_SONG_LENGTH,			m_strSongPlaybackLen);
 }
 
 BEGIN_MESSAGE_MAP(CSongsBestPickerDlg, CDialogEx)
@@ -208,6 +215,14 @@ BEGIN_MESSAGE_MAP(CSongsBestPickerDlg, CDialogEx)
 	ON_COMMAND(ID_DELETESONGLIST,		OnDeleteSongList)
 
 	ON_WM_TIMER()
+	ON_NOTIFY(LVN_ITEMCHANGED, IDC_SONG_LIST, &CSongsBestPickerDlg::OnItemChangedSongList)
+
+	ON_BN_CLICKED(IDC_PLAY_SONG,	&CSongsBestPickerDlg::OnBnClickedPlaySong)
+	ON_BN_CLICKED(IDC_PAUSE_SONG,	&CSongsBestPickerDlg::PauseSong)
+	ON_BN_CLICKED(IDC_STOP_SONG,	&CSongsBestPickerDlg::StopSong)
+
+	ON_MESSAGE (MM_MCINOTIFY,			OnMciNotify)
+
 END_MESSAGE_MAP()
 
 
@@ -216,6 +231,8 @@ END_MESSAGE_MAP()
 BOOL CSongsBestPickerDlg::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
+
+	m_hMainDlgWnd = GetSafeHwnd ();
 
 	// Set the icon for this dialog.  The framework does this automatically
 	//  when the application's main window is not a dialog
@@ -231,10 +248,10 @@ BOOL CSongsBestPickerDlg::OnInitDialog()
 	CRect rcList;
 	m_oSongList.GetClientRect (rcList);
 
-	m_oSongList.InsertColumn (SONG_COL_NAME,	L"Song",	LVCFMT_LEFT,	(int) (rcList.Width () * 0.5));
-	m_oSongList.InsertColumn (SONG_COL_WONLOSS,	L"Record",	LVCFMT_CENTER,	(int) (rcList.Width () * 0.19));
-	m_oSongList.InsertColumn (SONG_COL_RATING,	L"Rating",	LVCFMT_CENTER,	(int) (rcList.Width () * 0.19));
-	m_oSongList.InsertColumn (SONG_COL_MP3,		L"MP3",		LVCFMT_LEFT,	(int) (rcList.Width () * 0.11));
+	m_oSongList.InsertColumn (LIST_SONG_COL_NAME,		L"Song",	LVCFMT_LEFT,	(int) (rcList.Width () * 0.5));
+	m_oSongList.InsertColumn (LIST_SONG_COL_WONLOSS,	L"Record",	LVCFMT_CENTER,	(int) (rcList.Width () * 0.19));
+	m_oSongList.InsertColumn (LIST_SONG_COL_RATING,		L"Rating",	LVCFMT_CENTER,	(int) (rcList.Width () * 0.19));
+	m_oSongList.InsertColumn (LIST_SONG_COL_MP3,		L"MP3",		LVCFMT_LEFT,	(int) (rcList.Width () * 0.11));
 
 	m_oSongList.SetExtendedStyle (m_oSongList.GetExtendedStyle () | LVS_EX_FULLROWSELECT);
 
@@ -258,6 +275,10 @@ BOOL CSongsBestPickerDlg::OnInitDialog()
 
 //	ApplyHotkeys ();
 
+	//
+	//  Start a timer to keep tabs on things
+
+	m_nSongPlayingStatusTimerID = SetTimer (SONG_STATUS_TIMER_ID, SONG_STATUS_TIMER_MS, NULL);
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
@@ -324,6 +345,8 @@ HCURSOR CSongsBestPickerDlg::OnQueryDragIcon()
 
 
 
+
+
 void CSongsBestPickerDlg::OnBnClickedOk()
 {
 	RemoveHotkeys ();
@@ -333,8 +356,7 @@ void CSongsBestPickerDlg::OnBnClickedOk()
 
 void CSongsBestPickerDlg::OnBnClickedCancel()
 {
-	RemoveHotkeys ();
-	CDialogEx::OnCancel();
+	OnBnClickedOk ();
 }
 
 
@@ -428,6 +450,107 @@ bool CSongsBestPickerDlg::AddHotkey (int nID, UINT nModifiers, UINT nVirtualKey,
 }
 
 
+
+//************************************
+// Method:    PlaySong
+// FullName:  CSongsBestPickerDlg::PlaySong
+// Access:    public 
+// Returns:   void
+// Qualifier:
+//
+//************************************
+void CSongsBestPickerDlg::PlaySong (CString strFileToPlay)
+{
+	//
+	//  Play our song...
+	//  Apparently this does not work with spaces in the filename, even with quotes.
+
+	mciSendString (L"close all", NULL, 0, NULL);
+
+	//
+	//  Now actually try to play our file
+
+	CString		strShortFilename;
+	wchar_t* pBuffer = strShortFilename.GetBuffer (MAX_PATH);
+
+	if (0 != GetShortPathName (strFileToPlay, pBuffer, MAX_PATH))
+	{
+		strShortFilename.ReleaseBuffer ();
+
+		CString strOpenCmd;
+		strOpenCmd.Format (L"open \"%s\" alias MediaFile", strShortFilename);	 // mpegvideo 
+		MCIERROR mciResult = mciSendString (strOpenCmd, NULL, 0, NULL);
+		if (0 == mciResult)
+		{
+			mciResult = mciSendString (L"set MediaFile time format milliseconds", NULL, 0, NULL);
+			if (0 != mciResult)
+				TRACE (L"Error: %s\n", CUtils::GetMciErrorString (mciResult));
+
+			mciResult = mciSendString (L"play MediaFile from 0 notify", NULL, 0, m_hMainDlgWnd); //  wait
+			if (0 == mciResult)
+				m_eSongPlayingStatus = ESongPlayStatus::ePlaying;
+			else
+				TRACE (L"Error: %s\n", CUtils::GetMciErrorString (mciResult));
+		}
+		else
+		{
+			TRACE (L"Error: %s\n", CUtils::GetMciErrorString (mciResult));
+		}
+	}
+
+} // end play song
+
+
+
+
+
+
+//************************************
+// Method:    PauseSong
+// FullName:  CSongsBestPickerDlg::PauseSong
+// Access:    public 
+// Returns:   void
+// Qualifier:
+//
+//
+//
+//************************************
+void CSongsBestPickerDlg::PauseSong ()
+{
+	mciSendString (L"pause MediaFile", NULL, 0, NULL);
+
+} // end CSongsBestPickerDlg::PauseSong
+
+
+
+//************************************
+// Method:    StopSong
+// FullName:  CSongsBestPickerDlg::StopSong
+// Access:    public 
+// Returns:   void
+// Qualifier:
+//
+//
+//
+//************************************
+void CSongsBestPickerDlg::StopSong ()
+{
+	mciSendString (L"stop MediaFile", NULL, 0, NULL);
+
+} // end CSongsBestPickerDlg::StopSong
+
+
+
+
+
+
+
+
+
+
+
+
+
 //************************************
 // Method:    OnImportFromM3UFile
 // FullName:  CSongsBestPickerDlg::OnImportFromM3UFile
@@ -437,6 +560,12 @@ bool CSongsBestPickerDlg::AddHotkey (int nID, UINT nModifiers, UINT nVirtualKey,
 //************************************
 void CSongsBestPickerDlg::OnImportFromM3UFile()
 {
+	if (m_oSongList.GetItemCount () > 0)
+	{
+		if (IDYES != AfxMessageBox (L"Importing will add songs to your existing list.  If you want to start over, first Delete your song list.\r\n\r\nDo you still want to import songs?", MB_YESNO | MB_DEFBUTTON2))
+			return;
+	}
+
 	CFileDialog oFD (true, L"*.*");
 	if (IDOK != oFD.DoModal ())
 		return;
@@ -533,7 +662,7 @@ void CSongsBestPickerDlg::UpdateSongList()
 
 		int nIndex = m_oSongList.InsertItem (i, strSongName);
 		m_oSongList.SetItemData (nIndex, nLastID);
-		m_oSongList.SetItemText (nIndex, SONG_COL_MP3, strPathToMp3);
+		m_oSongList.SetItemText (nIndex, LIST_SONG_COL_MP3, strPathToMp3);
 
 		if (! m_oSongManager.GetWonLossRecord (nLastID, nWins, nLosses)) {
 			AfxMessageBox (m_oSongManager.GetError ());
@@ -543,7 +672,7 @@ void CSongsBestPickerDlg::UpdateSongList()
 		}
 
 		strWonLoss.Format (L"%2d / %2d", nWins, nLosses);
-		m_oSongList.SetItemText (nIndex, SONG_COL_WONLOSS, strWonLoss);
+		m_oSongList.SetItemText (nIndex, LIST_SONG_COL_WONLOSS, strWonLoss);
 
 	} // end loop through songs
 
@@ -551,6 +680,117 @@ void CSongsBestPickerDlg::UpdateSongList()
 	m_oSongList.UpdateWindow ();
 
 } // end CSongsBestPickerDlg::UpdateSongList
+
+
+
+
+//************************************
+// Method:    UpdateCurrentPod
+// FullName:  CSongsBestPickerDlg::UpdateCurrentPod
+// Access:    public 
+// Returns:   void
+// Qualifier:
+// Parameter: int nSongID
+//
+//
+//
+//************************************
+void CSongsBestPickerDlg::UpdateCurrentPod (int nSongID /* = -1 */)
+{
+	m_oCurrentPodList.DeleteAllItems ();
+	if (-1 == nSongID)
+		return;
+
+} // end CSongsBestPickerDlg::UpdateCurrentPod
+
+
+
+//************************************
+// Method:    UpdateStatsForCurrentSong
+// FullName:  CSongsBestPickerDlg::UpdateStatsForCurrentSong
+// Access:    public 
+// Returns:   void
+// Qualifier:
+// Parameter: int nSongID
+//
+//
+//
+//************************************
+void CSongsBestPickerDlg::UpdateStatsForCurrentSong (int nSongID /* = -1 */)
+{
+	m_oStatsList.DeleteAllItems ();
+	if (-1 == nSongID)
+		return;
+
+} // end CSongsBestPickerDlg::UpdateStatsForCurrentSong
+
+
+
+
+
+//************************************
+// Method:    UpdatePlayerStatus
+// FullName:  CSongsBestPickerDlg::UpdatePlayerStatus
+// Access:    public 
+// Returns:   void
+// Qualifier:
+//
+//
+//
+//************************************
+void CSongsBestPickerDlg::UpdatePlayerStatus ()
+{
+	if (m_eSongPlayingStatus != ESongPlayStatus::ePlaying)
+		return;
+
+	UpdateData ();
+
+	CString strValue;
+	wchar_t* pBuffer = strValue.GetBuffer (128);
+	mciSendString (L"status MediaFile position wait", pBuffer, 128, NULL);
+	strValue.ReleaseBuffer ();
+
+	int nTimeMS = 0;
+	if (CUtils::MyAtoI (strValue, nTimeMS))
+	{
+		int nTimeSec = (int) (nTimeMS / 1000);
+
+		int nMinutes	= nTimeSec / 60;
+		int nSecRemain	= nTimeSec % 60;
+
+		m_strSongPlaybackPos.Format (L"%2d:%02d", nMinutes, nSecRemain);
+		UpdateData (false);
+	}
+
+#ifdef IfThisWorked
+
+	pBuffer = strValue.GetBuffer (128);
+	mciSendString (L"status MediaFile length wait", pBuffer, 128, NULL);
+	strValue.ReleaseBuffer ();
+	TRACE (L"length: %s\n", strValue);
+
+	pBuffer = strValue.GetBuffer (128);
+	mciSendString (L"status MediaFile time format wait", pBuffer, 128, NULL);
+	strValue.ReleaseBuffer ();
+	TRACE (L"time format: %s\n", strValue);
+
+	pBuffer = strValue.GetBuffer (128);
+	mciSendString (L"status MediaFile position start", pBuffer, 128, NULL);
+	strValue.ReleaseBuffer ();
+	TRACE (L"position start: %s\n", strValue);
+
+	pBuffer = strValue.GetBuffer (128);
+	mciSendString (L"status MediaFile postroll duration", pBuffer, 128, NULL);
+	strValue.ReleaseBuffer ();
+	TRACE (L"postroll duration: %s\n", strValue);
+
+	pBuffer = strValue.GetBuffer (128);
+	mciSendString (L"status MediaFile start position", pBuffer, 128, NULL);
+	strValue.ReleaseBuffer ();
+	TRACE (L"start position: %s\n\n", strValue);
+#endif
+
+} // end CSongsBestPickerDlg::UpdatePlayerStatus
 
 
 
@@ -669,6 +909,16 @@ void CSongsBestPickerDlg::OnKeyUp (UINT nChar, UINT nRepCnt, UINT nFlags)
 
 void CSongsBestPickerDlg::OnTimer (UINT_PTR nIDEvent) 
 {
+
+	if (m_nSongPlayingStatusTimerID == nIDEvent)
+	{
+		KillTimer (m_nSongPlayingStatusTimerID);
+		UpdatePlayerStatus ();
+		m_nSongPlayingStatusTimerID = SetTimer (SONG_STATUS_TIMER_ID, SONG_STATUS_TIMER_MS, NULL);
+
+	}
+
+#ifdef SupportTimerForHotkey
 	if (0 != m_nHotkeyCurrentlyDown)
 	{
 		TRACE (_T("Timer\n"));
@@ -679,6 +929,7 @@ void CSongsBestPickerDlg::OnTimer (UINT_PTR nIDEvent)
 		MoveWindowForHotkey (m_nHotkeyCurrentlyDown, 3);
 		return;
 	}
+#endif
 
 	__super::OnTimer (nIDEvent);
 }
@@ -756,4 +1007,139 @@ CString CSongsBestPickerDlg::GetKeyName (unsigned int virtualKey)
 
 
 
+
+
+
+//************************************
+// Method:    OnItemChangedSongList
+// FullName:  CSongsBestPickerDlg::OnItemChangedSongList
+// Access:    public 
+// Returns:   void
+// Qualifier:
+// Parameter: NMHDR * pNMHDR
+// Parameter: LRESULT * pResult
+//
+//
+//
+//************************************
+void CSongsBestPickerDlg::OnItemChangedSongList (NMHDR* pNMHDR, LRESULT* pResult)
+{
+	LPNMLISTVIEW pNMLV = reinterpret_cast<LPNMLISTVIEW>(pNMHDR);
+	*pResult = 0;
+
+	//
+	//  Remember that we get this notification both when an item is selected AND
+	//  when it is unselected.  We only want to handle the selection
+
+	if ((pNMLV->uChanged & LVIF_STATE) && (pNMLV->uNewState & LVIS_SELECTED))
+	{
+		UpdateData ();
+
+		//
+		//  Save any changes the user made
+
+		if (-1 != m_nCurSongListCtrlIndex)
+		{
+			m_strCurSongName.Trim ();
+			m_strCurSongPathToMp3.Trim ();
+
+			if (! m_strCurSongName.IsEmpty ())
+				m_oSongList.SetItemText (m_nCurSongListCtrlIndex, LIST_SONG_COL_NAME, m_strCurSongName);
+			if (! m_strCurSongPathToMp3.IsEmpty ())
+				m_oSongList.SetItemText (m_nCurSongListCtrlIndex, LIST_SONG_COL_MP3, m_strCurSongPathToMp3);
+		}
+
+
+		//
+		//  Woohoo!  We have a newly selected item.
+
+		int nSongID				= -1;
+		m_nCurSongListCtrlIndex	= m_oSongList.GetFirstSelectedItem ();
+		if (-1 == m_nCurSongListCtrlIndex) {
+			nSongID = -1;
+			m_strCurSongName.Empty ();
+			m_strCurSongPathToMp3.Empty ();
+		}
+		else
+		{
+			nSongID					= (int) m_oSongList.GetItemData (m_nCurSongListCtrlIndex);
+			m_strCurSongName		= m_oSongList.GetItemText (m_nCurSongListCtrlIndex, LIST_SONG_COL_NAME);
+			m_strCurSongPathToMp3	= m_oSongList.GetItemText (m_nCurSongListCtrlIndex, LIST_SONG_COL_MP3);
+		}
+
+		UpdateCurrentPod			(nSongID);	// NOT the list ctrl index
+		UpdateStatsForCurrentSong	(nSongID);	// NOT the list ctrl index
+
+		UpdateData (false);
+	} // end if a new item is selected
+
+} // end item changed in song list
+
+
+
+
+
+//************************************
+// Method:    OnBnClickedPlaySong
+// FullName:  CSongsBestPickerDlg::OnBnClickedPlaySong
+// Access:    public 
+// Returns:   void
+// Qualifier:
+//
+//
+//
+//************************************
+void CSongsBestPickerDlg::OnBnClickedPlaySong ()
+{
+	//
+	//  If we're already playing, this means stop, otherwise means play...
+
+	PlaySong (m_strCurSongPathToMp3);
+
+} // end on play song
+
+
+
+
+
+
+
+//************************************
+// Method:    OnMciNotify
+// FullName:  CSongsBestPickerDlg::OnMciNotify
+// Access:    public 
+// Returns:   LRESULT
+// Qualifier:
+// Parameter: WPARAM wParam
+// Parameter: LPARAM lParam
+//
+//
+//
+//************************************
+LRESULT CSongsBestPickerDlg::OnMciNotify (WPARAM wParam, LPARAM lParam)
+{
+	switch (wParam)
+	{
+	case MCI_NOTIFY_SUCCESSFUL:
+		//
+		//  For "Play", successful means it's finished playing
+
+		m_eSongPlayingStatus = ESongPlayStatus::eStopped;
+		break;
+	case MCI_NOTIFY_FAILURE:
+		TRACE (L"Failure\n");
+		break;
+	case MCI_NOTIFY_ABORTED:
+		TRACE (L"Aborted\n");
+		break;
+	case MCI_NOTIFY_SUPERSEDED:
+		TRACE (L"Superseded\n");
+		break;
+	default:
+		TRACE (L"%d\n", (int) wParam);
+	}
+
+	return true;
+
+} // end CSongsBestPickerDlg::OnMciNotify
 

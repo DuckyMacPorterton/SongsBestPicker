@@ -2,6 +2,7 @@
 #include "SqlDefs.h"
 #include "SQLite/CppSQLite3-Unicode.h"
 #include <Mlang.h>
+#include <mciapi.h>
 
 
 class CUtils
@@ -18,6 +19,8 @@ public:
 	static bool		DoesTableExist		(CString& rstrError, CMyCppSQLite3DBPtr pDB, CString strTableName);
 
 	static CString	GetErrorMessageFromException (CException* pE, bool bDeleteException = false);
+	static CString	GetMciErrorString (MCIERROR nMciError);
+
 	static CString	GetProgramFilesDir ();
 
 	static CString	GetFileNameFromPath (CString strFullPath, bool bRemoveAllExtensions = true);
@@ -33,11 +36,13 @@ public:
 
 	static bool		DetectCodePageForString (char* pText, UINT& rnCodePage, UINT nDefaultCodePage = CP_UTF8, UINT nDefaultFlags = MLDETECTCP_8BIT);
 
+	static bool		MyAtoI (CString str, int& rnValFound, bool bRequireMatchEntireString = true);
+
 
 	static bool		FileExists (CString strName);
 	static bool		FindFile (CString& rstrPathToSong);
 
-
+	static BOOL		SleepMsg (DWORD dwTimeoutMS);
 
 	static void		EloRating		(float& Ra, float& Rb, int K, bool d);
 	static float	EloProbability	(float rating1, float rating2);

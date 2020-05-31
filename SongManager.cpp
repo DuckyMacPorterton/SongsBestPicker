@@ -111,7 +111,7 @@ bool CSongManager::InitSongsFromTextFile (CString strTextFile, EFileFormat eFile
 			return SetError (CUtils::GetErrorMessageFromException (&oFileExcept));
 
 		CString strInsert, strSongName, strPathToMp3;
-		strInsert.Format (L"insert into %s (%s, %s, %s) values (null, ?, ?)", TBL_SONGS, COL_ID, COL_SONGS, COL_PATH_TO_MP3);
+		strInsert.Format (L"insert into %s (%s, %s, %s) values (null, ?, ?)", TBL_SONGS, DB_COL_ID, DB_COL_SONGS, DB_COL_PATH_TO_MP3);
 		CppSQLite3Statement stmtQuery = m_pDB->compileStatement (strInsert);
 
 		while (ReadNextSongM3U (*pFileIn, strSongName, strPathToMp3))
@@ -204,9 +204,9 @@ bool CSongManager::GetWonLossRecord (int nSongID, int& rnWins, int& rnLosses)
 	{
 		CString strQueryWins, strQueryLosses;
 		strQueryWins.Format (L"SELECT count(*) FROM %s where (%s=%d and %s > 0) or (%s=%d and %s < 0)", TBL_GAME_HISTORY, 
-			COL_SONG_1_ID, nSongID, COL_GAME_SCORE_MARGIN, COL_SONG_2_ID, nSongID, COL_GAME_SCORE_MARGIN);
+			DB_COL_SONG_1_ID, nSongID, DB_COL_GAME_SCORE_MARGIN, DB_COL_SONG_2_ID, nSongID, DB_COL_GAME_SCORE_MARGIN);
 		strQueryLosses.Format (L"SELECT count(*) FROM %s where (%s=%d and %s < 0) or (%s=%d and %s > 0)", TBL_GAME_HISTORY, 
-			COL_SONG_1_ID, nSongID, COL_GAME_SCORE_MARGIN, COL_SONG_2_ID, nSongID, COL_GAME_SCORE_MARGIN);
+			DB_COL_SONG_1_ID, nSongID, DB_COL_GAME_SCORE_MARGIN, DB_COL_SONG_2_ID, nSongID, DB_COL_GAME_SCORE_MARGIN);
 	
 		rnWins		= m_pDB->execScalar (strQueryWins);
 		rnLosses	= m_pDB->execScalar (strQueryLosses);
@@ -378,15 +378,15 @@ bool CSongManager::GetNextSong(CString& rstrSongName, CString& rstrPathToMp3, in
 	try
 	{
 		CString strQuery;
-		strQuery.Format (L"select * from %s where %s > %d order by %s limit 1", TBL_SONGS, COL_ID, nPrevSongID, COL_ID);
+		strQuery.Format (L"select * from %s where %s > %d order by %s limit 1", TBL_SONGS, DB_COL_ID, nPrevSongID, DB_COL_ID);
 	
 		CppSQLite3Query query = m_pDB->execQuery (strQuery);
 		if (query.eof ())
 			return false;
 
-		rstrSongName	= query.getStringField	(COL_SONGS);
-		rstrPathToMp3	= query.getStringField	(COL_PATH_TO_MP3);
-		rnSongID		= query.getIntField		(COL_ID);
+		rstrSongName	= query.getStringField	(DB_COL_SONGS);
+		rstrPathToMp3	= query.getStringField	(DB_COL_PATH_TO_MP3);
+		rnSongID		= query.getIntField		(DB_COL_ID);
 		return true;
 	}
 	catch (CppSQLite3Exception& e)

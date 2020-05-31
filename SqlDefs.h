@@ -27,14 +27,14 @@ struct TableDefinitionStruct
 #define TBL_SONGS				L"Songs"
 #define TBL_SONGS_VER			1
 
-#define COL_ID					L"ID"
-#define COL_SONGS				L"Name"
-#define COL_PATH_TO_MP3			L"PathToMp3"
+#define DB_COL_ID					L"ID"
+#define DB_COL_SONGS				L"Name"
+#define DB_COL_PATH_TO_MP3			L"PathToMp3"
 
 static TableDefinitionStruct VPTblSongs[] = {
-	{true,	false,	COL_ID,					L"INTEGER",	VP_DEFAULT_UNUSED},
-	{false,	false,	COL_SONGS,				L"TEXT",	VP_DEFAULT_UNUSED},
-	{false,	false,	COL_PATH_TO_MP3,		L"TEXT",	VP_DEFAULT_UNUSED},
+	{true,	false,	DB_COL_ID,					L"INTEGER",	VP_DEFAULT_UNUSED},
+	{false,	false,	DB_COL_SONGS,				L"TEXT",	VP_DEFAULT_UNUSED},
+	{false,	false,	DB_COL_PATH_TO_MP3,		L"TEXT",	VP_DEFAULT_UNUSED},
 	{0,		0,		0,							0,					0}
 };
 
@@ -44,14 +44,14 @@ static TableDefinitionStruct VPTblSongs[] = {
 #define TBL_GAME_HISTORY			L"GameHistory"
 #define TBL_GAME_HISTORY_VER		1
 
-#define COL_SONG_1_ID				L"Song1"
-#define COL_SONG_2_ID				L"Song2"
-#define COL_GAME_SCORE_MARGIN		L"GameScoreMargin"
+#define DB_COL_SONG_1_ID				L"Song1"
+#define DB_COL_SONG_2_ID				L"Song2"
+#define DB_COL_GAME_SCORE_MARGIN		L"GameScoreMargin"
 
 static TableDefinitionStruct VPTblGameHistory[] = {
-	{false,	false,	COL_SONG_1_ID,				L"INTEGER",	VP_DEFAULT_UNUSED},
-	{false,	false,	COL_SONG_2_ID,				L"INTEGER",	VP_DEFAULT_UNUSED},
-	{false,	false,	COL_GAME_SCORE_MARGIN,		L"INTEGER",	VP_DEFAULT_UNUSED},
+	{false,	false,	DB_COL_SONG_1_ID,				L"INTEGER",	VP_DEFAULT_UNUSED},
+	{false,	false,	DB_COL_SONG_2_ID,				L"INTEGER",	VP_DEFAULT_UNUSED},
+	{false,	false,	DB_COL_GAME_SCORE_MARGIN,		L"INTEGER",	VP_DEFAULT_UNUSED},
 	{0,		0,		0,							0,					0}
 };
 
@@ -63,16 +63,16 @@ static TableDefinitionStruct VPTblGameHistory[] = {
 #define TBL_CURRENT_SCHEDULE		L"CurrentSchedule"
 #define TBL_CURRENT_SCHEDULE_VER	1
 
-#define COL_SONG_1_ID				L"Song1"
-#define COL_SONG_2_ID				L"Song2"
-#define COL_SONG_3_ID				L"Song3"
-#define COL_SONG_4_ID				L"Song4"
-#define COL_SONG_5_ID				L"Song5"
+//#define DB_COL_SONG_1_ID				L"Song1"		// Already defined above
+//#define DB_COL_SONG_2_ID				L"Song2"		// Already defined above
+#define DB_COL_SONG_3_ID				L"Song3"
+#define DB_COL_SONG_4_ID				L"Song4"
+#define DB_COL_SONG_5_ID				L"Song5"
 
 static TableDefinitionStruct VPTblCurrentSchedule[] = {
-	{false,	false,	COL_SONG_1_ID,				L"INTEGER",	VP_DEFAULT_UNUSED},
-	{false,	false,	COL_SONG_2_ID,				L"INTEGER",	VP_DEFAULT_UNUSED},
-	{false,	false,	COL_GAME_SCORE_MARGIN,		L"INTEGER",	VP_DEFAULT_UNUSED},
+	{false,	false,	DB_COL_SONG_1_ID,				L"INTEGER",	VP_DEFAULT_UNUSED},
+	{false,	false,	DB_COL_SONG_2_ID,				L"INTEGER",	VP_DEFAULT_UNUSED},
+	{false,	false,	DB_COL_GAME_SCORE_MARGIN,		L"INTEGER",	VP_DEFAULT_UNUSED},
 	{0,		0,		0,							0,					0}
 };
 

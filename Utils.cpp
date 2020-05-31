@@ -800,13 +800,117 @@ bool CUtils::FindFile (CString& rstrPathToSong)
 
 
 
+//////////////////////////////////////////////////////////////////////
+//
+//    M Y   A T O   I 
+//
+//  The problem here is that atoi doesn't tell you it it was
+//  successful or not.  If it fails it returns 0, which is a 
+//  perfectly valid return value if you send in "0".
+//
+//  strtol does do that, but it's ugly, so we clean it up
+//  and make it simple.
+//
+bool CUtils::MyAtoI (CString str, int& rnValFound, bool bRequireMatchEntireString /* = true */)
+{
+	if (str.IsEmpty ())
+		return false;
+
+	TCHAR* pBuffer		= str.GetBuffer ();
+	TCHAR* pFoundChar	= NULL;
+	rnValFound = _tcstol (pBuffer, &pFoundChar, 10); // 0 to auto-determine if it's decimal or hex - breaks - leading 0 makes it act like octal
+	
+	//
+	//  If pFoundChar is set and contains a NULL char, we've matched the whole thing.
+
+	if ((NULL != pFoundChar) && (*pFoundChar == NULL))
+		return true;		//  We actually matched something
+
+	//
+	//  If we matched something but not the whole string...
+
+	if ((pFoundChar != pBuffer) && (!bRequireMatchEntireString))
+		return true;
+
+	//
+	//  So we haven't matched what we need.  See if it's a hex number.
+
+	rnValFound = _tcstol (pBuffer, &pFoundChar, 16); // 0 to auto-determine if it's decimal or hex - breaks - leading 0 makes it act like octal
+	
+	//
+	//  If pFoundChar is set and contains a NULL char, we've matched the whole thing.
+
+	if ((NULL != pFoundChar) && (*pFoundChar == NULL))
+		return true;		//  We actually matched something
+
+	//
+	//  If we matched something but not the whole string...
+
+	if ((pFoundChar != pBuffer) && (!bRequireMatchEntireString))
+		return true;
+
+	rnValFound = 0;
+	return false;
+
+} // end MyAtoI
 
 
 
 
+//////////////////////////////////////////////////////////////////////////
+//
+//  The point of SleepMsg is that sleep will freeze the entire thread
+//  so if it's called from a thread that owns a window then that's 
+//  no good...  so this will sleep but let the message handling
+//  continue.  I'm conflicted about it but there have been a couple
+//  places where it worked and nothing else I could find did.
+//
+//  Timeout is in milliseconds
+//
+BOOL CUtils::SleepMsg (DWORD dwTimeoutMS)
+{
+#define MSGF_SLEEPMSG 0x5300
+
+//	DWORD dwStart = GetTickCount();
+	ULONGLONG nStart = GetTickCount64 ();
+
+	ULONGLONG nElapsed = 0;
+	while ((nElapsed = GetTickCount64 () - nStart) < dwTimeoutMS) {
+
+		DWORD dwStatus = MsgWaitForMultipleObjectsEx(0, NULL,
+			(DWORD) (dwTimeoutMS - nElapsed), QS_ALLINPUT,
+			0 | MWMO_INPUTAVAILABLE);
+
+
+		if (dwStatus == WAIT_OBJECT_0) {
+			MSG msg;
+			while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
+				if (msg.message == WM_QUIT) {
+					PostQuitMessage((int)msg.wParam);
+					return FALSE; // abandoned due to WM_QUIT
+				}
+				if (!CallMsgFilter(&msg, MSGF_SLEEPMSG)) {
+					TranslateMessage(&msg);
+					DispatchMessage(&msg);
+				}
+			}
+		} // end if dwstatus == WAIT_OBJECT_)
+	}
+
+	return TRUE; // timed out
+} // end sleep msg
 
 
 
+CString CUtils::GetMciErrorString (MCIERROR nMciError)
+{
+	CString str;
+	LPWSTR pstrError = str.GetBuffer (128);
+	mciGetErrorString (nMciError, pstrError, 128);
+	str.ReleaseBuffer ();
+
+	return str;
+} // end get mci error string
 
 
 
