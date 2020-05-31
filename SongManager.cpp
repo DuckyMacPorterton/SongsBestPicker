@@ -111,7 +111,7 @@ bool CSongManager::InitSongsFromTextFile (CString strTextFile, EFileFormat eFile
 			return SetError (CUtils::GetErrorMessageFromException (&oFileExcept));
 
 		CString strInsert, strSongName, strPathToMp3;
-		strInsert.Format (L"insert into %s (%s, %s, %s) values (null, ?, ?)", TBL_SONGS, DB_COL_ID, DB_COL_SONGS, DB_COL_PATH_TO_MP3);
+		strInsert.Format (L"insert into %s (%s, %s, %s) values (null, ?, ?)", TBL_SONGS, DB_COL_SONG_ID, DB_COL_SONG_NAME, DB_COL_PATH_TO_MP3);
 		CppSQLite3Statement stmtQuery = m_pDB->compileStatement (strInsert);
 
 		while (ReadNextSongM3U (*pFileIn, strSongName, strPathToMp3))
@@ -378,15 +378,15 @@ bool CSongManager::GetNextSong(CString& rstrSongName, CString& rstrPathToMp3, in
 	try
 	{
 		CString strQuery;
-		strQuery.Format (L"select * from %s where %s > %d order by %s limit 1", TBL_SONGS, DB_COL_ID, nPrevSongID, DB_COL_ID);
+		strQuery.Format (L"select * from %s where %s > %d order by %s limit 1", TBL_SONGS, DB_COL_SONG_ID, nPrevSongID, DB_COL_SONG_ID);
 	
 		CppSQLite3Query query = m_pDB->execQuery (strQuery);
 		if (query.eof ())
 			return false;
 
-		rstrSongName	= query.getStringField	(DB_COL_SONGS);
+		rstrSongName	= query.getStringField	(DB_COL_SONG_NAME);
 		rstrPathToMp3	= query.getStringField	(DB_COL_PATH_TO_MP3);
-		rnSongID		= query.getIntField		(DB_COL_ID);
+		rnSongID		= query.getIntField		(DB_COL_SONG_ID);
 		return true;
 	}
 	catch (CppSQLite3Exception& e)
@@ -399,6 +399,94 @@ bool CSongManager::GetNextSong(CString& rstrSongName, CString& rstrPathToMp3, in
 	}
 
 } // end get next song
+
+
+
+//************************************
+// Method:    SetSongName
+// FullName:  CSongManager::SetSongName
+// Access:    public 
+// Returns:   void
+// Qualifier:
+// Parameter: int nSongID
+// Parameter: CString strName
+//
+//
+//
+//************************************
+bool CSongManager::SetSongName (int nSongID, CString strSongName)
+{
+	if (NULL == m_pDB)
+		return false;
+
+	try
+	{
+		CString strInsert;
+		strInsert.Format (L"update %s set %s=? where %s=?", TBL_SONGS, 
+			DB_COL_SONG_NAME, DB_COL_SONG_ID);
+
+		CppSQLite3Statement stmtQuery = m_pDB->compileStatement (strInsert);
+
+		stmtQuery.bind (1, strSongName);
+		stmtQuery.bind (2, nSongID);
+		stmtQuery.execDML ();
+		return true;
+	}
+	catch (CppSQLite3Exception& e)
+	{
+		return SetError (e.errorMessage ());
+	}
+	catch (CException* e)
+	{
+		return SetError (CUtils::GetErrorMessageFromException (e, true));
+	}
+} // end CSongManager::SetSongName
+
+
+
+//************************************
+// Method:    SetSongPathToMp3
+// FullName:  CSongManager::SetSongPathToMp3
+// Access:    public 
+// Returns:   void
+// Qualifier:
+// Parameter: int nSongID
+// Parameter: CString strPathtoMp3
+//
+//
+//
+//************************************
+bool CSongManager::SetSongPathToMp3 (int nSongID, CString strPathtoMp3)
+{
+	if (NULL == m_pDB)
+		return false;
+
+	try
+	{
+		CString strInsert;
+		strInsert.Format (L"update %s set %s=? where %s=?", TBL_SONGS, 
+			DB_COL_PATH_TO_MP3, DB_COL_SONG_ID);
+
+		CppSQLite3Statement stmtQuery = m_pDB->compileStatement (strInsert);
+
+		stmtQuery.bind (1, strPathtoMp3);
+		stmtQuery.bind (2, nSongID);
+		stmtQuery.execDML ();
+		return true;
+	}
+	catch (CppSQLite3Exception& e)
+	{
+		return SetError (e.errorMessage ());
+	}
+	catch (CException* e)
+	{
+		return SetError (CUtils::GetErrorMessageFromException (e, true));
+	}
+} // end CSongManager::SetSongPathToMp3
+
+
+
+
 
 
 

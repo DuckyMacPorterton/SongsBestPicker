@@ -29,6 +29,9 @@ public:
 	bool	GetSongCount	(int& rnSongCount);
 	bool	GetNextSong		(CString& rstrSongName, CString& rstrPathToMp3, int& rnSongID, int nPrevSongID = -1);
 
+	bool	SetSongName		(int nSongID, CString strName);
+	bool	SetSongPathToMp3(int nSongID, CString strPathtoMp3);
+
 	void	SetGameResult	(int nSong1ID, int nSong2ID, int nSong1MarginOfVictory);
 //	bool	GetGameResult (UINT nOpponentID, int& rnMarginOfVictory);
 

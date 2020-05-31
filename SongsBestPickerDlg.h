@@ -44,8 +44,9 @@ protected:
 	CSongManager	m_oSongManager;
 
 	int				m_nCurSongListCtrlIndex	= -1;
-	CString			m_strCurSongName;
-	CString			m_strCurSongPathToMp3;
+	CString			m_strCurSongName,		m_strLastLoadedSongName;
+	CString			m_strCurSongPathToMp3,	m_strLastLoadedPathToMp3;
+
 	CString			m_strSongPlaybackPos;
 	CString			m_strSongPlaybackLen;
 

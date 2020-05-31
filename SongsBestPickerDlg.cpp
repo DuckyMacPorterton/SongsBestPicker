@@ -1043,12 +1043,21 @@ void CSongsBestPickerDlg::OnItemChangedSongList (NMHDR* pNMHDR, LRESULT* pResult
 			m_strCurSongName.Trim ();
 			m_strCurSongPathToMp3.Trim ();
 
-			if (! m_strCurSongName.IsEmpty ())
-				m_oSongList.SetItemText (m_nCurSongListCtrlIndex, LIST_SONG_COL_NAME, m_strCurSongName);
-			if (! m_strCurSongPathToMp3.IsEmpty ())
-				m_oSongList.SetItemText (m_nCurSongListCtrlIndex, LIST_SONG_COL_MP3, m_strCurSongPathToMp3);
-		}
+			if (! m_strCurSongName.IsEmpty () && m_strCurSongName != m_strLastLoadedSongName)
+			{
+				int nSongID = m_oSongList.GetItemData (m_nCurSongListCtrlIndex);
 
+				m_oSongManager.SetSongName (nSongID, m_strCurSongName);
+				m_oSongList.SetItemText (m_nCurSongListCtrlIndex, LIST_SONG_COL_NAME, m_strCurSongName);
+			}
+			if (! m_strCurSongPathToMp3.IsEmpty () && m_strCurSongPathToMp3 != m_strLastLoadedPathToMp3)
+			{
+				int nSongID = m_oSongList.GetItemData (m_nCurSongListCtrlIndex);
+
+				m_oSongManager.SetSongPathToMp3 (nSongID, m_strLastLoadedPathToMp3);
+				m_oSongList.SetItemText (m_nCurSongListCtrlIndex, LIST_SONG_COL_MP3, m_strCurSongPathToMp3);
+			}
+		}
 
 		//
 		//  Woohoo!  We have a newly selected item.
@@ -1059,12 +1068,18 @@ void CSongsBestPickerDlg::OnItemChangedSongList (NMHDR* pNMHDR, LRESULT* pResult
 			nSongID = -1;
 			m_strCurSongName.Empty ();
 			m_strCurSongPathToMp3.Empty ();
+
+			m_strLastLoadedSongName.Empty ();
+			m_strLastLoadedPathToMp3.Empty ();
 		}
 		else
 		{
 			nSongID					= (int) m_oSongList.GetItemData (m_nCurSongListCtrlIndex);
 			m_strCurSongName		= m_oSongList.GetItemText (m_nCurSongListCtrlIndex, LIST_SONG_COL_NAME);
 			m_strCurSongPathToMp3	= m_oSongList.GetItemText (m_nCurSongListCtrlIndex, LIST_SONG_COL_MP3);
+
+			m_strLastLoadedSongName	= m_strCurSongName;
+			m_strLastLoadedPathToMp3	= m_strCurSongPathToMp3;
 		}
 
 		UpdateCurrentPod			(nSongID);	// NOT the list ctrl index

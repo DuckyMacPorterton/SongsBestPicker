@@ -27,14 +27,14 @@ struct TableDefinitionStruct
 #define TBL_SONGS				L"Songs"
 #define TBL_SONGS_VER			1
 
-#define DB_COL_ID					L"ID"
-#define DB_COL_SONGS				L"Name"
+#define DB_COL_SONG_ID					L"ID"
+#define DB_COL_SONG_NAME			L"Name"
 #define DB_COL_PATH_TO_MP3			L"PathToMp3"
 
 static TableDefinitionStruct VPTblSongs[] = {
-	{true,	false,	DB_COL_ID,					L"INTEGER",	VP_DEFAULT_UNUSED},
-	{false,	false,	DB_COL_SONGS,				L"TEXT",	VP_DEFAULT_UNUSED},
-	{false,	false,	DB_COL_PATH_TO_MP3,		L"TEXT",	VP_DEFAULT_UNUSED},
+	{true,	false,	DB_COL_SONG_ID,				L"INTEGER",	VP_DEFAULT_UNUSED},
+	{false,	false,	DB_COL_SONG_NAME,			L"TEXT",	VP_DEFAULT_UNUSED},
+	{false,	false,	DB_COL_PATH_TO_MP3,			L"TEXT",	VP_DEFAULT_UNUSED},
 	{0,		0,		0,							0,					0}
 };
 
