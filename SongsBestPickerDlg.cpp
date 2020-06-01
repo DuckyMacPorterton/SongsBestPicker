@@ -195,7 +195,7 @@ void CSongsBestPickerDlg::DoDataExchange(CDataExchange* pDX)
 	CDialogEx::DoDataExchange(pDX);
 	DDX_Control(pDX, IDC_SONG_LIST, m_oSongList);
 	DDX_Control(pDX, IDC_STATS, m_oStatsList);
-	DDX_Control(pDX, IDC_CURRENT_POD_LIST, m_oCurrentPodList);
+	DDX_Control(pDX, IDC_CURRENT_POD_LIST, m_oCurrentPoolList);
 	DDX_Text(pDX, IDC_EDIT1, m_strCurSongName);
 	DDX_Text(pDX, IDC_EDIT2, m_strCurSongPathToMp3);
 	DDX_Text(pDX, IDC_SONG_POS, m_strSongPlaybackPos);
@@ -220,7 +220,6 @@ BEGIN_MESSAGE_MAP(CSongsBestPickerDlg, CDialogEx)
 	ON_COMMAND(ID_IMPORTFROMM3UFILE,	OnImportFromM3UFile)
 	ON_COMMAND(ID_RESETSONGSTATISTICS,	OnResetSongStatistics)
 	ON_COMMAND(ID_DELETESONGLIST,		OnDeleteSongList)
-	ON_COMMAND(ID_SCHEDULEGAMES,		OnScheduleGames)
 
 	ON_WM_TIMER()
 	ON_NOTIFY(LVN_ITEMCHANGED, IDC_SONG_LIST, &CSongsBestPickerDlg::OnItemChangedSongList)
@@ -264,13 +263,19 @@ BOOL CSongsBestPickerDlg::OnInitDialog()
 	m_oSongList.SetExtendedStyle (m_oSongList.GetExtendedStyle () | LVS_EX_FULLROWSELECT);
 
 	//
+	//  And our current pool / pod / competition / whatever we call it
+
+	m_oCurrentPoolList.GetClientRect (rcList);
+	m_oCurrentPoolList.InsertColumn (LIST_SONG_COL_NAME,	L"Song",LVCFMT_LEFT,	(int) (rcList.Width () * 0.98));
+	m_oCurrentPoolList.SetExtendedStyle (m_oSongList.GetExtendedStyle () | LVS_EX_FULLROWSELECT);
+
+	//
 	//  For anything to work, we need a valid database.  Confirm that we have one.
 
 	if (! m_oSongManager.GetError ().IsEmpty ())
 		AfxMessageBox (L"Error: " + m_oSongManager.GetError ());
 	else
 		UpdateSongList ();
-
 
 	//
 	//  Let's allow ourselves to minimize to system tray
@@ -287,6 +292,11 @@ BOOL CSongsBestPickerDlg::OnInitDialog()
 	//  Start a timer to keep tabs on things
 
 	m_nSongPlayingStatusTimerID = SetTimer (SONG_STATUS_TIMER_ID, SONG_STATUS_TIMER_MS, NULL);
+
+	//
+	//  Make sure we have songs scheduled into pools for competition
+
+	m_oSongManager.ScheduleMoreGames ();
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
@@ -794,9 +804,23 @@ void CSongsBestPickerDlg::UpdateSongList()
 //************************************
 void CSongsBestPickerDlg::UpdateCurrentPod (int nSongID /* = -1 */)
 {
-	m_oCurrentPodList.DeleteAllItems ();
+	m_oCurrentPoolList.DeleteAllItems ();
 	if (-1 == nSongID)
 		return;
+
+	CIntArray arrSongIDs;
+	if (! m_oSongManager.GetCurrentPool (arrSongIDs))
+		return;
+
+	m_oCurrentPoolList.DeleteAllItems ();
+	for (int i = 0; i < arrSongIDs.GetSize (); i ++)
+	{
+		CString strSongID, strPathToMp3;
+		m_oSongManager.GetSongDetails (arrSongIDs[i], strSongID, strPathToMp3);
+
+		int nListCtrlIndex = m_oCurrentPoolList.InsertItem (i, strSongID);
+		m_oCurrentPoolList.SetItemData (nListCtrlIndex, arrSongIDs[i]);
+	}
 
 } // end CSongsBestPickerDlg::UpdateCurrentPod
 
@@ -880,25 +904,6 @@ void CSongsBestPickerDlg::UpdatePlayerStatus ()
 #endif
 } // end CSongsBestPickerDlg::UpdatePlayerStatus
 
-
-
-
-//************************************
-// Method:    OnScheduleGames
-// FullName:  CSongsBestPickerDlg::OnScheduleGames
-// Access:    public 
-// Returns:   void
-// Qualifier:
-//
-//
-//
-//************************************
-void CSongsBestPickerDlg::OnScheduleGames ()
-{
-	if (! m_oSongManager.ScheduleMoreGames ())
-		AfxMessageBox (m_oSongManager.GetError (true));
-	
-} // end CSongsBestPickerDlg::OnScheduleGames
 
 
 

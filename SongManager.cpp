@@ -387,21 +387,55 @@ bool CSongManager::GetNextSong(CString& rstrSongName, CString& rstrPathToMp3, in
 		rnSongID		= query.getIntField		(DB_COL_SONG_ID);
 		return true;
 	}
-	catch (CppSQLite3Exception& e)
-	{
+	catch (CppSQLite3Exception& e) {
 		return SetError (e.errorMessage ());
 	}
-	catch (CException* e)
-	{
+	catch (CException* e) {
 		return SetError (CUtils::GetErrorMessageFromException (e, true));
 	}
-
 } // end get next song
 
 
 
+//************************************
+// Method:    GetSongDetails
+// FullName:  CSongManager::GetSongDetails
+// Access:    public 
+// Returns:   bool
+// Qualifier:
+// Parameter: int nSongID
+// Parameter: CString & rstrSongName
+// Parameter: CString & rstrPathToMp3
+//
+//
+//
+//************************************
+bool CSongManager::GetSongDetails (int nSongID, CString& rstrSongName, CString& rstrPathToMp3)
+{
+	if (NULL == m_pDB)
+		return false;
 
+	try
+	{
+		CString strQuery;
+		strQuery.Format (L"select * from %s where %s=%d", TBL_SONGS, DB_COL_SONG_ID, nSongID);
+	
+		CppSQLite3Query query = m_pDB->execQuery (strQuery);
+		if (query.eof ())
+			return false;
 
+		rstrSongName	= query.getStringField	(DB_COL_SONG_NAME);
+		rstrPathToMp3	= query.getStringField	(DB_COL_PATH_TO_MP3);
+		return true;
+	}
+	catch (CppSQLite3Exception& e) {
+		return SetError (e.errorMessage ());
+	}
+	catch (CException* e) {
+		return SetError (CUtils::GetErrorMessageFromException (e, true));
+	}
+
+} // end CSongManager::GetSongDetails
 
 
 
@@ -411,9 +445,9 @@ bool CSongManager::GetNextSong(CString& rstrSongName, CString& rstrPathToMp3, in
 // Access:    public 
 // Returns:   bool
 // Qualifier:
-// Parameter: CArray<int> & rarrSongIDs
+// Parameter: CIntArray & rarrSongIDs
 //************************************
-bool CSongManager::GetAllSongsInRandomOrder (CArray<int>& rarrSongIDs)
+bool CSongManager::GetAllSongsInRandomOrder (CIntArray& rarrSongIDs)
 {
 	if (NULL == m_pDB)
 		return false;
@@ -443,8 +477,6 @@ bool CSongManager::GetAllSongsInRandomOrder (CArray<int>& rarrSongIDs)
 	}
 
 } // end CSongManager::GetAllSongsInRandomOrder
-
-
 
 
 
@@ -560,6 +592,48 @@ bool CSongManager::GetUnfinishedPoolCount (int& rnUnfinishedPoolCount)
 
 
 //************************************
+// Method:    GetUnfinishedPoolCount
+// FullName:  CSongManager::GetUnfinishedPoolCount
+// Access:    public 
+// Returns:   bool
+// Qualifier:
+// Parameter: int & rnUnfinishedPoolCount
+//************************************
+bool CSongManager::GetCurrentPool (CIntArray& rarrSongIDs)
+{
+	rarrSongIDs.SetSize (0);
+	if (NULL == m_pDB)
+		return false;
+
+	try
+	{
+		CString strQuery;
+		strQuery.Format (L"select * from %s where %s=0 limit 1", TBL_CURRENT_SCHEDULE, DB_COL_POOL_FINISHED);
+		CppSQLite3Query oQuery = m_pDB->execQuery (strQuery);
+		
+		if (oQuery.eof ())
+			return false;
+
+		for (int i = 0; i < m_nPoolSize; i ++)
+			rarrSongIDs.Add (oQuery.getIntField (i));
+
+		return true;
+	}
+	catch (CppSQLite3Exception& e) {
+		return SetError (e.errorMessage ());
+	}
+	catch (CException* e) {
+		return SetError (CUtils::GetErrorMessageFromException (e, true));
+	}
+} // end CSongManager::GetUnfinishedPoolCount
+
+
+
+
+
+
+
+//************************************
 // Method:    ScheduleMoreGames
 // FullName:  CSongManager::ScheduleMoreGames
 // Access:    public 
@@ -587,7 +661,7 @@ bool CSongManager::ScheduleMoreGames ()
 		//
 		//  Later, we'll look at minimizing rematches.  But for now...
 
-		CArray<int>	arrSongIDs;
+		CIntArray	arrSongIDs;
 		if (!GetAllSongsInRandomOrder (arrSongIDs))
 			return false;
 

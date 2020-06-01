@@ -4,6 +4,7 @@
 #include "Song.h"
 #include "StdioFileEx/StdioFileEx.h"
 
+typedef CArray<int>		CIntArray;
 
 enum class EFileFormat
 {
@@ -29,7 +30,9 @@ public:
 
 	bool	GetSongCount	(int& rnSongCount);
 	bool	GetNextSong		(CString& rstrSongName, CString& rstrPathToMp3, int& rnSongID, int nPrevSongID = -1);
-	bool	GetAllSongsInRandomOrder (CArray<int>& rarrSongIDs);
+	bool	GetSongDetails	(int nSongID, CString& rstrSongName, CString& rstrPathToMp3);
+	
+	bool	GetAllSongsInRandomOrder (CIntArray& rarrSongIDs);
 
 	bool	SetSongName		(int nSongID, CString strName);
 	bool	SetSongPathToMp3(int nSongID, CString strPathtoMp3);
@@ -38,6 +41,7 @@ public:
 //	bool	GetGameResult (UINT nOpponentID, int& rnMarginOfVictory);
 
 	bool	GetUnfinishedPoolCount (int& rnUnfinishedPoolCount);
+	bool	GetCurrentPool (CIntArray& rarrSongIDs);
 
 	bool	SetError (CString strError);
 

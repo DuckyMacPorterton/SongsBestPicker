@@ -44,7 +44,7 @@ protected:
 	CSystemTray		m_oTrayIcon; 
 	CMyListCtrl		m_oSongList;
 	CMyListCtrl		m_oStatsList;
-	CMyListCtrl		m_oCurrentPodList;
+	CMyListCtrl		m_oCurrentPoolList;
 
 	CSongManager	m_oSongManager;
 	CProgressCtrl	m_oSongPlayingProgress;
@@ -98,9 +98,6 @@ public:
 	void	UpdateCurrentPod			(int nSongID = -1);
 	void	UpdateStatsForCurrentSong	(int nSongID = -1);
 	void	UpdatePlayerStatus			();
-
-
-	void	OnScheduleGames ();
 
 	void	MoveWindowForHotkey (UINT nHotkey, int nLargeMoveMultiplier = 1, int nSmallMoveMultiplier = 1);
 	CString GetKeyName (unsigned int virtualKey);
