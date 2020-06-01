@@ -23,11 +23,13 @@ public:
 	bool	InitSongsFromTextFile	(CString strTextFile, EFileFormat eFileFormat, bool bOverwriteExistingData = false);
 	bool	DeleteAllSongs			();
 
+	bool	ScheduleMoreGames ();
 
 	bool	GetWonLossRecord (int nSongID, int& rnWins, int& rnLosses);
 
 	bool	GetSongCount	(int& rnSongCount);
 	bool	GetNextSong		(CString& rstrSongName, CString& rstrPathToMp3, int& rnSongID, int nPrevSongID = -1);
+	bool	GetAllSongsInRandomOrder (CArray<int>& rarrSongIDs);
 
 	bool	SetSongName		(int nSongID, CString strName);
 	bool	SetSongPathToMp3(int nSongID, CString strPathtoMp3);
@@ -35,6 +37,7 @@ public:
 	void	SetGameResult	(int nSong1ID, int nSong2ID, int nSong1MarginOfVictory);
 //	bool	GetGameResult (UINT nOpponentID, int& rnMarginOfVictory);
 
+	bool	GetUnfinishedPoolCount (int& rnUnfinishedPoolCount);
 
 	bool	SetError (CString strError);
 
@@ -45,6 +48,8 @@ protected:
 protected:
 	CString				m_strError;
 	CMyCppSQLite3DBPtr	m_pDB;
+
+	int					m_nPoolSize = 5;	//  Our DB table design is not flexible enough to let us change this right now
 
 };
 

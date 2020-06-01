@@ -27,7 +27,7 @@ struct TableDefinitionStruct
 #define TBL_SONGS				L"Songs"
 #define TBL_SONGS_VER			1
 
-#define DB_COL_SONG_ID					L"ID"
+#define DB_COL_SONG_ID				L"ID"
 #define DB_COL_SONG_NAME			L"Name"
 #define DB_COL_PATH_TO_MP3			L"PathToMp3"
 
@@ -68,11 +68,15 @@ static TableDefinitionStruct VPTblGameHistory[] = {
 #define DB_COL_SONG_3_ID				L"Song3"
 #define DB_COL_SONG_4_ID				L"Song4"
 #define DB_COL_SONG_5_ID				L"Song5"
+#define DB_COL_POOL_FINISHED			L"Finished"
 
 static TableDefinitionStruct VPTblCurrentSchedule[] = {
 	{false,	false,	DB_COL_SONG_1_ID,				L"INTEGER",	VP_DEFAULT_UNUSED},
-	{false,	false,	DB_COL_SONG_2_ID,				L"INTEGER",	VP_DEFAULT_UNUSED},
-	{false,	false,	DB_COL_GAME_SCORE_MARGIN,		L"INTEGER",	VP_DEFAULT_UNUSED},
+	{false,	false,	DB_COL_SONG_2_ID,				L"INTEGER",	-1},
+	{false,	false,	DB_COL_SONG_3_ID,				L"INTEGER",	-1},
+	{false,	false,	DB_COL_SONG_4_ID,				L"INTEGER",	-1},
+	{false,	false,	DB_COL_SONG_5_ID,				L"INTEGER",	-1},
+	{false, false,  DB_COL_POOL_FINISHED,			L"INTEGER",  0},
 	{0,		0,		0,							0,					0}
 };
 

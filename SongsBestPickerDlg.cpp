@@ -6,7 +6,13 @@
 #include "SongsBestPicker.h"
 #include "SongsBestPickerDlg.h"
 #include "afxdialogex.h"
-#include <mciapi.h>
+
+#ifdef UseMci
+	#include <mciapi.h>
+#else
+	#include "MP3\Mp3.h"
+#endif
+
 #include "Utils.h"
 
 #ifdef _DEBUG
@@ -140,7 +146,7 @@ CString GetLastErrorAsString()
     size_t size = FormatMessage (FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
                                  NULL, errorMessageID, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPTSTR)&messageBuffer, 0, NULL);
 
-    CString message(messageBuffer, size);
+    CString message (messageBuffer, (int) size);
 
     //Free the buffer.
     LocalFree(messageBuffer);
@@ -187,13 +193,14 @@ CSongsBestPickerDlg::CSongsBestPickerDlg (CWnd* pParent /*=NULL*/)
 void CSongsBestPickerDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
-	DDX_Control(pDX, IDC_SONG_LIST,			m_oSongList);
-	DDX_Control(pDX, IDC_STATS,				m_oStatsList);
-	DDX_Control(pDX, IDC_CURRENT_POD_LIST,	m_oCurrentPodList);
-	DDX_Text(pDX, IDC_EDIT1,				m_strCurSongName);
-	DDX_Text(pDX, IDC_EDIT2,				m_strCurSongPathToMp3);
-	DDX_Text(pDX, IDC_SONG_POS,				m_strSongPlaybackPos);
-	DDX_Text(pDX, IDC_SONG_LENGTH,			m_strSongPlaybackLen);
+	DDX_Control(pDX, IDC_SONG_LIST, m_oSongList);
+	DDX_Control(pDX, IDC_STATS, m_oStatsList);
+	DDX_Control(pDX, IDC_CURRENT_POD_LIST, m_oCurrentPodList);
+	DDX_Text(pDX, IDC_EDIT1, m_strCurSongName);
+	DDX_Text(pDX, IDC_EDIT2, m_strCurSongPathToMp3);
+	DDX_Text(pDX, IDC_SONG_POS, m_strSongPlaybackPos);
+	DDX_Text(pDX, IDC_SONG_LENGTH, m_strSongPlaybackLen);
+	DDX_Control(pDX, IDC_PROGRESS1, m_oSongPlayingProgress);
 }
 
 BEGIN_MESSAGE_MAP(CSongsBestPickerDlg, CDialogEx)
@@ -213,6 +220,7 @@ BEGIN_MESSAGE_MAP(CSongsBestPickerDlg, CDialogEx)
 	ON_COMMAND(ID_IMPORTFROMM3UFILE,	OnImportFromM3UFile)
 	ON_COMMAND(ID_RESETSONGSTATISTICS,	OnResetSongStatistics)
 	ON_COMMAND(ID_DELETESONGLIST,		OnDeleteSongList)
+	ON_COMMAND(ID_SCHEDULEGAMES,		OnScheduleGames)
 
 	ON_WM_TIMER()
 	ON_NOTIFY(LVN_ITEMCHANGED, IDC_SONG_LIST, &CSongsBestPickerDlg::OnItemChangedSongList)
@@ -461,6 +469,10 @@ bool CSongsBestPickerDlg::AddHotkey (int nID, UINT nModifiers, UINT nVirtualKey,
 //************************************
 void CSongsBestPickerDlg::PlaySong (CString strFileToPlay)
 {
+	UpdateData ();
+
+
+#ifdef UseMci
 	//
 	//  Play our song...
 	//  Apparently this does not work with spaces in the filename, even with quotes.
@@ -488,7 +500,14 @@ void CSongsBestPickerDlg::PlaySong (CString strFileToPlay)
 
 			mciResult = mciSendString (L"play MediaFile from 0 notify", NULL, 0, m_hMainDlgWnd); //  wait
 			if (0 == mciResult)
+			{
 				m_eSongPlayingStatus = ESongPlayStatus::ePlaying;
+
+				int nSongLenSecs = GetSongLengthSecs ();
+				m_oSongPlayingProgress.SetRange32 (0, nSongLenSecs);
+				m_strSongPlaybackLen.Format (L"%d:%02d", nSongLenSecs / 60, nSongLenSecs % 60);
+				UpdateData (false);
+			}
 			else
 				TRACE (L"Error: %s\n", CUtils::GetMciErrorString (mciResult));
 		}
@@ -497,6 +516,22 @@ void CSongsBestPickerDlg::PlaySong (CString strFileToPlay)
 			TRACE (L"Error: %s\n", CUtils::GetMciErrorString (mciResult));
 		}
 	}
+#else
+
+	if (! m_oCurrentSong.Load (strFileToPlay))
+		TRACE (L"Error: Unable to load " + strFileToPlay);
+	else
+	{
+		if (m_oCurrentSong.Play ())
+			m_eSongPlayingStatus = ESongPlayStatus::ePlaying;
+	}
+
+	int nSongLenSecs = GetSongLengthSecs ();
+	m_strSongPlaybackLen.Format (L"%d:%02d", nSongLenSecs / 60, nSongLenSecs % 60);
+	UpdateData (false);
+
+#endif
+
 
 } // end play song
 
@@ -548,6 +583,68 @@ void CSongsBestPickerDlg::StopSong ()
 
 
 
+
+
+
+//************************************
+// Method:    GetSongLengthSecs
+// FullName:  CSongsBestPickerDlg::GetSongLengthSecs
+// Access:    public 
+// Returns:   int
+// Qualifier:
+//
+//
+//
+//************************************
+int CSongsBestPickerDlg::GetSongLengthSecs ()
+{
+#ifdef UseMci
+	CString strValue;
+	wchar_t* pBuffer = strValue.GetBuffer (128);
+	mciSendString (L"status MediaFile length wait", pBuffer, 128, NULL);
+	strValue.ReleaseBuffer ();
+	
+	int nLengthMS = 0;
+	if (CUtils::MyAtoI (strValue, nLengthMS))
+		return nLengthMS / 1000;
+	return 0;
+#else
+	int nSongLenSecs = (int) (m_oCurrentSong.GetDuration () / 10000000); // ten millionths of a second
+	return nSongLenSecs;
+#endif
+
+} // end CSongsBestPickerDlg::GetSongLengthSecs
+
+
+
+//************************************
+// Method:    GetSongPositionSecs
+// FullName:  CSongsBestPickerDlg::GetSongPositionSecs
+// Access:    public 
+// Returns:   int
+// Qualifier:
+//
+//
+//
+//************************************
+int CSongsBestPickerDlg::GetSongPositionSecs ()
+{
+#ifdef UseMci
+	CString strValue;
+	wchar_t* pBuffer = strValue.GetBuffer (128);
+	mciSendString (L"status MediaFile position wait", pBuffer, 128, NULL);
+	strValue.ReleaseBuffer ();
+	
+	int nLengthMS = 0;
+	if (CUtils::MyAtoI (strValue, nLengthMS))
+		return nLengthMS / 1000;
+	return 0;
+#else
+	int nSongLenSecs = (int) (m_oCurrentSong.GetCurrentPosition () / 10000000); // ten millionths of a second
+	return nSongLenSecs;
+#endif
+
+} // end CSongsBestPickerDlg::GetSongPositionSecs
 
 
 
@@ -744,26 +841,18 @@ void CSongsBestPickerDlg::UpdatePlayerStatus ()
 		return;
 
 	UpdateData ();
+	int nTimeSec = GetSongPositionSecs ();
 
-	CString strValue;
-	wchar_t* pBuffer = strValue.GetBuffer (128);
-	mciSendString (L"status MediaFile position wait", pBuffer, 128, NULL);
-	strValue.ReleaseBuffer ();
+	int nMinutes	= nTimeSec / 60;
+	int nSecRemain	= nTimeSec % 60;
 
-	int nTimeMS = 0;
-	if (CUtils::MyAtoI (strValue, nTimeMS))
-	{
-		int nTimeSec = (int) (nTimeMS / 1000);
+	m_strSongPlaybackPos.Format (L"%2d:%02d", nMinutes, nSecRemain);
+	m_oSongPlayingProgress.SetPos (nTimeSec);
+	UpdateData (false);
 
-		int nMinutes	= nTimeSec / 60;
-		int nSecRemain	= nTimeSec % 60;
 
-		m_strSongPlaybackPos.Format (L"%2d:%02d", nMinutes, nSecRemain);
-		UpdateData (false);
-	}
 
 #ifdef IfThisWorked
-
 	pBuffer = strValue.GetBuffer (128);
 	mciSendString (L"status MediaFile length wait", pBuffer, 128, NULL);
 	strValue.ReleaseBuffer ();
@@ -789,9 +878,27 @@ void CSongsBestPickerDlg::UpdatePlayerStatus ()
 	strValue.ReleaseBuffer ();
 	TRACE (L"start position: %s\n\n", strValue);
 #endif
-
 } // end CSongsBestPickerDlg::UpdatePlayerStatus
 
+
+
+
+//************************************
+// Method:    OnScheduleGames
+// FullName:  CSongsBestPickerDlg::OnScheduleGames
+// Access:    public 
+// Returns:   void
+// Qualifier:
+//
+//
+//
+//************************************
+void CSongsBestPickerDlg::OnScheduleGames ()
+{
+	if (! m_oSongManager.ScheduleMoreGames ())
+		AfxMessageBox (m_oSongManager.GetError (true));
+	
+} // end CSongsBestPickerDlg::OnScheduleGames
 
 
 
@@ -1045,14 +1152,14 @@ void CSongsBestPickerDlg::OnItemChangedSongList (NMHDR* pNMHDR, LRESULT* pResult
 
 			if (! m_strCurSongName.IsEmpty () && m_strCurSongName != m_strLastLoadedSongName)
 			{
-				int nSongID = m_oSongList.GetItemData (m_nCurSongListCtrlIndex);
+				int nSongID = (int) m_oSongList.GetItemData (m_nCurSongListCtrlIndex);
 
 				m_oSongManager.SetSongName (nSongID, m_strCurSongName);
 				m_oSongList.SetItemText (m_nCurSongListCtrlIndex, LIST_SONG_COL_NAME, m_strCurSongName);
 			}
 			if (! m_strCurSongPathToMp3.IsEmpty () && m_strCurSongPathToMp3 != m_strLastLoadedPathToMp3)
 			{
-				int nSongID = m_oSongList.GetItemData (m_nCurSongListCtrlIndex);
+				int nSongID = (int) m_oSongList.GetItemData (m_nCurSongListCtrlIndex);
 
 				m_oSongManager.SetSongPathToMp3 (nSongID, m_strLastLoadedPathToMp3);
 				m_oSongList.SetItemText (m_nCurSongListCtrlIndex, LIST_SONG_COL_MP3, m_strCurSongPathToMp3);

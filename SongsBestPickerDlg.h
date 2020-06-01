@@ -11,6 +11,11 @@
 #include "MyListCtrl.h"
 #include "ThreadPool.h"
 
+//#define UseMci
+#ifndef UseMci
+#include "MP3\Mp3.h"
+#endif
+
 enum class ESongPlayStatus {
 	eNotStarted,
 	ePlaying,
@@ -42,6 +47,7 @@ protected:
 	CMyListCtrl		m_oCurrentPodList;
 
 	CSongManager	m_oSongManager;
+	CProgressCtrl	m_oSongPlayingProgress;
 
 	int				m_nCurSongListCtrlIndex	= -1;
 	CString			m_strCurSongName,		m_strLastLoadedSongName;
@@ -51,9 +57,9 @@ protected:
 	CString			m_strSongPlaybackLen;
 
 	ESongPlayStatus	m_eSongPlayingStatus			= ESongPlayStatus::eNotStarted;
-	UINT			m_nSongPlayingStatusTimerID		= 0;
+	UINT_PTR		m_nSongPlayingStatusTimerID		= 0;
 
-
+	Mp3				m_oCurrentSong;
 
 
 	std::map<int, CString>	m_mapHotkeys;
@@ -74,6 +80,10 @@ public:
 	void	PlaySong (CString strFileToPlay);
 	void	PauseSong ();
 	void	StopSong ();
+	LRESULT	OnMciNotify (WPARAM wParam, LPARAM lParam);
+
+	int		GetSongLengthSecs ();
+	int		GetSongPositionSecs ();
 
 	void	ApplyHotkeys ();
 	void	RemoveHotkeys ();
@@ -89,14 +99,11 @@ public:
 	void	UpdateStatsForCurrentSong	(int nSongID = -1);
 	void	UpdatePlayerStatus			();
 
-	LRESULT	OnMciNotify (WPARAM wParam, LPARAM lParam);
 
-
+	void	OnScheduleGames ();
 
 	void	MoveWindowForHotkey (UINT nHotkey, int nLargeMoveMultiplier = 1, int nSmallMoveMultiplier = 1);
-
 	CString GetKeyName (unsigned int virtualKey);
-
 	void	OnHotKey(UINT nHotKeyId, UINT nKey1, UINT nKey2);
 
 	LRESULT	OnTrayNotification (WPARAM wParam, LPARAM lParam);

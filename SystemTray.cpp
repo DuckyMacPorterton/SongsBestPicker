@@ -147,13 +147,7 @@ void CSystemTray::Initialise()
 	m_pTargetWnd = NULL;
 	m_uCreationFlags = 0;
 
-#ifdef SYSTEMTRAY_USEW2K
-    OSVERSIONINFO os = { sizeof(os) };
-    GetVersionEx(&os);
-    m_bWin2K = ( VER_PLATFORM_WIN32_NT == os.dwPlatformId && os.dwMajorVersion >= 5 );
-#else
-    m_bWin2K = FALSE;
-#endif
+    m_bWin2K = true;
 }
 
 // update by Michael Dunn, November 1999
@@ -184,17 +178,7 @@ BOOL CSystemTray::Create(CWnd* pParent, UINT uCallbackMessage, LPCTSTR szToolTip
                          DWORD dwBalloonIcon /*=NIIF_NONE*/,
                          UINT uBalloonTimeout /*=10*/)
 {
-#ifdef _WIN32_WCE
-    m_bEnabled = TRUE;
-#else
-    // this is only for Windows 95 (or higher)
-    m_bEnabled = (GetVersion() & 0xff) >= 4;
-    if (!m_bEnabled) 
-    {
-        ASSERT(FALSE);
-        return FALSE;
-    }
-#endif
+    m_bEnabled = true; //  (GetVersion() & 0xff) >= 4;
 
     m_nMaxTooltipLength = _countof(m_tnd.szTip);
     
@@ -784,7 +768,7 @@ BEGIN_MESSAGE_MAP(CSystemTray, CWnd)
     ON_REGISTERED_MESSAGE(CSystemTray::m_nTaskbarCreatedMsg, OnTaskbarCreated)
 END_MESSAGE_MAP()
 
-void CSystemTray::OnTimer(UINT nIDEvent) 
+void CSystemTray::OnTimer (UINT_PTR nIDEvent) 
 {
     if (nIDEvent != m_uIDTimer)
     {
@@ -828,7 +812,7 @@ void CSystemTray::OnSettingChange(UINT uFlags, LPCTSTR lpszSection)
 }
 #endif
 
-LRESULT CSystemTray::OnTrayNotification(UINT wParam, LONG lParam) 
+LRESULT CSystemTray::OnTrayNotification (WPARAM wParam, LPARAM lParam) 
 {
     //Return quickly if its not for this tray icon
     if (wParam != m_tnd.uID)

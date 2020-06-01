@@ -79,6 +79,9 @@ bool CUtils::CreateDBTable (CString& rstrError, CMyCppSQLite3DBPtr pDB, CString 
 
 		strCol.Format (L"%s %s", TableInfo[i].strColumnName, TableInfo[i].strDataType);
 
+		if (TableInfo[i].nDefaultVal != VP_DEFAULT_UNUSED)
+			strCol += L" DEFAULT " + NumberToStringVP (TableInfo[i].nDefaultVal);
+
 		//
 		//  We write it this way because PRIMARY KEY is inherently unique so no need to check it for both.
 
@@ -798,6 +801,43 @@ bool CUtils::FindFile (CString& rstrPathToSong)
 
 
 
+
+//************************************
+// Method:    NumberToString
+// FullName:  CVPUtils::NumberToString
+// Access:    public static 
+// Returns:   CString
+// Qualifier:
+// Parameter: int nNumber
+//
+//  I've almost done this a billion times, never have.
+//  Makes it clean on the caller end to swap out a pretty
+//  print call where we just want the number non-pretty printed,
+//  but as a string.
+//
+//************************************
+/* static */ CString CUtils::NumberToStringVP (int nNumberToPrint, bool bOutputAsHex /* = false */, int nPadZeroTotalDigitCount /* = 0 */)
+{
+	CString strPretty;
+
+	if (bOutputAsHex)
+	{
+		if (nPadZeroTotalDigitCount > 0)
+			strPretty.Format (L"%0*X", nPadZeroTotalDigitCount, nNumberToPrint);
+		else
+			strPretty.Format (L"%X", nNumberToPrint);
+	}
+	else
+	{
+		if (nPadZeroTotalDigitCount > 0)
+			strPretty.Format (L"%0*d", nPadZeroTotalDigitCount, nNumberToPrint);
+		else
+			strPretty.Format (L"%d", nNumberToPrint);
+	}
+
+	return strPretty;
+
+} // end number to string
 
 
 //////////////////////////////////////////////////////////////////////

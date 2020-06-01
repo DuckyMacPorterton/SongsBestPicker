@@ -213,16 +213,16 @@ bool CSongManager::GetWonLossRecord (int nSongID, int& rnWins, int& rnLosses)
 
 		return true;
 	}
-	catch (CppSQLite3Exception& e)
-	{
+	catch (CppSQLite3Exception& e) {
 		return SetError (e.errorMessage ());
 	}
-	catch (CException* e)
-	{
+	catch (CException* e){
 		return SetError (CUtils::GetErrorMessageFromException (e, true));
 	}
-
 } // end CSongManager::GetWonLossRecord
+
+
+
 
 
 
@@ -344,12 +344,10 @@ bool CSongManager::GetSongCount (int& rnSongCount)
 		rnSongCount = m_pDB->execScalar (strQuery);
 		return true;
 	}
-	catch (CppSQLite3Exception& e)
-	{
+	catch (CppSQLite3Exception& e) {
 		return SetError (e.errorMessage ());
 	}
-	catch (CException* e)
-	{
+	catch (CException* e) {
 		return SetError (CUtils::GetErrorMessageFromException (e, true));
 	}
 } // end get song count
@@ -402,6 +400,54 @@ bool CSongManager::GetNextSong(CString& rstrSongName, CString& rstrPathToMp3, in
 
 
 
+
+
+
+
+
+//************************************
+// Method:    GetAllSongsInRandomOrder
+// FullName:  CSongManager::GetAllSongsInRandomOrder
+// Access:    public 
+// Returns:   bool
+// Qualifier:
+// Parameter: CArray<int> & rarrSongIDs
+//************************************
+bool CSongManager::GetAllSongsInRandomOrder (CArray<int>& rarrSongIDs)
+{
+	if (NULL == m_pDB)
+		return false;
+
+	try
+	{
+		rarrSongIDs.SetSize (0);
+
+		CString strQuery;
+		strQuery.Format (L"select %s from %s order by random()", DB_COL_SONG_ID, TBL_SONGS);
+	
+		CppSQLite3Query oQuery = m_pDB->execQuery (strQuery);
+		for (; !oQuery.eof (); oQuery.nextRow ())
+		{
+			rarrSongIDs.Add (oQuery.getIntField (0));
+		}
+
+		return true;
+	}
+	catch (CppSQLite3Exception& e)
+	{
+		return SetError (e.errorMessage ());
+	}
+	catch (CException* e)
+	{
+		return SetError (CUtils::GetErrorMessageFromException (e, true));
+	}
+
+} // end CSongManager::GetAllSongsInRandomOrder
+
+
+
+
+
 //************************************
 // Method:    SetSongName
 // FullName:  CSongManager::SetSongName
@@ -410,9 +456,6 @@ bool CSongManager::GetNextSong(CString& rstrSongName, CString& rstrPathToMp3, in
 // Qualifier:
 // Parameter: int nSongID
 // Parameter: CString strName
-//
-//
-//
 //************************************
 bool CSongManager::SetSongName (int nSongID, CString strSongName)
 {
@@ -444,6 +487,7 @@ bool CSongManager::SetSongName (int nSongID, CString strSongName)
 
 
 
+
 //************************************
 // Method:    SetSongPathToMp3
 // FullName:  CSongManager::SetSongPathToMp3
@@ -452,9 +496,6 @@ bool CSongManager::SetSongName (int nSongID, CString strSongName)
 // Qualifier:
 // Parameter: int nSongID
 // Parameter: CString strPathtoMp3
-//
-//
-//
 //************************************
 bool CSongManager::SetSongPathToMp3 (int nSongID, CString strPathtoMp3)
 {
@@ -485,6 +526,129 @@ bool CSongManager::SetSongPathToMp3 (int nSongID, CString strPathtoMp3)
 } // end CSongManager::SetSongPathToMp3
 
 
+
+//************************************
+// Method:    GetUnfinishedPoolCount
+// FullName:  CSongManager::GetUnfinishedPoolCount
+// Access:    public 
+// Returns:   bool
+// Qualifier:
+// Parameter: int & rnUnfinishedPoolCount
+//************************************
+bool CSongManager::GetUnfinishedPoolCount (int& rnUnfinishedPoolCount)
+{
+	if (NULL == m_pDB)
+		return false;
+
+	try
+	{
+		CString strQuery;
+		strQuery.Format (L"select count(*) from %s where %s=0", TBL_CURRENT_SCHEDULE, DB_COL_POOL_FINISHED);
+		rnUnfinishedPoolCount = m_pDB->execScalar (strQuery);
+		return true;
+	}
+	catch (CppSQLite3Exception& e) {
+		return SetError (e.errorMessage ());
+	}
+	catch (CException* e) {
+		return SetError (CUtils::GetErrorMessageFromException (e, true));
+	}
+} // end CSongManager::GetUnfinishedPoolCount
+
+
+
+
+
+//************************************
+// Method:    ScheduleMoreGames
+// FullName:  CSongManager::ScheduleMoreGames
+// Access:    public 
+// Returns:   bool
+// Qualifier:
+//************************************
+bool CSongManager::ScheduleMoreGames ()
+{
+	//
+	//  If there are still unfinished pools, don't schedule more games yet
+
+	if (NULL == m_pDB)
+		return false;
+
+	int nUnfinishedPools = 0;
+	if (!GetUnfinishedPoolCount (nUnfinishedPools) || (nUnfinishedPools > 0))
+		return false;
+
+	try
+	{
+		//
+		//  Ok, let's grab all the songs, then put them into buckets of 5 each.
+		//  At first, that'll be it.  If we have a bucket at the end with < 5 songs,
+		//  we'll go fill it out with songs we've already used.
+		//
+		//  Later, we'll look at minimizing rematches.  But for now...
+
+		CArray<int>	arrSongIDs;
+		if (!GetAllSongsInRandomOrder (arrSongIDs))
+			return false;
+
+		int nSongCount = (int) arrSongIDs.GetSize ();
+		if (nSongCount < m_nPoolSize)
+			m_nPoolSize = nSongCount;
+
+		//
+		//  Sweet!  They're randomized.  Just pull them out in order...  and since they're random, if
+		//  we need extras we can just pull from the front.
+
+		int nPools	= nSongCount / m_nPoolSize;
+		int nExtras = nSongCount % m_nPoolSize;
+
+		CString strQuery;
+		int		nSongIndex = 0;
+		for (int nPoolIndex = 0; nPoolIndex < nPools; nPoolIndex++)
+		{
+			strQuery.Format (L"insert into %s values (", TBL_CURRENT_SCHEDULE);
+			for (int i = 0; i < m_nPoolSize; i++, nSongIndex++)
+			{
+				if (i > 0)
+					strQuery += L", ";
+				strQuery += CUtils::NumberToStringVP (arrSongIDs[nSongIndex]);
+			}
+
+			strQuery += L", 0);";
+
+			m_pDB->execDML (strQuery);
+		} // end loop to store pools in DB
+
+		//
+		//  Now any extras
+
+		if (nExtras > 0)
+		{
+			strQuery.Format (L"insert into %s values (", TBL_CURRENT_SCHEDULE);
+			for (int i = 0; i < m_nPoolSize; i++, nSongIndex++)
+			{
+				if (i > 0)
+					strQuery += L", ";
+
+				if (nSongIndex < nSongCount)
+					strQuery += CUtils::NumberToStringVP (arrSongIDs[nSongIndex]);
+				else
+					strQuery += CUtils::NumberToStringVP (arrSongIDs[nSongIndex % nSongCount]);	//  So, wraps around and gives us indexes 0, 1, 2, etc
+			}
+
+			strQuery += L", 0);";
+			m_pDB->execDML (strQuery);
+		} // end if we have an extra pool to finish up
+
+		return true;
+	}
+	catch (CppSQLite3Exception& e) {
+		return SetError (e.errorMessage ());
+	}
+	catch (CException* e) {
+		return SetError (CUtils::GetErrorMessageFromException (e, true));
+	}
+} // end CSongManager::ScheduleMoreGames
 
 
 
