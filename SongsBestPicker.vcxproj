@@ -81,6 +81,7 @@
     <OutDir>$(SolutionDir)..\Run\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)..\Build\$(Configuration)\</IntDir>
     <LibraryPath>C:\Program Files (x86)\FMOD SoundSystem\FMOD Studio API Windows\api\core\lib\x64;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\\Program Files (x86)\\FMOD SoundSystem\\FMOD Studio API Windows\\api\\core\\inc;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -92,6 +93,7 @@
     <OutDir>$(SolutionDir)..\Run\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)..\Build\$(Configuration)\</IntDir>
     <LibraryPath>C:\Program Files (x86)\FMOD SoundSystem\FMOD Studio API Windows\api\core\lib\x64;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\\Program Files (x86)\\FMOD SoundSystem\\FMOD Studio API Windows\\api\\core\\inc;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -190,7 +192,6 @@
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="MP3\Mp3.h" />
     <ClInclude Include="MyListCtrl.h" />
     <ClInclude Include="SqlDefs.h" />
     <ClInclude Include="Song.h" />
@@ -211,7 +212,6 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="MP3\Mp3.cpp" />
     <ClCompile Include="MyListCtrl.cpp" />
     <ClCompile Include="Song.cpp" />
     <ClCompile Include="SongManager.cpp" />

@@ -7,18 +7,6 @@
 #include "SongsBestPickerDlg.h"
 #include "afxdialogex.h"
 
-
-#include "C:\\Program Files (x86)\\FMOD SoundSystem\\FMOD Studio API Windows\\api\\core\\inc\\fmod.hpp"
-//#include "C:\\Program Files (x86)\\FMOD SoundSystem\\FMOD Studio API Windows\\api\\core\\inc\\common.h"
-
-
-
-#ifdef UseMci
-	#include <mciapi.h>
-#else
-	#include "MP3\Mp3.h"
-#endif
-
 #include "Utils.h"
 
 #ifdef _DEBUG
@@ -208,8 +196,6 @@ BEGIN_MESSAGE_MAP(CSongsBestPickerDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_PAUSE_SONG,	&CSongsBestPickerDlg::PauseSong)
 	ON_BN_CLICKED(IDC_STOP_SONG,	&CSongsBestPickerDlg::StopSong)
 
-	ON_MESSAGE (MM_MCINOTIFY,			OnMciNotify)
-
 	ON_NOTIFY(HDN_ITEMDBLCLICK, 0, &CSongsBestPickerDlg::OnSongHeaderDblClick)
 	ON_BN_CLICKED(IDC_SUBMIT_POD_RANKINGS, &CSongsBestPickerDlg::OnBnClickedSubmitPodRankings)
 	ON_BN_CLICKED(IDC_BROWSE_FOR_SONG, &CSongsBestPickerDlg::OnBnClickedBrowseForSong)
@@ -266,6 +252,17 @@ BOOL CSongsBestPickerDlg::OnInitDialog()
 
 	m_oTrayIcon.Create (this, ID_MY_NOTIFY, L"Songs Best Picker!", m_hIcon, IDR_MENU_DOUGS_HOTKEYS);
 
+	//
+	//  Our playback system
+
+	
+	void*		pExtraDriverData = NULL;
+	FMOD_RESULT result = FMOD::System_Create (&m_pFmodSystem);
+	if (result == FMOD_OK)
+		result = m_pFmodSystem->init (32, FMOD_INIT_NORMAL, pExtraDriverData);
+
+	if (result != FMOD_OK)
+		AfxMessageBox (L"Error initializing playback system: " + CUtils::UTF8toUTF16 (FMOD_ErrorString (result)));
 
 	//
 	//  And apply the hotkeys
@@ -468,160 +465,49 @@ void CSongsBestPickerDlg::PlaySong (CString strFileToPlay /* = L"" */)
 {
 	UpdateData ();
 
-	if (strFileToPlay.IsEmpty ())
+	if (strFileToPlay.IsEmpty () && NULL != m_pFmodChannel)
 	{
 		//
 		//  If we're paused, just try to resume
 
 		if (m_eSongPlayingStatus == ESongPlayStatus::ePaused)
 		{
-			FMOD::System* system;
-			FMOD::Sound* sound1	= NULL;
-			FMOD::Channel* channel = 0;
-			FMOD_RESULT       result;
-			void* extradriverdata = 0;
-
-			/*
-				Create a System object and initialize
-			*/
-			result = FMOD::System_Create(&system);
-			result = system->init(32, FMOD_INIT_NORMAL, extradriverdata);
-			result = system->createSound(CUtils::UTF16toUTF8 (strFileToPlay), FMOD_DEFAULT, 0, &sound1);
-
-			result = sound1->setMode(FMOD_LOOP_OFF);    /* drumloop.wav has embedded loop points which automatically makes looping turn on, */
-//			ERRCHECK(result);                           /* so turn it off here.  We could have also just put FMOD_LOOP_OFF in the above CreateSound call. */
-
-			result = system->playSound(sound1, 0, false, &channel);
-
-
-//			mciSendString (L"resume MediaFile", NULL, 0, NULL);
+			m_pFmodChannel->setPaused (false);
 			m_eSongPlayingStatus = ESongPlayStatus::ePlaying;
 			return;
-		}
-
-		strFileToPlay = m_strCurSongPathToMp3;
+		}	
 	}
 
+	strFileToPlay = m_strCurSongPathToMp3;
 	if (strFileToPlay.IsEmpty ())
 		return;
 
+	//
+	//  Play it!
+	
+	FMOD_RESULT result = m_pFmodSystem->createSound (CUtils::UTF16toUTF8 (m_strCurSongPathToMp3), FMOD_DEFAULT, 0, &m_pCurSong);
+	if (result != FMOD_OK) {
+		m_eSongPlayingStatus = ESongPlayStatus::eStopped;
+		AfxMessageBox (L"Error loading song: " + CUtils::UTF8toUTF16 (FMOD_ErrorString (result)) + L"\r\n\r\n" + m_strCurSongPathToMp3);
+		return;
+	}
 
-#ifdef UseMci
-	FMOD::System* system;
-	FMOD::Sound* sound1 = NULL;
-	FMOD::Channel* channel = 0;
-	FMOD_RESULT       result;
-	void* extradriverdata = 0;
-
-	/*
-		Create a System object and initialize
-	*/
-	result = FMOD::System_Create(&system);
-	result = system->init(32, FMOD_INIT_NORMAL, extradriverdata);
-	result = system->createSound(CUtils::UTF16toUTF8 (m_strCurSongPathToMp3), FMOD_DEFAULT, 0, &sound1);
-
-	result = sound1->setMode(FMOD_LOOP_OFF);    /* drumloop.wav has embedded loop points which automatically makes looping turn on, */
-//			ERRCHECK(result);                           /* so turn it off here.  We could have also just put FMOD_LOOP_OFF in the above CreateSound call. */
-
-	result = system->playSound(sound1, 0, false, &channel);
-
-
-	//			mciSendString (L"resume MediaFile", NULL, 0, NULL);
+	result = m_pFmodSystem->playSound (m_pCurSong, 0, false, &m_pFmodChannel);
 	m_eSongPlayingStatus = ESongPlayStatus::ePlaying;
-	return;
 
-
-
-
-
-	sweet!  fmod works.  Plays "father's day"
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-	//
-	//  Play our song...
-	//  Apparently this does not work with spaces in the filename, even with quotes.
-
-	mciSendString (L"close all", NULL, 0, NULL);
-
-	//
-	//  Now actually try to play our file
-
-	CString		strShortFilename;
-	wchar_t* pBuffer = strShortFilename.GetBuffer (MAX_PATH);
-
-	if (0 != GetShortPathName (strFileToPlay, pBuffer, MAX_PATH))
-	{
-		strShortFilename.ReleaseBuffer ();
-
-		CString strOpenCmd;
-		strOpenCmd.Format (L"open \"%s\" alias MediaFile", strShortFilename);	 // mpegvideo 
-		MCIERROR mciResult = mciSendString (strOpenCmd, NULL, 0, NULL);
-		if (0 == mciResult)
-		{
-			mciResult = mciSendString (L"set MediaFile time format milliseconds", NULL, 0, NULL);
-			if (0 != mciResult)
-				TRACE (L"Error: %s\n", CUtils::GetMciErrorString (mciResult));
-
-			mciResult = mciSendString (L"play MediaFile from 0 notify", NULL, 0, m_hMainDlgWnd); //  wait
-			if (0 == mciResult)
-			{
-				m_eSongPlayingStatus = ESongPlayStatus::ePlaying;
-
-				int nSongLenSecs = GetSongLengthSecs ();
-				m_oSongPlayingProgress.SetRange32 (0, nSongLenSecs);
-				m_strSongPlaybackLen.Format (L"%d:%02d", nSongLenSecs / 60, nSongLenSecs % 60);
-				UpdateData (false);
-			}
-			else
-				TRACE (L"Error: %s\n", CUtils::GetMciErrorString (mciResult));
-		}
-		else
-		{
-			TRACE (L"Error: %s\n", CUtils::GetMciErrorString (mciResult));
-		}
-	}
-#else
-
-	if (! m_oCurrentSong.Load (strFileToPlay))
-		TRACE (L"Error: Unable to load " + strFileToPlay);
-	else
-	{
-		if (m_oCurrentSong.Play ())
-			m_eSongPlayingStatus = ESongPlayStatus::ePlaying;
+	UINT nSongLenMS = 0;
+	result = m_pCurSong->getLength (&nSongLenMS, FMOD_TIMEUNIT_MS);
+	if (result != FMOD_OK) {
+//		AfxMessageBox (L"Error loading song: " + CUtils::UTF8toUTF16 (FMOD_ErrorString (result)) + L"\r\n\r\n" + m_strCurSongPathToMp3);
+		return;
 	}
 
-	int nSongLenSecs = GetSongLengthSecs ();
-	m_strSongPlaybackLen.Format (L"%d:%02d", nSongLenSecs / 60, nSongLenSecs % 60);
+	int nSongLenSec = nSongLenMS / 1000;
+
+	m_strSongPlaybackLen.Format (L"%d:%02d", nSongLenSec / 60, nSongLenSec % 60);
 	UpdateData (false);
 
-#endif
-
-
 } // end play song
-
-
-
 
 
 
@@ -631,13 +517,13 @@ void CSongsBestPickerDlg::PlaySong (CString strFileToPlay /* = L"" */)
 // Access:    public 
 // Returns:   void
 // Qualifier:
-//
-//
-//
 //************************************
 void CSongsBestPickerDlg::PauseSong ()
 {
-	mciSendString (L"pause MediaFile", NULL, 0, NULL);
+	if (NULL == m_pFmodChannel)
+		return;
+
+	m_pFmodChannel->setPaused (false);
 	m_eSongPlayingStatus = ESongPlayStatus::ePaused;
 
 } // end CSongsBestPickerDlg::PauseSong
@@ -650,88 +536,12 @@ void CSongsBestPickerDlg::PauseSong ()
 // Access:    public 
 // Returns:   void
 // Qualifier:
-//
-//
-//
 //************************************
 void CSongsBestPickerDlg::StopSong ()
 {
-	mciSendString (L"stop MediaFile", NULL, 0, NULL);
-	m_eSongPlayingStatus = ESongPlayStatus::eStopped;
+	m_pFmodChannel->stop ();
 
 } // end CSongsBestPickerDlg::StopSong
-
-
-
-
-
-
-
-
-
-
-
-
-
-//************************************
-// Method:    GetSongLengthSecs
-// FullName:  CSongsBestPickerDlg::GetSongLengthSecs
-// Access:    public 
-// Returns:   int
-// Qualifier:
-//
-//
-//
-//************************************
-int CSongsBestPickerDlg::GetSongLengthSecs ()
-{
-#ifdef UseMci
-	CString strValue;
-	wchar_t* pBuffer = strValue.GetBuffer (128);
-	mciSendString (L"status MediaFile length wait", pBuffer, 128, NULL);
-	strValue.ReleaseBuffer ();
-	
-	int nLengthMS = 0;
-	if (CUtils::MyAtoI (strValue, nLengthMS))
-		return nLengthMS / 1000;
-	return 0;
-#else
-	int nSongLenSecs = (int) (m_oCurrentSong.GetDuration () / 10000000); // ten millionths of a second
-	return nSongLenSecs;
-#endif
-
-} // end CSongsBestPickerDlg::GetSongLengthSecs
-
-
-
-//************************************
-// Method:    GetSongPositionSecs
-// FullName:  CSongsBestPickerDlg::GetSongPositionSecs
-// Access:    public 
-// Returns:   int
-// Qualifier:
-//
-//
-//
-//************************************
-int CSongsBestPickerDlg::GetSongPositionSecs ()
-{
-#ifdef UseMci
-	CString strValue;
-	wchar_t* pBuffer = strValue.GetBuffer (128);
-	mciSendString (L"status MediaFile position wait", pBuffer, 128, NULL);
-	strValue.ReleaseBuffer ();
-	
-	int nLengthMS = 0;
-	if (CUtils::MyAtoI (strValue, nLengthMS))
-		return nLengthMS / 1000;
-	return 0;
-#else
-	int nSongLenSecs = (int) (m_oCurrentSong.GetCurrentPosition () / 10000000); // ten millionths of a second
-	return nSongLenSecs;
-#endif
-
-} // end CSongsBestPickerDlg::GetSongPositionSecs
 
 
 
@@ -1019,43 +829,22 @@ void CSongsBestPickerDlg::UpdatePlayerStatus ()
 		return;
 
 	UpdateData ();
-	int nTimeSec = GetSongPositionSecs ();
 
-	int nMinutes	= nTimeSec / 60;
-	int nSecRemain	= nTimeSec % 60;
+	UINT nCurPosMS = 0;
+	auto result = m_pFmodChannel->getPosition (&nCurPosMS, FMOD_TIMEUNIT_MS);
+	if (result != FMOD_OK) {
+		AfxMessageBox (L"Error loading song: " + CUtils::UTF8toUTF16 (FMOD_ErrorString (result)) + L"\r\n\r\n" + m_strCurSongPathToMp3);
+		return;
+	}
+
+	int nCurPosSec	= nCurPosMS / 1000;
+	int nMinutes	= nCurPosSec / 60;
+	int nSecRemain	= nCurPosSec % 60;
 
 	m_strSongPlaybackPos.Format (L"%2d:%02d", nMinutes, nSecRemain);
-	m_oSongPlayingProgress.SetPos (nTimeSec);
+	m_oSongPlayingProgress.SetPos (nCurPosSec);
 	UpdateData (false);
 
-
-
-#ifdef IfThisWorked
-	pBuffer = strValue.GetBuffer (128);
-	mciSendString (L"status MediaFile length wait", pBuffer, 128, NULL);
-	strValue.ReleaseBuffer ();
-	TRACE (L"length: %s\n", strValue);
-
-	pBuffer = strValue.GetBuffer (128);
-	mciSendString (L"status MediaFile time format wait", pBuffer, 128, NULL);
-	strValue.ReleaseBuffer ();
-	TRACE (L"time format: %s\n", strValue);
-
-	pBuffer = strValue.GetBuffer (128);
-	mciSendString (L"status MediaFile position start", pBuffer, 128, NULL);
-	strValue.ReleaseBuffer ();
-	TRACE (L"position start: %s\n", strValue);
-
-	pBuffer = strValue.GetBuffer (128);
-	mciSendString (L"status MediaFile postroll duration", pBuffer, 128, NULL);
-	strValue.ReleaseBuffer ();
-	TRACE (L"postroll duration: %s\n", strValue);
-
-	pBuffer = strValue.GetBuffer (128);
-	mciSendString (L"status MediaFile start position", pBuffer, 128, NULL);
-	strValue.ReleaseBuffer ();
-	TRACE (L"start position: %s\n\n", strValue);
-#endif
 } // end CSongsBestPickerDlg::UpdatePlayerStatus
 
 
@@ -1541,52 +1330,6 @@ void CSongsBestPickerDlg::OnBnClickedPlaySong ()
 
 } // end on play song
 
-
-
-
-
-
-
-//************************************
-// Method:    OnMciNotify
-// FullName:  CSongsBestPickerDlg::OnMciNotify
-// Access:    public 
-// Returns:   LRESULT
-// Qualifier:
-// Parameter: WPARAM wParam
-// Parameter: LPARAM lParam
-//
-//
-//
-//************************************
-LRESULT CSongsBestPickerDlg::OnMciNotify (WPARAM wParam, LPARAM lParam)
-{
-	switch (wParam)
-	{
-	case MCI_NOTIFY_SUCCESSFUL:
-		//
-		//  For "Play", successful means it's finished playing
-
-		m_eSongPlayingStatus = ESongPlayStatus::eStopped;
-		SetNextSongActive ();
-
-		break;
-	case MCI_NOTIFY_FAILURE:
-		TRACE (L"Failure\n");
-		break;
-	case MCI_NOTIFY_ABORTED:
-		TRACE (L"Aborted\n");
-		break;
-	case MCI_NOTIFY_SUPERSEDED:
-		TRACE (L"Superseded\n");
-		break;
-	default:
-		TRACE (L"%d\n", (int) wParam);
-	}
-
-	return true;
-
-} // end CSongsBestPickerDlg::OnMciNotify
 
 
 

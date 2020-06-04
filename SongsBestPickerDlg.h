@@ -11,10 +11,8 @@
 #include "MyListCtrl.h"
 #include "ThreadPool.h"
 
-#define UseMci
-#ifndef UseMci
-#include "MP3\Mp3.h"
-#endif
+#include "fmod.hpp"
+#include "fmod_errors.h"
 
 enum class ESongPlayStatus {
 	eNotStarted,
@@ -61,16 +59,18 @@ protected:
 	//
 	//  Playback info
 
+	FMOD::System*	m_pFmodSystem	= NULL;
+	FMOD::Sound*	m_pCurSong		= NULL;
+	FMOD::Channel*	m_pFmodChannel	= NULL;
+
+
+
 	CString			m_strSongPlaybackPos;
 	CString			m_strSongPlaybackLen;
 	CProgressCtrl	m_oSongPlayingProgress;
 
 	ESongPlayStatus	m_eSongPlayingStatus			= ESongPlayStatus::eNotStarted;
 	UINT_PTR		m_nSongPlayingStatusTimerID		= 0;
-
-#ifndef UseMci
-	Mp3				m_oCurrentSong;
-#endif
 
 	std::map<int, CString>	m_mapHotkeys;
 	bool					m_bHotkeysApplied = false;
@@ -91,10 +91,6 @@ public:
 	void	PlaySong (CString strFileToPlay = L"");
 	void	PauseSong ();
 	void	StopSong ();
-	LRESULT	OnMciNotify (WPARAM wParam, LPARAM lParam);
-
-	int		GetSongLengthSecs ();
-	int		GetSongPositionSecs ();
 
 	void	ApplyHotkeys ();
 	void	RemoveHotkeys ();
