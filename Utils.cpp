@@ -80,7 +80,7 @@ bool CUtils::CreateDBTable (CString& rstrError, CMyCppSQLite3DBPtr pDB, CString 
 		strCol.Format (L"%s %s", TableInfo[i].strColumnName, TableInfo[i].strDataType);
 
 		if (TableInfo[i].nDefaultVal != VP_DEFAULT_UNUSED)
-			strCol += L" DEFAULT " + NumberToStringVP (TableInfo[i].nDefaultVal);
+			strCol += L" DEFAULT " + NumberToString (TableInfo[i].nDefaultVal);
 
 		//
 		//  We write it this way because PRIMARY KEY is inherently unique so no need to check it for both.
@@ -816,7 +816,7 @@ bool CUtils::FindFile (CString& rstrPathToSong)
 //  but as a string.
 //
 //************************************
-/* static */ CString CUtils::NumberToStringVP (int nNumberToPrint, bool bOutputAsHex /* = false */, int nPadZeroTotalDigitCount /* = 0 */)
+/* static */ CString CUtils::NumberToString (int nNumberToPrint, bool bOutputAsHex /* = false */, int nPadZeroTotalDigitCount /* = 0 */)
 {
 	CString strPretty;
 

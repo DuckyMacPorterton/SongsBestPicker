@@ -7,6 +7,12 @@
 #include "SongsBestPickerDlg.h"
 #include "afxdialogex.h"
 
+
+#include "C:\\Program Files (x86)\\FMOD SoundSystem\\FMOD Studio API Windows\\api\\core\\inc\\fmod.hpp"
+//#include "C:\\Program Files (x86)\\FMOD SoundSystem\\FMOD Studio API Windows\\api\\core\\inc\\common.h"
+
+
+
 #ifdef UseMci
 	#include <mciapi.h>
 #else
@@ -353,7 +359,8 @@ void CSongsBestPickerDlg::OnBnClickedOk()
 
 void CSongsBestPickerDlg::OnBnClickedCancel()
 {
-	OnBnClickedOk ();
+	m_oTrayIcon.MinimiseToTray (this);	
+//	OnBnClickedOk ();
 }
 
 
@@ -466,9 +473,28 @@ void CSongsBestPickerDlg::PlaySong (CString strFileToPlay /* = L"" */)
 		//
 		//  If we're paused, just try to resume
 
-		if (m_eSongPlayingStatus  == ESongPlayStatus::ePaused)
+		if (m_eSongPlayingStatus == ESongPlayStatus::ePaused)
 		{
-			mciSendString (L"resume MediaFile", NULL, 0, NULL);
+			FMOD::System* system;
+			FMOD::Sound* sound1	= NULL;
+			FMOD::Channel* channel = 0;
+			FMOD_RESULT       result;
+			void* extradriverdata = 0;
+
+			/*
+				Create a System object and initialize
+			*/
+			result = FMOD::System_Create(&system);
+			result = system->init(32, FMOD_INIT_NORMAL, extradriverdata);
+			result = system->createSound(CUtils::UTF16toUTF8 (strFileToPlay), FMOD_DEFAULT, 0, &sound1);
+
+			result = sound1->setMode(FMOD_LOOP_OFF);    /* drumloop.wav has embedded loop points which automatically makes looping turn on, */
+//			ERRCHECK(result);                           /* so turn it off here.  We could have also just put FMOD_LOOP_OFF in the above CreateSound call. */
+
+			result = system->playSound(sound1, 0, false, &channel);
+
+
+//			mciSendString (L"resume MediaFile", NULL, 0, NULL);
 			m_eSongPlayingStatus = ESongPlayStatus::ePlaying;
 			return;
 		}
@@ -481,6 +507,57 @@ void CSongsBestPickerDlg::PlaySong (CString strFileToPlay /* = L"" */)
 
 
 #ifdef UseMci
+	FMOD::System* system;
+	FMOD::Sound* sound1 = NULL;
+	FMOD::Channel* channel = 0;
+	FMOD_RESULT       result;
+	void* extradriverdata = 0;
+
+	/*
+		Create a System object and initialize
+	*/
+	result = FMOD::System_Create(&system);
+	result = system->init(32, FMOD_INIT_NORMAL, extradriverdata);
+	result = system->createSound(CUtils::UTF16toUTF8 (m_strCurSongPathToMp3), FMOD_DEFAULT, 0, &sound1);
+
+	result = sound1->setMode(FMOD_LOOP_OFF);    /* drumloop.wav has embedded loop points which automatically makes looping turn on, */
+//			ERRCHECK(result);                           /* so turn it off here.  We could have also just put FMOD_LOOP_OFF in the above CreateSound call. */
+
+	result = system->playSound(sound1, 0, false, &channel);
+
+
+	//			mciSendString (L"resume MediaFile", NULL, 0, NULL);
+	m_eSongPlayingStatus = ESongPlayStatus::ePlaying;
+	return;
+
+
+
+
+
+	sweet!  fmod works.  Plays "father's day"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	//
 	//  Play our song...
 	//  Apparently this does not work with spaces in the filename, even with quotes.
@@ -822,7 +899,7 @@ void CSongsBestPickerDlg::UpdateCurrentPod (int nSongID /* = -1 */)
 			m_nCurSongID = arrSongIDs[i];
 		}
 
-		int nListCtrlIndex = m_oCurrentPodList.InsertItem (i, CUtils::NumberToStringVP (i + 1));
+		int nListCtrlIndex = m_oCurrentPodList.InsertItem (i, CUtils::NumberToString (i + 1));
 		m_oCurrentPodList.SetItemText (nListCtrlIndex, LIST_POD_COL_NAME, strSongName);
 		m_oCurrentPodList.SetItemData (nListCtrlIndex, arrSongIDs[i]);
 
@@ -851,28 +928,44 @@ bool CSongsBestPickerDlg::SetSongRank (int nRank)
 		return false;
 
 	//
-	//  Let's just re-label our song, then call sort...
+	//  Let's just re-label our song, then call sort... actually, 
+	//  InsertItem will insert it sorted for us.
 
 	m_oCurrentPodList.SetRedraw (false);
+
+	CString strSongWeMoved;
+	int		nSongIdWeMoved = -1;
+
 	for (int i = 0; i < m_oCurrentPodList.GetItemCount (); i ++)
 	{
 		int nListCtrlSongID = (int) m_oCurrentPodList.GetItemData (i);
 		if (nListCtrlSongID == m_nCurSongID)
 		{
-			m_oCurrentPodList.SetItemText (i, LIST_POD_COL_RANK, CUtils::NumberToStringVP (nRank));
+			strSongWeMoved = m_oCurrentPodList.GetItemText (i, LIST_POD_COL_NAME);
+			m_oCurrentPodList.DeleteItem (i);
 			break;
 		}
 	}
 
-	//
-	//  Now the other rows rank # is wrong
-
-	for (int i = nRank; i < m_oCurrentPodList.GetItemCount (); i ++)
+	for (int i = 0; i < m_oCurrentPodList.GetItemCount (); i ++)
 	{
-		m_oCurrentPodList.SetItemText (i, LIST_POD_COL_RANK, CUtils::NumberToStringVP (i + 1));
+		if (i < (nRank-1))
+			m_oCurrentPodList.SetItemText (i, LIST_POD_COL_RANK, CUtils::NumberToString (i + 1));
+		else 
+			m_oCurrentPodList.SetItemText (i, LIST_POD_COL_RANK, CUtils::NumberToString (i + 1 + 1));	// Extra + 1 because we'll insert one before these
 	}
 
-	m_oCurrentPodList.SortItems (ComparePodSongRank, (DWORD_PTR) this);
+	//
+	//  And put our newly re-ranked song back in.  List will sort it by the song rank so will be in the right order.
+
+	int nIndex = m_oCurrentPodList.InsertItem (nRank - 1, CUtils::NumberToString (nRank));
+	m_oCurrentPodList.SetItemText (nIndex, LIST_POD_COL_NAME, strSongWeMoved);
+	m_oCurrentPodList.SetItemData (nIndex, m_nCurSongID);
+
+	m_oCurrentPodList.SelectItem (nIndex, true);	//  We don't have to unselect anything since this song was selected before we deleted it
+
+	//
+	//  Have it redraw itself
 
 	m_oCurrentPodList.SetRedraw (true);
 	m_oCurrentPodList.Invalidate ();
@@ -1094,16 +1187,34 @@ bool CSongsBestPickerDlg::SetNextSongActive ()
 	if (-1 != nListCtrlIndex)
 		m_oCurrentPodList.UnselectItem (nListCtrlIndex);
 
-	int nNextToSelect	= m_oCurrentPodList.GetNextItem (nListCtrlIndex, LVNI_BELOW);
-	
-	int nSongID = -1;
-	if (-1 != nNextToSelect) {
-		nSongID = (int) m_oCurrentPodList.GetItemData (nNextToSelect);
+	//
+	//  Remember, we go in order the songs are in the database, NOT the current
+	//  ranking of the pod.  
+
+	CIntArray arrCurrentPodSongIDs;
+	if (! m_oSongManager.GetCurrentPod (arrCurrentPodSongIDs))
+		return false;
+
+	int nNextSongID = -1;
+	for (int i = 0; i < arrCurrentPodSongIDs.GetSize (); i ++)
+	{
+		if (arrCurrentPodSongIDs[i] == m_nCurSongID)
+		{
+			//
+			//  Aha!
+
+			if (i < (arrCurrentPodSongIDs.GetSize () - 1))
+				nNextSongID = arrCurrentPodSongIDs[i + 1];
+			else if (arrCurrentPodSongIDs.GetSize () > 0)
+				nNextSongID = arrCurrentPodSongIDs[0];
+			else
+				return false;
+		}
 	}
 
-	m_oCurrentPodList.SelectItem (nNextToSelect, true);
+	m_oCurrentPodList.SelectItem (m_oCurrentPodList.FindByItemData (nNextSongID));
 
-	LoadSongIntoPlayer (nSongID);
+	LoadSongIntoPlayer (nNextSongID);
 	PlaySong ();	// No arg plays the current song... which we just loaded
 	return true;
 
@@ -1548,7 +1659,7 @@ int CSongsBestPickerDlg::ComparePodSongRank (LPARAM lParam1, LPARAM lParam2, LPA
 
 
 
-int CSongsBestPickerDlg::ComparePodSongRank (LPARAM lParam1, LPARAM lParam2, LPARAM lParamSort)
+int CSongsBestPickerDlg::CompareSongListCtrl (LPARAM lParam1, LPARAM lParam2, LPARAM lParamSort)
 {
 	//  It's passing in the GetItemData number to us...  we're sorting on that
 	//  anyway.

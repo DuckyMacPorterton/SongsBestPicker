@@ -701,7 +701,7 @@ bool CSongManager::ScheduleMorePods ()
 			{
 				if (i > 0)
 					strQuery += L", ";
-				strQuery += CUtils::NumberToStringVP (arrSongIDs[nSongIndex]);
+				strQuery += CUtils::NumberToString (arrSongIDs[nSongIndex]);
 			}
 
 			strQuery += L", 0);";
@@ -721,7 +721,7 @@ bool CSongManager::ScheduleMorePods ()
 					strQuery += L", ";
 
 				if (nSongIndex < nSongCount)
-					strQuery += CUtils::NumberToStringVP (arrSongIDs[nSongIndex]);
+					strQuery += CUtils::NumberToString (arrSongIDs[nSongIndex]);
 				else
 				{
 					//
@@ -739,7 +739,7 @@ bool CSongManager::ScheduleMorePods ()
 					if (nUseThisSongIndex > nSongCount)
 						nUseThisSongIndex = 0;
 
-					strQuery += CUtils::NumberToStringVP (arrSongIDs[nUseThisSongIndex]);	//  So, wraps around and gives us indexes 0, 1, 2, etc
+					strQuery += CUtils::NumberToString (arrSongIDs[nUseThisSongIndex]);	//  So, wraps around and gives us indexes 0, 1, 2, etc
 				}
 			}
 

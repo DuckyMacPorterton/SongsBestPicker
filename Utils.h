@@ -37,7 +37,7 @@ public:
 	static bool		DetectCodePageForString (char* pText, UINT& rnCodePage, UINT nDefaultCodePage = CP_UTF8, UINT nDefaultFlags = MLDETECTCP_8BIT);
 
 	static bool		MyAtoI (CString str, int& rnValFound, bool bRequireMatchEntireString = true);
-	static CString	NumberToStringVP (int nNumber,		bool bOutputAsHex = false, int nPadZeroTotalDigitCount = 0);
+	static CString	NumberToString (int nNumber,		bool bOutputAsHex = false, int nPadZeroTotalDigitCount = 0);
 
 
 	static bool		FileExists (CString strName);
