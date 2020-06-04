@@ -237,6 +237,8 @@
     <None Include="res\SongsBestPicker.rc2" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="res\icon1.ico" />
+    <Image Include="res\Music.ico" />
     <Image Include="res\SongsBestPicker.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -24,7 +24,7 @@ public:
 	bool	InitSongsFromTextFile	(CString strTextFile, EFileFormat eFileFormat, bool bOverwriteExistingData = false);
 	bool	DeleteAllSongs			();
 
-	bool	ScheduleMoreGames ();
+	bool	ScheduleMorePods ();
 
 	bool	GetWonLossRecord (int nSongID, int& rnWins, int& rnLosses);
 
@@ -37,11 +37,12 @@ public:
 	bool	SetSongName		(int nSongID, CString strName);
 	bool	SetSongPathToMp3(int nSongID, CString strPathtoMp3);
 
-	void	SetGameResult	(int nSong1ID, int nSong2ID, int nSong1MarginOfVictory);
+//	void	SetGameResult	(int nSong1ID, int nSong2ID, int nSong1MarginOfVictory);
 //	bool	GetGameResult (UINT nOpponentID, int& rnMarginOfVictory);
 
-	bool	GetUnfinishedPoolCount (int& rnUnfinishedPoolCount);
-	bool	GetCurrentPool (CIntArray& rarrSongIDs);
+	bool	GetUnfinishedPodCount (int& rnUnfinishedPoolCount);
+	bool	GetCurrentPod	(CIntArray& rarrSongIDs);
+	bool	SetPodRankings	(CIntArray& rarrSongIDs);
 
 	bool	SetError (CString strError);
 

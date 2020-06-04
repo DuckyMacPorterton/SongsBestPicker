@@ -11,7 +11,7 @@
 #include "MyListCtrl.h"
 #include "ThreadPool.h"
 
-//#define UseMci
+#define UseMci
 #ifndef UseMci
 #include "MP3\Mp3.h"
 #endif
@@ -44,30 +44,36 @@ protected:
 	CSystemTray		m_oTrayIcon; 
 	CMyListCtrl		m_oSongList;
 	CMyListCtrl		m_oStatsList;
-	CMyListCtrl		m_oCurrentPoolList;
+	CMyListCtrl		m_oCurrentPodList;
 
 	CSongManager	m_oSongManager;
-	CProgressCtrl	m_oSongPlayingProgress;
 
-	int				m_nCurSongListCtrlIndex	= -1;
+	bool			m_bSongsSortAscending	= true;
+	int				m_nSongsSortCol			= 0;
+
+	//
+	//  Handles info about what song is currently loaded into our player / editor
+
+	int				m_nCurSongID			= -1;
 	CString			m_strCurSongName,		m_strLastLoadedSongName;
 	CString			m_strCurSongPathToMp3,	m_strLastLoadedPathToMp3;
 
+	//
+	//  Playback info
+
 	CString			m_strSongPlaybackPos;
 	CString			m_strSongPlaybackLen;
+	CProgressCtrl	m_oSongPlayingProgress;
 
 	ESongPlayStatus	m_eSongPlayingStatus			= ESongPlayStatus::eNotStarted;
 	UINT_PTR		m_nSongPlayingStatusTimerID		= 0;
 
+#ifndef UseMci
 	Mp3				m_oCurrentSong;
-
+#endif
 
 	std::map<int, CString>	m_mapHotkeys;
 	bool					m_bHotkeysApplied = false;
-
-	UINT					m_nHotkeyCurrentlyDown	= 0;
-	UINT					m_nHotkeyDownTimerId	= 0;
-
 
 protected:
 	virtual BOOL	OnInitDialog();
@@ -76,8 +82,13 @@ protected:
 	HCURSOR			OnQueryDragIcon();
 	DECLARE_MESSAGE_MAP()
 
+	static int CALLBACK CompareSongListCtrl (LPARAM lParam1, LPARAM lParam2, LPARAM lParamSort);
+	static int CALLBACK ComparePodSongRank	(LPARAM lParam1, LPARAM lParam2, LPARAM lParamSort);
+
+	int GetCurrentPodSongRank (int nSongID);
+
 public:
-	void	PlaySong (CString strFileToPlay);
+	void	PlaySong (CString strFileToPlay = L"");
 	void	PauseSong ();
 	void	StopSong ();
 	LRESULT	OnMciNotify (WPARAM wParam, LPARAM lParam);
@@ -99,12 +110,24 @@ public:
 	void	UpdateStatsForCurrentSong	(int nSongID = -1);
 	void	UpdatePlayerStatus			();
 
-	void	MoveWindowForHotkey (UINT nHotkey, int nLargeMoveMultiplier = 1, int nSmallMoveMultiplier = 1);
+	void	LoadSongIntoPlayer	(int nSondID);
+	void	SaveSongInfoFromPlayer ();
+
+	CString	GetSongName			(int nSongID);
+	CString	GetSongPathToMp3	(int nSongID);
+
+
+	bool	OnHandleHotkey (UINT nHotkey);
+
+	bool	PlayOrPauseSong ();
+	bool	SetNextSongActive ();
+	bool	SetPrevSongActive ();
+	bool	SetSongRank (int nRank);
+
 	CString GetKeyName (unsigned int virtualKey);
 	void	OnHotKey(UINT nHotKeyId, UINT nKey1, UINT nKey2);
 
 	LRESULT	OnTrayNotification (WPARAM wParam, LPARAM lParam);
-	void	OnKeyUp( UINT nChar, UINT nRepCnt, UINT nFlags );
 	void	OnTimer (UINT_PTR nIDEvent);
 	BOOL	PreTranslateMessage (MSG* pMsg);
 	
@@ -114,4 +137,8 @@ public:
 
 	void	OnItemChangedSongList(NMHDR* pNMHDR, LRESULT* pResult);
 	void	OnBnClickedPlaySong();
+	void	OnSongHeaderDblClick(NMHDR* pNMHDR, LRESULT* pResult);
+	afx_msg void OnItemChangedCurrentPodList(NMHDR* pNMHDR, LRESULT* pResult);
+	afx_msg void OnBnClickedSubmitPodRankings();
+	afx_msg void OnBnClickedBrowseForSong();
 };

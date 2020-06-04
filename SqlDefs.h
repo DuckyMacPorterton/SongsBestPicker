@@ -60,9 +60,11 @@ static TableDefinitionStruct VPTblGameHistory[] = {
 
 //////////////////////////////////////////////////////////////////
 //
-#define TBL_CURRENT_SCHEDULE		L"CurrentSchedule"
-#define TBL_CURRENT_SCHEDULE_VER	1
+#define TBL_SONG_PODS		L"SongPods"
+//#define TBL_SONG_PODS_VER	1
+#define TBL_SONG_PODS_VER	2	// Added PodID
 
+#define DB_COL_POD_ID					L"PodID"			// Each grouping of 5 songs gets an ID
 //#define DB_COL_SONG_1_ID				L"Song1"		// Already defined above
 //#define DB_COL_SONG_2_ID				L"Song2"		// Already defined above
 #define DB_COL_SONG_3_ID				L"Song3"
@@ -71,6 +73,7 @@ static TableDefinitionStruct VPTblGameHistory[] = {
 #define DB_COL_POOL_FINISHED			L"Finished"
 
 static TableDefinitionStruct VPTblCurrentSchedule[] = {
+	{true,	false,	DB_COL_POD_ID,					L"INTEGER",	VP_DEFAULT_UNUSED},
 	{false,	false,	DB_COL_SONG_1_ID,				L"INTEGER",	VP_DEFAULT_UNUSED},
 	{false,	false,	DB_COL_SONG_2_ID,				L"INTEGER",	-1},
 	{false,	false,	DB_COL_SONG_3_ID,				L"INTEGER",	-1},
@@ -107,7 +110,7 @@ struct SVpSqlTableDefinitions
 static SVpSqlTableDefinitions arrVpSqlTableDefinitions[] = {
 	{TBL_SONGS,				VPTblSongs,				TBL_SONGS_VER},
 	{TBL_GAME_HISTORY,		VPTblGameHistory,		TBL_GAME_HISTORY_VER},
-	{TBL_CURRENT_SCHEDULE,	VPTblCurrentSchedule,	TBL_CURRENT_SCHEDULE_VER},
+	{TBL_SONG_PODS,	VPTblCurrentSchedule,	TBL_SONG_PODS_VER},
 	{0,						0,						0}
 }; // end VP SQL Table Definition array
 

@@ -390,6 +390,7 @@ void CMyListCtrl::UnselectAll ()
 	SelectNone ();
 }
 
+
 void CMyListCtrl::SelectNone ()
 {
 	for (int i = 0; i < GetItemCount (); i ++)

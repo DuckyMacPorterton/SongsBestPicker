@@ -165,7 +165,7 @@ bool CSongManager::DeleteAllSongs()
 		strDelete.Format (L"delete from %s", TBL_GAME_HISTORY);
 		m_pDB->execDML (strDelete);
 
-		strDelete.Format (L"delete from %s", TBL_CURRENT_SCHEDULE);
+		strDelete.Format (L"delete from %s", TBL_SONG_PODS);
 		m_pDB->execDML (strDelete);
 
 		return true;
@@ -567,7 +567,7 @@ bool CSongManager::SetSongPathToMp3 (int nSongID, CString strPathtoMp3)
 // Qualifier:
 // Parameter: int & rnUnfinishedPoolCount
 //************************************
-bool CSongManager::GetUnfinishedPoolCount (int& rnUnfinishedPoolCount)
+bool CSongManager::GetUnfinishedPodCount (int& rnUnfinishedPoolCount)
 {
 	if (NULL == m_pDB)
 		return false;
@@ -575,7 +575,7 @@ bool CSongManager::GetUnfinishedPoolCount (int& rnUnfinishedPoolCount)
 	try
 	{
 		CString strQuery;
-		strQuery.Format (L"select count(*) from %s where %s=0", TBL_CURRENT_SCHEDULE, DB_COL_POOL_FINISHED);
+		strQuery.Format (L"select count(*) from %s where %s=0", TBL_SONG_PODS, DB_COL_POOL_FINISHED);
 		rnUnfinishedPoolCount = m_pDB->execScalar (strQuery);
 		return true;
 	}
@@ -599,7 +599,7 @@ bool CSongManager::GetUnfinishedPoolCount (int& rnUnfinishedPoolCount)
 // Qualifier:
 // Parameter: int & rnUnfinishedPoolCount
 //************************************
-bool CSongManager::GetCurrentPool (CIntArray& rarrSongIDs)
+bool CSongManager::GetCurrentPod (CIntArray& rarrSongIDs)
 {
 	rarrSongIDs.SetSize (0);
 	if (NULL == m_pDB)
@@ -608,14 +608,14 @@ bool CSongManager::GetCurrentPool (CIntArray& rarrSongIDs)
 	try
 	{
 		CString strQuery;
-		strQuery.Format (L"select * from %s where %s=0 limit 1", TBL_CURRENT_SCHEDULE, DB_COL_POOL_FINISHED);
+		strQuery.Format (L"select * from %s where %s=0 limit 1", TBL_SONG_PODS, DB_COL_POOL_FINISHED);
 		CppSQLite3Query oQuery = m_pDB->execQuery (strQuery);
 		
 		if (oQuery.eof ())
 			return false;
 
 		for (int i = 0; i < m_nPoolSize; i ++)
-			rarrSongIDs.Add (oQuery.getIntField (i));
+			rarrSongIDs.Add (oQuery.getIntField (1 + i));	// first col is the pod ID, skip that... otherwise just count so we'll support if we allow different pod sizes later.
 
 		return true;
 	}
@@ -629,6 +629,20 @@ bool CSongManager::GetCurrentPool (CIntArray& rarrSongIDs)
 
 
 
+//************************************
+// Method:    SetPodRankings
+// FullName:  CSongManager::SetPodRankings
+// Access:    public 
+// Returns:   bool
+// Qualifier:
+// Parameter: CIntArray & rarrSongIDs
+//************************************
+bool CSongManager::SetPodRankings (CIntArray& rarrSongIDs)
+{
+	return false;
+
+} // end CSongManager::SetPodRankings
+
 
 
 
@@ -640,7 +654,7 @@ bool CSongManager::GetCurrentPool (CIntArray& rarrSongIDs)
 // Returns:   bool
 // Qualifier:
 //************************************
-bool CSongManager::ScheduleMoreGames ()
+bool CSongManager::ScheduleMorePods ()
 {
 	//
 	//  If there are still unfinished pools, don't schedule more games yet
@@ -649,7 +663,7 @@ bool CSongManager::ScheduleMoreGames ()
 		return false;
 
 	int nUnfinishedPools = 0;
-	if (!GetUnfinishedPoolCount (nUnfinishedPools) || (nUnfinishedPools > 0))
+	if (!GetUnfinishedPodCount (nUnfinishedPools) || (nUnfinishedPools > 0))
 		return false;
 
 	try
@@ -664,6 +678,8 @@ bool CSongManager::ScheduleMoreGames ()
 		CIntArray	arrSongIDs;
 		if (!GetAllSongsInRandomOrder (arrSongIDs))
 			return false;
+
+		m_pDB->execDML (L"begin transaction");
 
 		int nSongCount = (int) arrSongIDs.GetSize ();
 		if (nSongCount < m_nPoolSize)
@@ -680,7 +696,7 @@ bool CSongManager::ScheduleMoreGames ()
 		int		nSongIndex = 0;
 		for (int nPoolIndex = 0; nPoolIndex < nPools; nPoolIndex++)
 		{
-			strQuery.Format (L"insert into %s values (", TBL_CURRENT_SCHEDULE);
+			strQuery.Format (L"insert into %s values (null, ", TBL_SONG_PODS);	// null forces auto-increment for DB_COL_POD_ID
 			for (int i = 0; i < m_nPoolSize; i++, nSongIndex++)
 			{
 				if (i > 0)
@@ -698,7 +714,7 @@ bool CSongManager::ScheduleMoreGames ()
 
 		if (nExtras > 0)
 		{
-			strQuery.Format (L"insert into %s values (", TBL_CURRENT_SCHEDULE);
+			strQuery.Format (L"insert into %s values (null, ", TBL_SONG_PODS);
 			for (int i = 0; i < m_nPoolSize; i++, nSongIndex++)
 			{
 				if (i > 0)
@@ -707,19 +723,40 @@ bool CSongManager::ScheduleMoreGames ()
 				if (nSongIndex < nSongCount)
 					strQuery += CUtils::NumberToStringVP (arrSongIDs[nSongIndex]);
 				else
-					strQuery += CUtils::NumberToStringVP (arrSongIDs[nSongIndex % nSongCount]);	//  So, wraps around and gives us indexes 0, 1, 2, etc
+				{
+					//
+					//  Ideally, we'll take the first song from the previously scheduled pods to fill this out.
+					//  If there aren't enough songs available, we'll use the 2nd, then 3rd, etc.
+
+					int nUseThisSongIndex = (nSongIndex % nSongCount) + ((i - 1) * m_nPoolSize);
+					if (nUseThisSongIndex > nSongCount)
+						nUseThisSongIndex = (nSongIndex % nSongCount);
+
+					//
+					//  If they don't have at least m_nPoolSize songs, well, this program isn't going
+					//  to work that well for them.  So don't worry about it.  Just duplicate this song.
+
+					if (nUseThisSongIndex > nSongCount)
+						nUseThisSongIndex = 0;
+
+					strQuery += CUtils::NumberToStringVP (arrSongIDs[nUseThisSongIndex]);	//  So, wraps around and gives us indexes 0, 1, 2, etc
+				}
 			}
 
 			strQuery += L", 0);";
 			m_pDB->execDML (strQuery);
+			m_pDB->execDML (L"commit transaction");
+
 		} // end if we have an extra pool to finish up
 
 		return true;
 	}
 	catch (CppSQLite3Exception& e) {
+		m_pDB->execDML (L"rollback transaction");
 		return SetError (e.errorMessage ());
 	}
 	catch (CException* e) {
+		m_pDB->execDML (L"rollback transaction");
 		return SetError (CUtils::GetErrorMessageFromException (e, true));
 	}
 } // end CSongManager::ScheduleMoreGames
