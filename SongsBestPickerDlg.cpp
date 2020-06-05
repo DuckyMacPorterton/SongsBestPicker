@@ -240,8 +240,20 @@ BOOL CSongsBestPickerDlg::OnInitDialog()
 	m_oCurrentPodList.SetExtendedStyle (m_oSongList.GetExtendedStyle () | LVS_EX_FULLROWSELECT);
 
 	//
+	//  Our playback system
+	
+	void*		pExtraDriverData = NULL;
+	FMOD_RESULT result = FMOD::System_Create (&m_pFmodSystem);
+	if (result == FMOD_OK)
+		result = m_pFmodSystem->init (32, FMOD_INIT_NORMAL, pExtraDriverData);
+
+	if (result != FMOD_OK)
+		AfxMessageBox (L"Error initializing playback system: " + CUtils::UTF8toUTF16 (FMOD_ErrorString (result)));
+
+	//
 	//  For anything to work, we need a valid database.  Confirm that we have one.
 
+	m_oSongManager.SetFmodSystem (m_pFmodSystem);
 	if (! m_oSongManager.GetError ().IsEmpty ())
 		AfxMessageBox (L"Error: " + m_oSongManager.GetError ());
 	else
@@ -251,18 +263,6 @@ BOOL CSongsBestPickerDlg::OnInitDialog()
 	//  Let's allow ourselves to minimize to system tray
 
 	m_oTrayIcon.Create (this, ID_MY_NOTIFY, L"Songs Best Picker!", m_hIcon, IDR_MENU_DOUGS_HOTKEYS);
-
-	//
-	//  Our playback system
-
-	
-	void*		pExtraDriverData = NULL;
-	FMOD_RESULT result = FMOD::System_Create (&m_pFmodSystem);
-	if (result == FMOD_OK)
-		result = m_pFmodSystem->init (32, FMOD_INIT_NORMAL, pExtraDriverData);
-
-	if (result != FMOD_OK)
-		AfxMessageBox (L"Error initializing playback system: " + CUtils::UTF8toUTF16 (FMOD_ErrorString (result)));
 
 	//
 	//  And apply the hotkeys
@@ -505,6 +505,7 @@ void CSongsBestPickerDlg::PlaySong (CString strFileToPlay /* = L"" */)
 	int nSongLenSec = nSongLenMS / 1000;
 
 	m_strSongPlaybackLen.Format (L"%d:%02d", nSongLenSec / 60, nSongLenSec % 60);
+
 	UpdateData (false);
 
 } // end play song
@@ -1179,7 +1180,7 @@ void CSongsBestPickerDlg::OnItemChangedSongList (NMHDR* pNMHDR, LRESULT* pResult
 		else {
 			nSongID = (int)m_oSongList.GetItemData (nListCtrlIndex);
 			UpdateStatsForCurrentSong (nSongID);
-		}
+		} // end if we have a valid song to check out
 
 #ifdef LoadSongsFromMainList
 		SaveSongInfoFromPlayer ();

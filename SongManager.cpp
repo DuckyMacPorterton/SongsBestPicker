@@ -3,6 +3,7 @@
 #include "SQLite/CppSQLite3-Unicode.h"
 #include "Utils.h"
 #include "Song.h"
+#include <fmod_errors.h>
 
 
 CSongManager::CSongManager ()
@@ -97,6 +98,8 @@ bool CSongManager::InitSongsFromTextFile (CString strTextFile, EFileFormat eFile
 	if (eFileFormat != EFileFormat::eM3U)
 		return SetError (L"Currently we only support m3u files");
 
+	CWaitCursor wc;
+
 	try
 	{
 		m_pDB->execDML (L"begin transaction");
@@ -110,17 +113,26 @@ bool CSongManager::InitSongsFromTextFile (CString strTextFile, EFileFormat eFile
 		if (! pFileIn->Open (strTextFile, CFile::modeRead, &oFileExcept))
 			return SetError (CUtils::GetErrorMessageFromException (&oFileExcept));
 
-		CString strInsert, strSongName, strPathToMp3;
-		strInsert.Format (L"insert into %s (%s, %s, %s) values (null, ?, ?)", TBL_SONGS, DB_COL_SONG_ID, DB_COL_SONG_NAME, DB_COL_PATH_TO_MP3);
+		CString strInsert, strSongName, strPathToMp3, strArtist, strTitle, strAlbum;
+		strInsert.Format (L"insert into %s (%s, %s, %s, %s, %s, %s) values (null, ?, ?, ?, ?, ?)", TBL_SONGS, 
+			DB_COL_SONG_ID, DB_COL_SONG_NAME, DB_COL_PATH_TO_MP3, DB_COL_ARTIST, DB_COL_TITLE, DB_COL_ALBUM);
 		CppSQLite3Statement stmtQuery = m_pDB->compileStatement (strInsert);
 
 		while (ReadNextSongM3U (*pFileIn, strSongName, strPathToMp3))
 		{
 			//
+			//  See if we can read any meta tags from the mp3
+
+			LoadTagsFromMp3 (strPathToMp3, strTitle, strArtist, strAlbum);
+
+			//
 			//  Add to our database.  null for the ID makes it auto-choose, though not technically "autoincrement"
 
 			stmtQuery.bind (1, strSongName);
 			stmtQuery.bind (2, strPathToMp3);
+			stmtQuery.bind (3, strArtist);
+			stmtQuery.bind (4, strTitle);
+			stmtQuery.bind (5, strAlbum);
 			stmtQuery.execDML ();
 
 		} // end file read loop
@@ -141,6 +153,274 @@ bool CSongManager::InitSongsFromTextFile (CString strTextFile, EFileFormat eFile
 } // end init songs from text file
 
 
+//************************************
+// Method:    GuessMoreLikelyToBeReal
+// FullName:  CSongManager::GuessMoreLikelyToBeReal
+// Access:    protected 
+// Returns:   CString
+// Qualifier:
+// Parameter: CString strOne
+// Parameter: CString strTwo
+//
+//  When we load tags from files, some are good and some are gibberish.
+//  This tries to figure which is most likely to be good.
+//
+//************************************
+CString CSongManager::GuessMoreLikelyToBeReal (CString strOne, CString strTwo)
+{
+	if (strOne.IsEmpty ())
+		return strTwo;
+	if (strTwo.IsEmpty ())
+		return strOne;
+
+	//
+	//  Otherwise, let's return the one with the least junk
+
+	int nJunkCount1 = 0;
+
+	for (int i = 0; i < strOne.GetLength (); i ++)
+	{
+		if (! iswprint (strOne[i])) 
+			nJunkCount1 ++;
+	}
+
+	int nJunkCount2 = 0;
+	for (int i = 0; i < strTwo.GetLength (); i ++)
+	{
+		if (! iswprint (strTwo[i])) 
+			nJunkCount2 ++;
+	}
+
+	if (nJunkCount1 > nJunkCount2)
+		return strTwo;
+	return strOne;
+
+} // end CSongManager::GuessMoreLikelyToBeReal
+
+
+
+//************************************
+// Method:    LoadTagsFromMp3
+// FullName:  CSongManager::LoadTagsFromMp3
+// Access:    public 
+// Returns:   bool
+// Qualifier:
+// Parameter: CString strPathToMp3
+// Parameter: CString & rstrTitle
+// Parameter: CString & rstrArtist
+// Parameter: CString & rstrAlbum
+//************************************
+bool CSongManager::LoadTagsFromMp3 (CString strPathToMp3, CString& rstrTitle, CString& rstrArtist, CString& rstrAlbum)
+{
+	rstrTitle.Empty ();
+	rstrArtist.Empty ();
+	rstrAlbum.Empty ();
+
+	FMOD::Sound* pSoundToLoadTags = NULL;
+
+	FMOD_RESULT result = m_pFmodSystem->createSound (CUtils::UTF16toUTF8 (strPathToMp3), FMOD_OPENONLY, 0, &pSoundToLoadTags);	// FMOD_DEFAULT
+	if (result != FMOD_OK) {
+		TRACE (L"LoadTagsFromMp3: Error loading song: " + CUtils::UTF8toUTF16 (FMOD_ErrorString (result)) + L" / " + strPathToMp3);
+		return false;
+	}
+
+	//
+	//  First get the artist
+
+	CStringArray arrTagNames;
+	if (GetTagNamesForType (L"Artist", arrTagNames))
+	{
+		for (int i = 0; i < arrTagNames.GetSize (); i ++)
+		{
+			CString strTemp;
+			ReadSingleTag (pSoundToLoadTags, arrTagNames[i], strTemp);
+			rstrArtist = GuessMoreLikelyToBeReal (rstrArtist, strTemp);
+		}
+	}
+
+	//
+	//  Then the title
+
+	if (GetTagNamesForType (L"Title", arrTagNames))
+	{
+		for (int i = 0; i < arrTagNames.GetSize (); i ++)
+		{
+			CString strTemp;
+			ReadSingleTag (pSoundToLoadTags, arrTagNames[i], strTemp);
+			rstrTitle = GuessMoreLikelyToBeReal (rstrTitle, strTemp);
+		}
+	}
+
+	//
+	//  And I guess we'll get the album
+
+	if (GetTagNamesForType (L"Album", arrTagNames))
+	{
+		for (int i = 0; i < arrTagNames.GetSize (); i ++)
+		{
+			CString strTemp;
+			ReadSingleTag (pSoundToLoadTags, arrTagNames[i], strTemp);
+			rstrAlbum = GuessMoreLikelyToBeReal (rstrAlbum, strTemp);
+		}
+	}
+
+	pSoundToLoadTags->release ();
+	return true;
+
+#ifdef LoopThroughAllTags
+	int nSongTags = 0, nSongTagsUpdatedSinceLastCall = 0;;
+	pSoundToLoadTags->getNumTags (&nSongTags, &nSongTagsUpdatedSinceLastCall);
+
+	for (int i = 0; i < nSongTags; i++)
+	{
+		FMOD_TAG oTag;
+		auto result = pSoundToLoadTags->getTag (NULL, i, &oTag);
+		if (result != FMOD_OK)
+		{
+			TRACE (L"%s\n", CUtils::UTF8toUTF16 (FMOD_ErrorString (result)));
+			break;
+		}
+
+		if (FMOD_TAGTYPE_ID3V2 != oTag.type && FMOD_TAGTYPE_ID3V1 != oTag.type)
+			continue;
+
+		CStringA strTagData;
+		char* pBuffer = strTagData.GetBuffer (oTag.datalen);
+		memcpy (pBuffer, oTag.data, oTag.datalen);
+		strTagData.ReleaseBuffer ();
+
+		TRACE (L"Tag %d: %s: %s\n", i, CUtils::UTF8toUTF16 (oTag.name), CUtils::UTF8toUTF16 (strTagData));
+	}
+#endif
+
+} // end CSongManager::LoadTagsFromMp3
+
+
+
+
+//************************************
+// Method:    ReadSingleTag
+// FullName:  CSongManager::ReadSingleTag
+// Access:    public 
+// Returns:   bool
+// Qualifier:
+// Parameter: FMOD::Sound * pSoundToLoadTags
+// Parameter: CString strTagName
+// Parameter: CStrin & rstrValue
+//************************************
+bool CSongManager::ReadSingleTag (FMOD::Sound* pSoundToLoadTags, CString strTagName, CString& rstrValue)
+{
+	if (NULL == pSoundToLoadTags)
+		return false;
+
+	//
+	//  Turns out this is case sensitive if we call getTag ("tagname").
+	//  I don't want that.  So we'll loop and do the case insensitiving ourselves
+
+	CStringA strTagNameA = CUtils::UTF16toUTF8 (strTagName);
+
+	int nSongTags = 0, nSongTagsUpdatedSinceLastCall = 0;;
+	pSoundToLoadTags->getNumTags (&nSongTags, &nSongTagsUpdatedSinceLastCall);
+
+	for (int i = 0; i < nSongTags; i++)
+	{
+		FMOD_TAG oTag;
+		auto result = pSoundToLoadTags->getTag (NULL, i, &oTag);
+		if (result != FMOD_OK)
+			continue;
+
+		if (strTagNameA.CompareNoCase (oTag.name) == 0)
+		{
+			CStringA strTagData;
+			char* pBuffer = strTagData.GetBuffer (oTag.datalen);
+			memcpy (pBuffer, oTag.data, oTag.datalen);
+			strTagData.ReleaseBuffer ();
+			rstrValue = CUtils::UTF8toUTF16 (strTagData);
+			return true;
+		}
+	}
+
+	return false;
+
+} // end CSongManager::ReadSingleTag
+
+
+
+//************************************
+// Method:    GetTagNamesForType
+// FullName:  CSongManager::GetTagNamesForType
+// Access:    public 
+// Returns:   bool
+// Qualifier:
+// Parameter: CString strTagType
+// Parameter: CStingArray & rarrTagNames
+//
+//  So, for tag type, "Artist" (<--- the name I would understand), returns
+//  an array of things that info might be tagged in the mp3.  So, Artist might be:
+//    Artist, or TP1, or TPE2, or whatever
+//
+//************************************
+bool CSongManager::GetTagNamesForType (CString strTagType, CStringArray& rarrTagNames)
+{
+	if (NULL == m_pDB)
+		return false;
+
+	try
+	{
+		rarrTagNames.SetSize (0);
+
+		CString strQuery;
+		strQuery.Format (L"select %s from %s where %s=?", DB_COL_TAG_NAME, TBL_MP3_TAGS, DB_COL_TAG_TYPE);
+
+		CppSQLite3Statement stmtQuery = m_pDB->compileStatement (strQuery);
+
+		stmtQuery.bind (1, strTagType);
+
+		CppSQLite3Query oQuery = stmtQuery.execQuery ();
+		for (; !oQuery.eof (); oQuery.nextRow ())
+		{
+			rarrTagNames.Add (oQuery.getStringField (0));
+		}
+
+		//
+		//  If we don't have anything, let's have some defaults
+
+		if (rarrTagNames.GetSize () == 0)
+		{
+			if (strTagType.CompareNoCase (L"Artist") == 0)
+			{
+				rarrTagNames.Add (L"Artist");
+				rarrTagNames.Add (L"TP1");
+				rarrTagNames.Add (L"TPE1");
+				rarrTagNames.Add (L"TPE2");
+				rarrTagNames.Add (L"Author");
+				rarrTagNames.Add (L"WM/AlbumArtist");
+			}
+			else if (strTagType.CompareNoCase (L"Title") == 0)
+			{
+				rarrTagNames.Add (L"Title");
+				rarrTagNames.Add (L"TIT2");
+				rarrTagNames.Add (L"TT2");
+				rarrTagNames.Add (L"WM/AlbumTitle");
+			}
+			else if (strTagType.CompareNoCase (L"Album") == 0)
+			{
+				rarrTagNames.Add (L"Album");
+				rarrTagNames.Add (L"TAL");
+				rarrTagNames.Add (L"TALB");
+				rarrTagNames.Add (L"WM/AlbumTitle");
+			}
+		}
+
+		return true;
+	}
+	catch (CppSQLite3Exception& e) {
+		return SetError (e.errorMessage ());
+	}
+	catch (CException* e) {
+		return SetError (CUtils::GetErrorMessageFromException (e, true));
+	}
+} // end CSongManager::GetTagNamesForType
 
 
 
@@ -677,6 +957,9 @@ bool CSongManager::ScheduleMorePods ()
 
 		CIntArray	arrSongIDs;
 		if (!GetAllSongsInRandomOrder (arrSongIDs))
+			return false;
+
+		if (arrSongIDs.GetSize () == 0)
 			return false;
 
 		m_pDB->execDML (L"begin transaction");

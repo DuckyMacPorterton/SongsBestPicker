@@ -3,6 +3,7 @@
 #include <map>
 #include "Song.h"
 #include "StdioFileEx/StdioFileEx.h"
+#include <fmod.hpp>
 
 typedef CArray<int>		CIntArray;
 
@@ -19,9 +20,15 @@ public:
 	CSongManager ();
 	~CSongManager ();
 
+	void	SetFmodSystem (FMOD::System* pFmodSystem) {m_pFmodSystem = pFmodSystem;};
+
 	CString	GetError (bool bClearError = false);
 
 	bool	InitSongsFromTextFile	(CString strTextFile, EFileFormat eFileFormat, bool bOverwriteExistingData = false);
+protected:
+	CString GuessMoreLikelyToBeReal (CString strOne, CString strTwo);
+
+public:
 	bool	DeleteAllSongs			();
 
 	bool	ScheduleMorePods ();
@@ -44,6 +51,16 @@ public:
 	bool	GetCurrentPod	(CIntArray& rarrSongIDs);
 	bool	SetPodRankings	(CIntArray& rarrSongIDs);
 
+	//
+	//   Dealing with meta tags
+
+	bool	LoadTagsFromMp3			(CString strPathToMp3, CString& rstrTitle, CString& rstrArtist, CString& rstrAlbum);
+	bool	GetTagNamesForType (CString strTagType, CStringArray& rarrTagNames);
+	bool	ReadSingleTag (FMOD::Sound* pSoundToLoadTags, CString strTagName, CString& rstrValue);
+
+	//
+	//  Errors?  We never have errors
+
 	bool	SetError (CString strError);
 
 protected:
@@ -53,6 +70,8 @@ protected:
 protected:
 	CString				m_strError;
 	CMyCppSQLite3DBPtr	m_pDB;
+	FMOD::System*		m_pFmodSystem	= NULL;
+
 
 	int					m_nPoolSize = 5;	//  Our DB table design is not flexible enough to let us change this right now
 

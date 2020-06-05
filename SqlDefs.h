@@ -25,16 +25,23 @@ struct TableDefinitionStruct
 //////////////////////////////////////////////////////////////////
 //
 #define TBL_SONGS				L"Songs"
-#define TBL_SONGS_VER			1
+//#define TBL_SONGS_VER			1
+#define TBL_SONGS_VER			2	// Added tag info, artist, title, album
 
 #define DB_COL_SONG_ID				L"ID"
 #define DB_COL_SONG_NAME			L"Name"
 #define DB_COL_PATH_TO_MP3			L"PathToMp3"
+#define DB_COL_ARTIST				L"Artist"
+#define DB_COL_TITLE				L"Title"
+#define DB_COL_ALBUM				L"Album"
 
 static TableDefinitionStruct VPTblSongs[] = {
 	{true,	false,	DB_COL_SONG_ID,				L"INTEGER",	VP_DEFAULT_UNUSED},
 	{false,	false,	DB_COL_SONG_NAME,			L"TEXT",	VP_DEFAULT_UNUSED},
 	{false,	false,	DB_COL_PATH_TO_MP3,			L"TEXT",	VP_DEFAULT_UNUSED},
+	{false,	false,	DB_COL_ARTIST,				L"TEXT",	VP_DEFAULT_UNUSED},
+	{false,	false,	DB_COL_TITLE,				L"TEXT",	VP_DEFAULT_UNUSED},
+	{false,	false,	DB_COL_ALBUM,				L"TEXT",	VP_DEFAULT_UNUSED},
 	{0,		0,		0,							0,					0}
 };
 
@@ -86,6 +93,25 @@ static TableDefinitionStruct VPTblCurrentSchedule[] = {
 
 
 
+
+//////////////////////////////////////////////////////////////////
+//
+#define TBL_MP3_TAGS			L"MP3Tags"
+#define TBL_MP3_TAGS_VER		1
+
+#define DB_COL_TAG_TYPE				L"TagType"		//  So, "Artist" or "Title" - the thing we understand
+#define DB_COL_TAG_NAME				L"TagName"		//  TPE1 or TP1 or whatever cryptic crap is in there
+
+static TableDefinitionStruct VPTblMp3Tags[] = {
+	{false,	false,	DB_COL_TAG_TYPE,		L"TEXT",	VP_DEFAULT_UNUSED},
+	{false,	false,	DB_COL_TAG_NAME,		L"TEXT",	VP_DEFAULT_UNUSED},
+	{0,		0,		0,						0,			0}
+};
+
+
+
+
+
 // ***************************************************************************************************
 // ***************************************************************************************************
 // ***************************************************************************************************
@@ -110,7 +136,8 @@ struct SVpSqlTableDefinitions
 static SVpSqlTableDefinitions arrVpSqlTableDefinitions[] = {
 	{TBL_SONGS,				VPTblSongs,				TBL_SONGS_VER},
 	{TBL_GAME_HISTORY,		VPTblGameHistory,		TBL_GAME_HISTORY_VER},
-	{TBL_SONG_PODS,	VPTblCurrentSchedule,	TBL_SONG_PODS_VER},
+	{TBL_SONG_PODS,			VPTblCurrentSchedule,	TBL_SONG_PODS_VER},
+	{TBL_MP3_TAGS,			VPTblMp3Tags,			TBL_MP3_TAGS_VER},
 	{0,						0,						0}
 }; // end VP SQL Table Definition array
 
