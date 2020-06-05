@@ -26,39 +26,42 @@ struct TableDefinitionStruct
 //
 #define TBL_SONGS				L"Songs"
 //#define TBL_SONGS_VER			1
-#define TBL_SONGS_VER			2	// Added tag info, artist, title, album
+//#define TBL_SONGS_VER			2	// Added tag info, artist, title, album
+#define TBL_SONGS_VER			3	// Removed song name
 
 #define DB_COL_SONG_ID				L"ID"
-#define DB_COL_SONG_NAME			L"Name"
 #define DB_COL_PATH_TO_MP3			L"PathToMp3"
-#define DB_COL_ARTIST				L"Artist"
-#define DB_COL_TITLE				L"Title"
-#define DB_COL_ALBUM				L"Album"
+#define DB_COL_SONG_ARTIST			L"Artist"
+#define DB_COL_SONG_TITLE			L"Title"
+#define DB_COL_SONG_ALBUM			L"Album"
+#define DB_COL_SONG_RATING			L"Rating"
 
 static TableDefinitionStruct VPTblSongs[] = {
 	{true,	false,	DB_COL_SONG_ID,				L"INTEGER",	VP_DEFAULT_UNUSED},
-	{false,	false,	DB_COL_SONG_NAME,			L"TEXT",	VP_DEFAULT_UNUSED},
 	{false,	false,	DB_COL_PATH_TO_MP3,			L"TEXT",	VP_DEFAULT_UNUSED},
-	{false,	false,	DB_COL_ARTIST,				L"TEXT",	VP_DEFAULT_UNUSED},
-	{false,	false,	DB_COL_TITLE,				L"TEXT",	VP_DEFAULT_UNUSED},
-	{false,	false,	DB_COL_ALBUM,				L"TEXT",	VP_DEFAULT_UNUSED},
+	{false,	false,	DB_COL_SONG_ARTIST,			L"TEXT",	VP_DEFAULT_UNUSED},
+	{false,	false,	DB_COL_SONG_TITLE,			L"TEXT",	VP_DEFAULT_UNUSED},
+	{false,	false,	DB_COL_SONG_ALBUM,			L"TEXT",	VP_DEFAULT_UNUSED},
+	{false, false,	DB_COL_SONG_RATING,			L"INTEGER",	1000},
 	{0,		0,		0,							0,					0}
 };
 
 
 //////////////////////////////////////////////////////////////////
 //
-#define TBL_GAME_HISTORY			L"GameHistory"
-#define TBL_GAME_HISTORY_VER		1
+#define TBL_SONG_HEAD_TO_HEAD		L"SongHeadToHead"
+#define TBL_SONG_HEAD_TO_HEAD_VER	1
 
+#define DB_COL_POD_ID					L"PodID"			// Each grouping of 5 songs gets an ID
 #define DB_COL_SONG_1_ID				L"Song1"
 #define DB_COL_SONG_2_ID				L"Song2"
-#define DB_COL_GAME_SCORE_MARGIN		L"GameScoreMargin"
+#define DB_COL_SCORE_MARGIN				L"ScoreMargin"
 
-static TableDefinitionStruct VPTblGameHistory[] = {
-	{false,	false,	DB_COL_SONG_1_ID,				L"INTEGER",	VP_DEFAULT_UNUSED},
-	{false,	false,	DB_COL_SONG_2_ID,				L"INTEGER",	VP_DEFAULT_UNUSED},
-	{false,	false,	DB_COL_GAME_SCORE_MARGIN,		L"INTEGER",	VP_DEFAULT_UNUSED},
+static TableDefinitionStruct VPTblSongHeadToHead[] = {
+	{false,	false,	DB_COL_POD_ID,				L"INTEGER",	VP_DEFAULT_UNUSED},
+	{false,	false,	DB_COL_SONG_1_ID,			L"INTEGER",	VP_DEFAULT_UNUSED},
+	{false,	false,	DB_COL_SONG_2_ID,			L"INTEGER",	VP_DEFAULT_UNUSED},
+	{false,	false,	DB_COL_SCORE_MARGIN,		L"INTEGER",	VP_DEFAULT_UNUSED},
 	{0,		0,		0,							0,					0}
 };
 
@@ -71,7 +74,7 @@ static TableDefinitionStruct VPTblGameHistory[] = {
 //#define TBL_SONG_PODS_VER	1
 #define TBL_SONG_PODS_VER	2	// Added PodID
 
-#define DB_COL_POD_ID					L"PodID"			// Each grouping of 5 songs gets an ID
+//#define DB_COL_POD_ID					L"PodID"			// Each grouping of 5 songs gets an ID
 //#define DB_COL_SONG_1_ID				L"Song1"		// Already defined above
 //#define DB_COL_SONG_2_ID				L"Song2"		// Already defined above
 #define DB_COL_SONG_3_ID				L"Song3"
@@ -135,7 +138,7 @@ struct SVpSqlTableDefinitions
 
 static SVpSqlTableDefinitions arrVpSqlTableDefinitions[] = {
 	{TBL_SONGS,				VPTblSongs,				TBL_SONGS_VER},
-	{TBL_GAME_HISTORY,		VPTblGameHistory,		TBL_GAME_HISTORY_VER},
+	{TBL_SONG_HEAD_TO_HEAD,	VPTblSongHeadToHead,	TBL_SONG_HEAD_TO_HEAD_VER},
 	{TBL_SONG_PODS,			VPTblCurrentSchedule,	TBL_SONG_PODS_VER},
 	{TBL_MP3_TAGS,			VPTblMp3Tags,			TBL_MP3_TAGS_VER},
 	{0,						0,						0}

@@ -975,7 +975,7 @@ CString CUtils::GetMciErrorString (MCIERROR nMciError)
 // Function to calculate Elo rating 
 // K is a constant. 
 // d determines whether Player A wins or Player B.  
-/* static */ void CUtils::EloRating (float& Ra, float& Rb, int K, bool d) 
+/* static */ void CUtils::EloRating (float& fRatingWinner, float& fRatingLoser, int K_arg, int nWinnerScore, int nLoserScore) 
 {   
     //
     //  FiveThirtyEight has K=20 for NBA and similar for soccer + NFL
@@ -984,6 +984,13 @@ CString CUtils::GetMciErrorString (MCIERROR nMciError)
 
     //
     //  To add margin of victory to this:
+	//
+	//  I got this from: https://math.stackexchange.com/questions/850002/improving-the-elo-rating-system-to-account-for-game-results
+	//
+	// Margin of Victory Multiplier = LN(ABS(PD)+1) * (2.2/((ELOW-ELOL)*.001+2.2))
+
+	float fK = (float) (K_arg * (log ((double) abs (nWinnerScore - nLoserScore) + 1) * (2.2 /(((double) fRatingWinner-fRatingLoser)*.001+2.2))));
+	
 
 #ifdef asdfasdf
     The margin of victory multiplier is calculated as follows.
@@ -1001,32 +1008,14 @@ Where PD is the point differential in the game, ELOW is the winning team’s Elo R
 
 #endif
 
+	//
+	//  To calculate the Winning  Probability of Player B 
 
+	float Pb = EloProbability (fRatingWinner, fRatingLoser);
+	float Pa = EloProbability (fRatingLoser,  fRatingWinner);
 
-    // To calculate the Winning 
-    // Probability of Player B 
-    float Pb = EloProbability (Ra, Rb); 
-  
-    // To calculate the Winning 
-    // Probability of Player A 
-    float Pa = EloProbability(Rb, Ra); 
-  
-    // Case -1 When Player A wins 
-    // Updating the Elo Ratings 
-    if (d == 1) { 
-        Ra = Ra + K * (1 - Pa); 
-        Rb = Rb + K * (0 - Pb); 
-    } 
-  
-    // Case -2 When Player B wins 
-    // Updating the Elo Ratings 
-    else { 
-        Ra = Ra + K * (0 - Pa); 
-        Rb = Rb + K * (1 - Pb); 
-    } 
-  
-//    cout << "Updated Ratings:-\n"; 
-//    cout << "Ra = " << Ra << " Rb = " << Rb; 
+	fRatingWinner = fRatingWinner + fK * (1 - Pa);
+	fRatingLoser = fRatingLoser + fK * (0 - Pb);
 } 
   
 #ifdef ThisWorks

@@ -36,20 +36,22 @@ public:
 	bool	GetWonLossRecord (int nSongID, int& rnWins, int& rnLosses);
 
 	bool	GetSongCount	(int& rnSongCount);
-	bool	GetNextSong		(CString& rstrSongName, CString& rstrPathToMp3, int& rnSongID, int nPrevSongID = -1);
-	bool	GetSongDetails	(int nSongID, CString& rstrSongName, CString& rstrPathToMp3);
-	
+	bool	GetNextSong		(CString& rstrSongTitle, CString& rstrSongArtist, CString& rstrSongAlbum, CString& rstrPathToMp3, int& rnSongID, int nPrevSongID = -1);
+	bool	GetSongDetails	(int nSongID, CString& rstrSongTitle, CString& rstrSongArtist, CString& rstrSongAlbum, CString& rstrPathToMp3);
+	bool	SetSongDetails	(int nSongID, CString strSongTitle, CString strSongArtist, CString strSongAlbum, CString strPathToMp3);
+
+	bool	GetSongRating	(int nSongID, int& rnSongRating);
+	bool	SetSongRating	(int nSongID, int nSongRating);
+	bool	RecalcAllSongRatings	();
+
 	bool	GetAllSongsInRandomOrder (CIntArray& rarrSongIDs);
 
-	bool	SetSongName		(int nSongID, CString strName);
+	bool	SetSongTitle		(int nSongID, CString strName);
 	bool	SetSongPathToMp3(int nSongID, CString strPathtoMp3);
 
-//	void	SetGameResult	(int nSong1ID, int nSong2ID, int nSong1MarginOfVictory);
-//	bool	GetGameResult (UINT nOpponentID, int& rnMarginOfVictory);
-
-	bool	GetUnfinishedPodCount (int& rnUnfinishedPoolCount);
-	bool	GetCurrentPod	(CIntArray& rarrSongIDs);
-	bool	SetPodRankings	(CIntArray& rarrSongIDs);
+	bool	GetUnfinishedPodCount	(int& rnUnfinishedPoolCount);
+	bool	GetCurrentPod			(int& rnPodID, CIntArray& rarrSongIDs);
+	bool	SetPodRankings			(int nPodID, CIntArray& rarrSongIDs);
 
 	//
 	//   Dealing with meta tags

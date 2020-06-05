@@ -45,7 +45,7 @@ public:
 
 	static BOOL		SleepMsg (DWORD dwTimeoutMS);
 
-	static void		EloRating		(float& Ra, float& Rb, int K, bool d);
+	static void		EloRating		(float& Ra, float& Rb, int K, int nWinnerScore, int nLoserScore);
 	static float	EloProbability	(float rating1, float rating2);
 
 

@@ -53,15 +53,17 @@ protected:
 	//  Handles info about what song is currently loaded into our player / editor
 
 	int				m_nCurSongID			= -1;
-	CString			m_strCurSongName,		m_strLastLoadedSongName;
+	int				m_nCurPodID				= -1;
+
+	CString			m_strCurSongTitle,		m_strLastLoadedSongTitle;
 	CString			m_strCurSongPathToMp3,	m_strLastLoadedPathToMp3;
 
 	//
 	//  Playback info
 
-	FMOD::System*	m_pFmodSystem	= NULL;
-	FMOD::Sound*	m_pCurSong		= NULL;
-	FMOD::Channel*	m_pFmodChannel	= NULL;
+	FMOD::System*	m_pPlaybackSystem	= NULL;
+	FMOD::Sound*	m_pCurSong			= NULL;
+	FMOD::Channel*	m_pPlaybackChannel	= NULL;
 
 
 
@@ -82,7 +84,7 @@ protected:
 	HCURSOR			OnQueryDragIcon();
 	DECLARE_MESSAGE_MAP()
 
-	static int CALLBACK CompareSongListCtrl (LPARAM lParam1, LPARAM lParam2, LPARAM lParamSort);
+	static int CALLBACK SortCompareSongListCtrl (LPARAM lParam1, LPARAM lParam2, LPARAM lParamSort);
 	static int CALLBACK ComparePodSongRank	(LPARAM lParam1, LPARAM lParam2, LPARAM lParamSort);
 
 	int GetCurrentPodSongRank (int nSongID);
@@ -91,6 +93,7 @@ public:
 	void	PlaySong (CString strFileToPlay = L"");
 	void	PauseSong ();
 	void	StopSong ();
+	void	UnloadSong ();
 
 	void	ApplyHotkeys ();
 	void	RemoveHotkeys ();
@@ -102,15 +105,18 @@ public:
 	void	OnResetSongStatistics	();
 
 	void	UpdateSongList				();
-	void	UpdateCurrentPod			(int nSongID = -1);
+	void	UpdateCurrentPod			();
 	void	UpdateStatsForCurrentSong	(int nSongID = -1);
 	void	UpdatePlayerStatus			();
 
 	void	LoadSongIntoPlayer	(int nSondID);
 	void	SaveSongInfoFromPlayer ();
 
-	CString	GetSongName			(int nSongID);
+	CString	GetSongTitle		(int nSongID);
+	CString	GetSongArtist		(int nSongID);
+	CString	GetSongAlbum		(int nSongID);
 	CString	GetSongPathToMp3	(int nSongID);
+	bool	GetWonLossRecord	(int nSongID, int& rnWon, int& rnLost);
 
 
 	bool	OnHandleHotkey (UINT nHotkey);
