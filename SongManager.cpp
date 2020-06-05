@@ -5,6 +5,8 @@
 #include "Song.h"
 #include <fmod_errors.h>
 
+#define ELO_DEFAULT_K	32
+
 
 CSongManager::CSongManager ()
 {
@@ -854,6 +856,68 @@ bool CSongManager::SetSongRating (int nSongID, int nSongRating)
 
 
 //************************************
+// Method:    RecalcAllSongRatings
+// FullName:  CSongManager::RecalcAllSongRatings
+// Access:    public 
+// Returns:   bool
+// Qualifier:
+//
+//
+//
+//************************************
+bool CSongManager::RecalcAllSongRatings ()
+{
+	if (NULL == m_pDB)
+		return false;
+
+	try
+	{
+		//
+		//  First clear out all the old ratings
+
+		CString strInsert;
+		strInsert.Format (L"update %s set %s=%d", TBL_SONGS, DB_COL_SONG_RATING, 1000);
+		m_pDB->execDML (strInsert);
+
+		//
+		//  Now just loop through all the games and run ELO on the results
+
+		CString strQuery;
+		strQuery.Format (L"select %s, %s, %s from %s", DB_COL_SONG_1_ID, DB_COL_SONG_2_ID, DB_COL_SCORE_MARGIN, TBL_SONG_HEAD_TO_HEAD);
+
+		CppSQLite3Query oQuery = m_pDB->execQuery (strQuery);
+		for (; !oQuery.eof (); oQuery.nextRow ())
+		{
+			int nWinningSong	= oQuery.getIntField (DB_COL_SONG_1_ID);
+			int nLosingSong		= oQuery.getIntField (DB_COL_SONG_2_ID);
+			int nMargin			= oQuery.getIntField (DB_COL_SCORE_MARGIN);
+
+			int nWinnerRating = 0, nLoserRating = 0;
+			if (GetSongRating (nWinningSong, nWinnerRating) && GetSongRating (nLosingSong, nLoserRating))
+			{
+				float fWinnerRating = (float)nWinnerRating;
+				float fLoserRating	= (float)nLoserRating;
+				CUtils::EloRating (fWinnerRating, fLoserRating, ELO_DEFAULT_K, nMargin, 0);
+
+				SetSongRating (nWinningSong,	(int)fWinnerRating);
+				SetSongRating (nLosingSong,		(int)fLoserRating);
+			}
+		} // end loop through all previous head to head song matchups
+
+		return true;
+	}
+	catch (CppSQLite3Exception& e) {
+		return SetError (e.errorMessage ());
+	}
+	catch (CException* e) {
+		return SetError (CUtils::GetErrorMessageFromException (e, true));
+	}
+
+} // end CSongManager::RecalcAllSongRatings
+
+
+
+//************************************
 // Method:    GetAllSongsInRandomOrder
 // FullName:  CSongManager::GetAllSongsInRandomOrder
 // Access:    public 
@@ -1071,7 +1135,7 @@ bool CSongManager::SetPodRankings (int nPodID, CIntArray& rarrSongIDs)
 				{
 					float fWinnerRating = (float) nWinnerRating;
 					float fLoserRating	= (float) nLoserRating;
-					CUtils::EloRating (fWinnerRating, fLoserRating, 32, m_nPoolSize - nWinner, m_nPoolSize - nLoser);
+					CUtils::EloRating (fWinnerRating, fLoserRating, ELO_DEFAULT_K, m_nPoolSize - nWinner, m_nPoolSize - nLoser);
 
 					SetSongRating (nWinner, (int) fWinnerRating);
 					SetSongRating (nLoser,	(int) fLoserRating);

@@ -188,6 +188,7 @@ BEGIN_MESSAGE_MAP(CSongsBestPickerDlg, CDialogEx)
 	ON_MESSAGE (ID_MY_NOTIFY,			OnTrayNotification)
 	ON_COMMAND(ID_DOUG_SHOWWINDOW,		OnShowMyWindow)
 	ON_COMMAND(ID_IMPORTFROMM3UFILE,	OnImportFromM3UFile)
+	ON_COMMAND(ID_RECALC_SONG_RATINGS,	OnRecalcSongRatings)
 	ON_COMMAND(ID_RESETSONGSTATISTICS,	OnResetSongStatistics)
 	ON_COMMAND(ID_DELETESONGLIST,		OnDeleteSongList)
 
@@ -610,6 +611,25 @@ void CSongsBestPickerDlg::OnImportFromM3UFile()
 		UpdateSongList ();
 
 } // end on import from m3u file
+
+
+
+//************************************
+// Method:    OnRecalcSongRatings
+// FullName:  CSongsBestPickerDlg::OnRecalcSongRatings
+// Access:    public 
+// Returns:   void
+// Qualifier:
+//
+//
+//
+//************************************
+void CSongsBestPickerDlg::OnRecalcSongRatings ()
+{
+	m_oSongManager.RecalcAllSongRatings ();
+	UpdateSongList ();
+
+} // end CSongsBestPickerDlg::OnRecalcSongRatings
 
 
 

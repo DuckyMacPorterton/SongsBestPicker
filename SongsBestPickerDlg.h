@@ -101,6 +101,7 @@ public:
 	bool	AddHotkey (int nID, UINT nModifiers, UINT nVirtualKey, CString strNameForError);
 
 	void	OnImportFromM3UFile		();
+	void	OnRecalcSongRatings		();
 	void	OnDeleteSongList		();
 	void	OnResetSongStatistics	();
 
