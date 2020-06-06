@@ -104,6 +104,7 @@ public:
 	void	OnRecalcSongRatings		();
 	void	OnDeleteSongList		();
 	void	OnResetSongStatistics	();
+	void	OnRemoveDuplicateSongs	();
 
 	void	UpdateSongList				();
 	void	UpdateCurrentPod			();
@@ -150,4 +151,5 @@ public:
 	afx_msg void OnBnClickedSubmitPodRankings();
 	afx_msg void OnBnClickedBrowseForSong();
 	afx_msg void OnRClickSongList(NMHDR* pNMHDR, LRESULT* pResult);
+	afx_msg void OnBnClickedSaveSongChanges();
 };

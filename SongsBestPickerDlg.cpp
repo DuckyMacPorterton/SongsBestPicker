@@ -192,6 +192,7 @@ BEGIN_MESSAGE_MAP(CSongsBestPickerDlg, CDialogEx)
 	ON_COMMAND(ID_RECALC_SONG_RATINGS,	OnRecalcSongRatings)
 	ON_COMMAND(ID_RESETSONGSTATISTICS,	OnResetSongStatistics)
 	ON_COMMAND(ID_DELETESONGLIST,		OnDeleteSongList)
+	ON_COMMAND(ID_REMOVEDUPLICATESONGS,	OnRemoveDuplicateSongs)
 
 	ON_COMMAND(ID_POPUP_DELETESONG,		OnDeleteSongFromList)
 	ON_COMMAND(ID_POPUP_EDITSONGINFO,	OnEditSongInfo)
@@ -209,6 +210,7 @@ BEGIN_MESSAGE_MAP(CSongsBestPickerDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_SUBMIT_POD_RANKINGS, &CSongsBestPickerDlg::OnBnClickedSubmitPodRankings)
 	ON_BN_CLICKED(IDC_BROWSE_FOR_SONG, &CSongsBestPickerDlg::OnBnClickedBrowseForSong)
 	ON_NOTIFY(NM_RCLICK, IDC_SONG_LIST, &CSongsBestPickerDlg::OnRClickSongList)
+	ON_BN_CLICKED(IDC_SAVE_SONG_CHANGES, &CSongsBestPickerDlg::OnBnClickedSaveSongChanges)
 END_MESSAGE_MAP()
 
 
@@ -672,6 +674,25 @@ void CSongsBestPickerDlg::OnResetSongStatistics()
 } // end on reset song statistics
 
 
+
+
+
+//************************************
+// Method:    OnRemoveDuplicateSongs
+// FullName:  CSongsBestPickerDlg::OnRemoveDuplicateSongs
+// Access:    public 
+// Returns:   void
+// Qualifier:
+//
+//
+//
+//************************************
+void CSongsBestPickerDlg::OnRemoveDuplicateSongs ()
+{
+
+
+
+} // end CSongsBestPickerDlg::OnRemoveDuplicateSongs
 
 
 
@@ -1526,17 +1547,7 @@ int CSongsBestPickerDlg::SortCompareSongListCtrl (LPARAM lParam1, LPARAM lParam2
 	//
 	//  Sort differently based on which column we're sorting
 
-	if (LIST_SONG_COL_TITLE == pDlg->m_nSongsSortCol)
-	{
-		//
-		//  Sorting on name column...  this is either alpha or by classification order
-
-		CString str1 = pDlg->GetSongTitle (nSongID1);
-		CString str2 = pDlg->GetSongTitle (nSongID2);
-
-		return nOrderMultiplier * str1.CompareNoCase(str2);
-	}
-	else if (LIST_SONG_COL_ARTIST == pDlg->m_nSongsSortCol)
+	if (LIST_SONG_COL_ARTIST == pDlg->m_nSongsSortCol)
 	{
 		//
 		//  Sorting on name column...  this is either alpha or by classification order
@@ -1544,7 +1555,13 @@ int CSongsBestPickerDlg::SortCompareSongListCtrl (LPARAM lParam1, LPARAM lParam2
 		CString str1 = pDlg->GetSongArtist (nSongID1);
 		CString str2 = pDlg->GetSongArtist (nSongID2);
 
-		return nOrderMultiplier * str1.CompareNoCase(str2);
+		int nResult = str1.CompareNoCase (str2);
+		if (0 != nResult)
+			return nOrderMultiplier * str1.CompareNoCase(str2);
+
+		//
+		//  Otherwise return the title compare
+
 	}
 	else if (LIST_SONG_COL_ALBUM == pDlg->m_nSongsSortCol)
 	{
@@ -1615,6 +1632,22 @@ int CSongsBestPickerDlg::SortCompareSongListCtrl (LPARAM lParam1, LPARAM lParam2
 
 		return nOrderMultiplier * str1.CompareNoCase(str2);
 	}
+
+	//
+	//  Title compare is our backup sort for every column.   That's why
+	//  it's not part of the if...else structure
+
+//	if (LIST_SONG_COL_TITLE == pDlg->m_nSongsSortCol)
+	{
+		//
+		//  Sorting on name column...  this is either alpha or by classification order
+
+		CString str1 = pDlg->GetSongTitle (nSongID1);
+		CString str2 = pDlg->GetSongTitle (nSongID2);
+
+		return nOrderMultiplier * str1.CompareNoCase(str2);
+	}
+
 
 	return 0;
 
@@ -1896,3 +1929,11 @@ void CSongsBestPickerDlg::OnRClickSongList(NMHDR* pNMHDR, LRESULT* pResult)
 	*pResult = 0;
 } // end on rclick song list
 
+
+
+void CSongsBestPickerDlg::OnBnClickedSaveSongChanges()
+{
+	UpdateData ();
+	m_oSongManager.SetSongPathToMp3 (m_nCurSongID, m_strCurSongPathToMp3);
+	UpdateSongList ();
+}

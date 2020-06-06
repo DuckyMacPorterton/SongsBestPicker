@@ -38,7 +38,7 @@ struct TableDefinitionStruct
 
 static TableDefinitionStruct VPTblSongs[] = {
 	{true,	false,	DB_COL_SONG_ID,				L"INTEGER",	VP_DEFAULT_UNUSED},
-	{false,	false,	DB_COL_PATH_TO_MP3,			L"TEXT",	VP_DEFAULT_UNUSED},
+	{false,	true,	DB_COL_PATH_TO_MP3,			L"TEXT",	VP_DEFAULT_UNUSED},
 	{false,	false,	DB_COL_SONG_ARTIST,			L"TEXT",	VP_DEFAULT_UNUSED},
 	{false,	false,	DB_COL_SONG_TITLE,			L"TEXT",	VP_DEFAULT_UNUSED},
 	{false,	false,	DB_COL_SONG_ALBUM,			L"TEXT",	VP_DEFAULT_UNUSED},

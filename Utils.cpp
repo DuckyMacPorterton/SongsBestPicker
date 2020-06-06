@@ -82,6 +82,9 @@ bool CUtils::CreateDBTable (CString& rstrError, CMyCppSQLite3DBPtr pDB, CString 
 		if (TableInfo[i].nDefaultVal != VP_DEFAULT_UNUSED)
 			strCol += L" DEFAULT " + NumberToString (TableInfo[i].nDefaultVal);
 
+		if (CString (TableInfo[i].strDataType).CompareNoCase (L"TEXT") == 0)
+			strCol += L" collate nocase ";
+
 		//
 		//  We write it this way because PRIMARY KEY is inherently unique so no need to check it for both.
 

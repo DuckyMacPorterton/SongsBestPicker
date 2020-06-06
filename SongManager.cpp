@@ -116,7 +116,7 @@ bool CSongManager::InitSongsFromTextFile (CString strTextFile, EFileFormat eFile
 			return SetError (CUtils::GetErrorMessageFromException (&oFileExcept));
 
 		CString strInsert, strSongName, strPathToMp3, strArtist, strTitle, strAlbum;
-		strInsert.Format (L"insert into %s (%s, %s, %s, %s, %s) values (null, ?, ?, ?, ?)", TBL_SONGS, 
+		strInsert.Format (L"insert or ignore into %s (%s, %s, %s, %s, %s) values (null, ?, ?, ?, ?)", TBL_SONGS, 
 			DB_COL_SONG_ID, DB_COL_PATH_TO_MP3, DB_COL_SONG_ARTIST, DB_COL_SONG_TITLE, DB_COL_SONG_ALBUM);
 		CppSQLite3Statement stmtQuery = m_pDB->compileStatement (strInsert);
 
