@@ -186,11 +186,16 @@ BEGIN_MESSAGE_MAP(CSongsBestPickerDlg, CDialogEx)
 	ON_COMMAND (ID_FILE_EXIT,		&CSongsBestPickerDlg::OnBnClickedOk)
 
 	ON_MESSAGE (ID_MY_NOTIFY,			OnTrayNotification)
+
 	ON_COMMAND(ID_DOUG_SHOWWINDOW,		OnShowMyWindow)
 	ON_COMMAND(ID_IMPORTFROMM3UFILE,	OnImportFromM3UFile)
 	ON_COMMAND(ID_RECALC_SONG_RATINGS,	OnRecalcSongRatings)
 	ON_COMMAND(ID_RESETSONGSTATISTICS,	OnResetSongStatistics)
 	ON_COMMAND(ID_DELETESONGLIST,		OnDeleteSongList)
+
+	ON_COMMAND(ID_POPUP_DELETESONG,		OnDeleteSongFromList)
+	ON_COMMAND(ID_POPUP_EDITSONGINFO,	OnEditSongInfo)
+	ON_COMMAND(ID_PLAY_SONG,			OnPlaySongFromSongList)
 
 	ON_WM_TIMER()
 	ON_NOTIFY(LVN_ITEMCHANGED, IDC_SONG_LIST,			&CSongsBestPickerDlg::OnItemChangedSongList)
@@ -203,6 +208,7 @@ BEGIN_MESSAGE_MAP(CSongsBestPickerDlg, CDialogEx)
 	ON_NOTIFY(HDN_ITEMDBLCLICK, 0, &CSongsBestPickerDlg::OnSongHeaderDblClick)
 	ON_BN_CLICKED(IDC_SUBMIT_POD_RANKINGS, &CSongsBestPickerDlg::OnBnClickedSubmitPodRankings)
 	ON_BN_CLICKED(IDC_BROWSE_FOR_SONG, &CSongsBestPickerDlg::OnBnClickedBrowseForSong)
+	ON_NOTIFY(NM_RCLICK, IDC_SONG_LIST, &CSongsBestPickerDlg::OnRClickSongList)
 END_MESSAGE_MAP()
 
 
@@ -733,6 +739,10 @@ void CSongsBestPickerDlg::UpdateSongList()
 
 		strWonLoss.Format (L"%2d / %2d", nWins, nLosses);
 		m_oSongList.SetItemText (nIndex, LIST_SONG_COL_WONLOSS, strWonLoss);
+
+		int nRating = -1;
+		if (m_oSongManager.GetSongRating (nLastID, nRating))
+			m_oSongList.SetItemText (nIndex, LIST_SONG_COL_RATING, CUtils::NumberToString (nRating));
 
 	} // end loop through songs
 
@@ -1586,18 +1596,16 @@ int CSongsBestPickerDlg::SortCompareSongListCtrl (LPARAM lParam1, LPARAM lParam2
 	}
 	else if (LIST_SONG_COL_RATING == pDlg->m_nSongsSortCol)
 	{
-#ifdef SupportThis
-		//
-		//  Sorting on records classified pct
+		int nSong1Rating = 0, nSong2Rating = 0;
 
-		double fRecordsPct1 = pDlg->GetRecordsClassifiedPctFromIndex (nFieldIndex1);
-		double fRecordsPct2	= pDlg->GetRecordsClassifiedPctFromIndex (nFieldIndex2);
+		pDlg->GetSongRating (nSongID1, nSong1Rating);
+		pDlg->GetSongRating (nSongID2, nSong2Rating);
 
-		if (fRecordsPct1 < fRecordsPct2)
+		if (nSong1Rating < nSong2Rating)
 			return nOrderMultiplier * -1;
-		if (fRecordsPct1 > fRecordsPct2)
+		if (nSong1Rating > nSong2Rating)
 			return nOrderMultiplier * 1;
-#endif
+
 		return 0;
 	}
 	else if (LIST_SONG_COL_MP3 == pDlg->m_nSongsSortCol)
@@ -1721,6 +1729,85 @@ bool CSongsBestPickerDlg::GetWonLossRecord (int nSongID, int& rnWon, int& rnLost
 
 
 //************************************
+// Method:    GetSongRating
+// FullName:  CSongsBestPickerDlg::GetSongRating
+// Access:    public 
+// Returns:   bool
+// Qualifier:
+// Parameter: int nSongID
+// Parameter: int & rnRating
+//
+//************************************
+bool CSongsBestPickerDlg::GetSongRating (int nSongID, int& rnRating)
+{
+	return m_oSongManager.GetSongRating (nSongID, rnRating);
+
+} // end CSongsBestPickerDlg::GetSongRating
+
+
+
+//************************************
+// Method:    OnDeleteSongFromList
+// FullName:  CSongsBestPickerDlg::OnDeleteSongFromList
+// Access:    public 
+// Returns:   void
+// Qualifier:
+//************************************
+void CSongsBestPickerDlg::OnDeleteSongFromList ()
+{
+	int nSelectedSong = m_oSongList.GetFirstSelectedItem ();
+	if (-1 == nSelectedSong)
+		return;
+
+	CString strSong = m_oSongList.GetItemText (nSelectedSong, LIST_SONG_COL_TITLE);
+	if (IDYES != AfxMessageBox (L"Do you really want to delete the song: " + strSong + L"\r\n\r\nThis will only remove the song from this software, not delete it from your disk", MB_YESNO | MB_DEFBUTTON2))
+		return;
+
+	int nSongID = (int) m_oSongList.GetItemData (nSelectedSong);
+	m_oSongManager.DeleteSong (nSongID);
+	UpdateSongList ();
+
+
+} // end CSongsBestPickerDlg::OnDeleteSongFromList
+
+
+
+//************************************
+// Method:    OnEditSongInfo
+// FullName:  CSongsBestPickerDlg::OnEditSongInfo
+// Access:    public 
+// Returns:   void
+// Qualifier:
+//************************************
+void CSongsBestPickerDlg::OnEditSongInfo ()
+{
+	AfxMessageBox (L"Not yet supported");
+} // end CSongsBestPickerDlg::OnEditSongInfo
+
+
+
+//************************************
+// Method:    OnPlaySongFromSongList
+// FullName:  CSongsBestPickerDlg::OnPlaySongFromSongList
+// Access:    public 
+// Returns:   void
+// Qualifier:
+//************************************
+void CSongsBestPickerDlg::OnPlaySongFromSongList ()
+{
+	int nSelectedSong = m_oSongList.GetFirstSelectedItem ();
+	if (-1 == nSelectedSong)
+		return;
+
+	int nSongID = (int) m_oSongList.GetItemData (nSelectedSong);
+	LoadSongIntoPlayer (nSongID);
+	PlaySong ();
+
+} // end CSongsBestPickerDlg::OnPlaySongFromSongList
+
+
+
+//************************************
 // Method:    OnBnClickedSubmitPodRankings
 // FullName:  CSongsBestPickerDlg::OnBnClickedSubmitPodRankings
 // Access:    public 
@@ -1778,3 +1865,34 @@ void CSongsBestPickerDlg::OnBnClickedBrowseForSong()
 	m_strCurSongPathToMp3 = oDlg.GetPathName ();
 	UpdateData (false);
 } // end browse for song
+
+
+
+
+//************************************
+// Method:    OnRClickSongList
+// FullName:  CSongsBestPickerDlg::OnRClickSongList
+// Access:    public 
+// Returns:   void
+// Qualifier:
+// Parameter: NMHDR * pNMHDR
+// Parameter: LRESULT * pResult
+//************************************
+void CSongsBestPickerDlg::OnRClickSongList(NMHDR* pNMHDR, LRESULT* pResult)
+{
+	LPNMITEMACTIVATE pNMItemActivate = reinterpret_cast<LPNMITEMACTIVATE>(pNMHDR);
+
+	CPoint ptScreen = pNMItemActivate->ptAction;
+	this->ClientToScreen (&ptScreen);
+
+	CMenu	menuPopup;
+	
+	VERIFY(menuPopup.LoadMenu(IDR_MENU_SONG_POPUP));
+	CMenu*	pMenuSongList = menuPopup.GetSubMenu(0);
+	if (NULL == pMenuSongList)
+		return;
+
+	pMenuSongList->TrackPopupMenu (TPM_LEFTALIGN | TPM_RIGHTBUTTON, ptScreen.x, ptScreen.y, this); // | TPM_RETURNCMD
+	*pResult = 0;
+} // end on rclick song list
+

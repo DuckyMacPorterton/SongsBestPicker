@@ -29,11 +29,12 @@ protected:
 	CString GuessMoreLikelyToBeReal (CString strOne, CString strTwo);
 
 public:
-	bool	DeleteAllSongs			();
+	bool	DeleteAllSongs		();
+	bool	DeleteSong			(int nSongID);
 
-	bool	ScheduleMorePods ();
+	bool	ScheduleMorePods	();
 
-	bool	GetWonLossRecord (int nSongID, int& rnWins, int& rnLosses);
+	bool	GetWonLossRecord	(int nSongID, int& rnWins, int& rnLosses);
 
 	bool	GetSongCount	(int& rnSongCount);
 	bool	GetNextSong		(CString& rstrSongTitle, CString& rstrSongArtist, CString& rstrSongAlbum, CString& rstrPathToMp3, int& rnSongID, int nPrevSongID = -1);

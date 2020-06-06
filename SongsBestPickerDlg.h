@@ -118,6 +118,11 @@ public:
 	CString	GetSongAlbum		(int nSongID);
 	CString	GetSongPathToMp3	(int nSongID);
 	bool	GetWonLossRecord	(int nSongID, int& rnWon, int& rnLost);
+	bool	GetSongRating		(int nSongID, int& rnRating);
+
+	void	OnDeleteSongFromList ();
+	void	OnEditSongInfo ();
+	void	OnPlaySongFromSongList ();
 
 
 	bool	OnHandleHotkey (UINT nHotkey);
@@ -144,4 +149,5 @@ public:
 	afx_msg void OnItemChangedCurrentPodList(NMHDR* pNMHDR, LRESULT* pResult);
 	afx_msg void OnBnClickedSubmitPodRankings();
 	afx_msg void OnBnClickedBrowseForSong();
+	afx_msg void OnRClickSongList(NMHDR* pNMHDR, LRESULT* pResult);
 };

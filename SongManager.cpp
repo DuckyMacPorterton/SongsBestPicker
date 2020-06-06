@@ -473,6 +473,55 @@ bool CSongManager::DeleteAllSongs()
 
 
 //************************************
+// Method:    DeleteSong
+// FullName:  CSongManager::DeleteSong
+// Access:    public 
+// Returns:   bool
+// Qualifier:
+// Parameter: int nSongID
+//
+//
+//
+//************************************
+bool CSongManager::DeleteSong (int nSongID)
+{
+	if (NULL == m_pDB)
+		return false;
+
+	try
+	{
+		CString strDelete;
+		strDelete.Format (L"delete from %s where %s=%d", TBL_SONGS, DB_COL_SONG_ID, nSongID);
+		m_pDB->execDML (strDelete);
+
+		strDelete.Format (L"delete from %s where %s=%d or %s=%d", TBL_SONG_HEAD_TO_HEAD,
+			DB_COL_SONG_1_ID,	nSongID,
+			DB_COL_SONG_2_ID,	nSongID);
+		m_pDB->execDML (strDelete);
+
+		strDelete.Format (L"delete from %s where %s=%d or %s=%d or %s=%d or %s=%d or %s=%d", TBL_SONG_PODS, 
+			DB_COL_SONG_1_ID,	nSongID,
+			DB_COL_SONG_2_ID,	nSongID,
+			DB_COL_SONG_3_ID,	nSongID,
+			DB_COL_SONG_4_ID,	nSongID,
+			DB_COL_SONG_5_ID,	nSongID);
+		m_pDB->execDML (strDelete);
+
+		return true;
+	}
+	catch (CppSQLite3Exception& e)
+	{
+		return SetError (e.errorMessage ());
+	}
+	catch (CException* e)
+	{
+		return SetError (CUtils::GetErrorMessageFromException (e, true));
+	}
+} // end CSongManager::DeleteSong
+
+
+
+//************************************
 // Method:    GetWonLossRecord
 // FullName:  CSongManager::GetWonLossRecord
 // Access:    public 
@@ -788,9 +837,6 @@ bool CSongManager::SetSongDetails (int nSongID, CString strSongTitle, CString st
 // Qualifier:
 // Parameter: int nSongID
 // Parameter: int & rnSongRating
-//
-//
-//
 //************************************
 bool CSongManager::GetSongRating (int nSongID, int& rnSongRating)
 {
