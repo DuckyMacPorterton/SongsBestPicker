@@ -55,8 +55,10 @@ protected:
 	int				m_nCurSongID			= -1;
 	int				m_nCurPodID				= -1;
 
-	CString			m_strCurSongTitle,		m_strLastLoadedSongTitle;
-	CString			m_strCurSongPathToMp3,	m_strLastLoadedPathToMp3;
+	CString			m_strCurSongTitle;
+	CString			m_strCurSongPathToMp3;
+	CString			m_strCurSongArtist;
+	CString			m_strCurSongAlbum;
 
 	//
 	//  Playback info
@@ -64,8 +66,6 @@ protected:
 	FMOD::System*	m_pPlaybackSystem	= NULL;
 	FMOD::Sound*	m_pCurSong			= NULL;
 	FMOD::Channel*	m_pPlaybackChannel	= NULL;
-
-
 
 	CString			m_strSongPlaybackPos;
 	CString			m_strSongPlaybackLen;
@@ -107,6 +107,7 @@ public:
 	void	OnRemoveDuplicateSongs	();
 
 	void	UpdateSongList				();
+	void	UpdateSongListSpecificSong	(int nSongID, CString strTitle, CString strArtist, CString strAlbum, CString strPathToMp3);
 	void	UpdateCurrentPod			();
 	void	UpdateStatsForCurrentSong	(int nSongID = -1);
 	void	UpdatePlayerStatus			();
@@ -147,9 +148,8 @@ public:
 	void	OnItemChangedSongList(NMHDR* pNMHDR, LRESULT* pResult);
 	void	OnBnClickedPlaySong();
 	void	OnSongHeaderDblClick(NMHDR* pNMHDR, LRESULT* pResult);
-	afx_msg void OnItemChangedCurrentPodList(NMHDR* pNMHDR, LRESULT* pResult);
-	afx_msg void OnBnClickedSubmitPodRankings();
-	afx_msg void OnBnClickedBrowseForSong();
-	afx_msg void OnRClickSongList(NMHDR* pNMHDR, LRESULT* pResult);
-	afx_msg void OnBnClickedSaveSongChanges();
+	void	OnItemChangedCurrentPodList(NMHDR* pNMHDR, LRESULT* pResult);
+	void	OnBnClickedSubmitPodRankings();
+	void	OnBnClickedBrowseForSong();
+	void	OnRClickSongList(NMHDR* pNMHDR, LRESULT* pResult);
 };

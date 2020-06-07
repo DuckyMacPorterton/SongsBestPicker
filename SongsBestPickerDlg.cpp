@@ -156,6 +156,8 @@ CSongsBestPickerDlg::CSongsBestPickerDlg (CWnd* pParent /*=NULL*/)
 	, m_strCurSongPathToMp3	(L"")
 	, m_strSongPlaybackPos(_T(""))
 	, m_strSongPlaybackLen(_T(""))
+	, m_strCurSongArtist(_T(""))
+	, m_strCurSongAlbum(_T(""))
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDI_SONGS_BEST_PICKER); // IDR_MAINFRAME);
 }
@@ -171,6 +173,8 @@ void CSongsBestPickerDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Text(pDX, IDC_SONG_POS, m_strSongPlaybackPos);
 	DDX_Text(pDX, IDC_SONG_LENGTH, m_strSongPlaybackLen);
 	DDX_Control(pDX, IDC_PROGRESS1, m_oSongPlayingProgress);
+	DDX_Text(pDX, IDC_EDIT_ARTIST, m_strCurSongArtist);
+	DDX_Text(pDX, IDC_EDIT_ALBUM, m_strCurSongAlbum);
 }
 
 BEGIN_MESSAGE_MAP(CSongsBestPickerDlg, CDialogEx)
@@ -203,14 +207,14 @@ BEGIN_MESSAGE_MAP(CSongsBestPickerDlg, CDialogEx)
 	ON_NOTIFY(LVN_ITEMCHANGED, IDC_CURRENT_POD_LIST,	&CSongsBestPickerDlg::OnItemChangedCurrentPodList)
 
 	ON_BN_CLICKED(IDC_PLAY_SONG,	&CSongsBestPickerDlg::OnBnClickedPlaySong)
-	ON_BN_CLICKED(IDC_PAUSE_SONG,	&CSongsBestPickerDlg::PauseSong)
-	ON_BN_CLICKED(IDC_STOP_SONG,	&CSongsBestPickerDlg::StopSong)
+//	ON_BN_CLICKED(IDC_PAUSE_SONG,	&CSongsBestPickerDlg::PauseSong)
+//	ON_BN_CLICKED(IDC_STOP_SONG,	&CSongsBestPickerDlg::StopSong)
 
 	ON_NOTIFY(HDN_ITEMDBLCLICK, 0, &CSongsBestPickerDlg::OnSongHeaderDblClick)
 	ON_BN_CLICKED(IDC_SUBMIT_POD_RANKINGS, &CSongsBestPickerDlg::OnBnClickedSubmitPodRankings)
 	ON_BN_CLICKED(IDC_BROWSE_FOR_SONG, &CSongsBestPickerDlg::OnBnClickedBrowseForSong)
 	ON_NOTIFY(NM_RCLICK, IDC_SONG_LIST, &CSongsBestPickerDlg::OnRClickSongList)
-	ON_BN_CLICKED(IDC_SAVE_SONG_CHANGES, &CSongsBestPickerDlg::OnBnClickedSaveSongChanges)
+	ON_BN_CLICKED(IDC_SAVE_SONG_CHANGES, &CSongsBestPickerDlg::SaveSongInfoFromPlayer)
 END_MESSAGE_MAP()
 
 
@@ -772,6 +776,29 @@ void CSongsBestPickerDlg::UpdateSongList()
 
 } // end CSongsBestPickerDlg::UpdateSongList
 
+
+
+
+//************************************
+// Method:    UpdateSongListSpecificSong
+// FullName:  CSongsBestPickerDlg::UpdateSongListSpecificSong
+// Access:    public 
+// Returns:   void
+// Qualifier:
+// Parameter: int nSongID
+//************************************
+void CSongsBestPickerDlg::UpdateSongListSpecificSong (int nSongID, CString strTitle, CString strArtist, CString strAlbum, CString strPathToMp3)
+{
+	int nListCtrlIndex = m_oSongList.FindByItemData (nSongID);
+	if (-1 == nListCtrlIndex)
+		return;
+
+	m_oSongList.SetItemText (nListCtrlIndex, LIST_SONG_COL_TITLE,	strTitle);
+	m_oSongList.SetItemText (nListCtrlIndex, LIST_SONG_COL_ARTIST,	strArtist);
+	m_oSongList.SetItemText (nListCtrlIndex, LIST_SONG_COL_ALBUM,	strAlbum);
+	m_oSongList.SetItemText (nListCtrlIndex, LIST_SONG_COL_MP3,		strPathToMp3);
+
+} // end CSongsBestPickerDlg::UpdateSongListSpecificSong
 
 
 
@@ -1363,18 +1390,12 @@ void CSongsBestPickerDlg::LoadSongIntoPlayer (int nSongID)
 	if (-1 == nSongID) {
 		m_strCurSongTitle.Empty ();
 		m_strCurSongPathToMp3.Empty ();
-
-		m_strLastLoadedSongTitle.Empty ();
-		m_strLastLoadedPathToMp3.Empty ();
+		m_strCurSongAlbum.Empty ();
+		m_strCurSongArtist.Empty ();
 	}
 	else
 	{
-		CString strSongArtist, strSongAlbum;
-
-		m_oSongManager.GetSongDetails (nSongID, m_strCurSongTitle, strSongArtist, strSongAlbum, m_strCurSongPathToMp3);
-
-		m_strLastLoadedSongTitle		= m_strCurSongTitle;
-		m_strLastLoadedPathToMp3	= m_strCurSongPathToMp3;
+		m_oSongManager.GetSongDetails (nSongID, m_strCurSongTitle, m_strCurSongArtist, m_strCurSongAlbum, m_strCurSongPathToMp3);
 	}
 
 	UpdateData (false);
@@ -1396,34 +1417,19 @@ void CSongsBestPickerDlg::LoadSongIntoPlayer (int nSongID)
 //************************************
 void CSongsBestPickerDlg::SaveSongInfoFromPlayer ()
 {
-#ifdef SupportEditing
 	UpdateData ();
 
 	//
 	//  Save any changes the user made
 
-	if (-1 != m_nCurSongListCtrlIndex)
-	{
-		m_strCurSongTitle.Trim ();
-		m_strCurSongPathToMp3.Trim ();
+	m_strCurSongTitle.Trim ();
+	m_strCurSongAlbum.Trim ();
+	m_strCurSongArtist.Trim ();
+	m_strCurSongPathToMp3.Trim ();
 
-		if (!m_strCurSongTitle.IsEmpty () && m_strCurSongTitle != m_strLastLoadedSongTitle)
-		{
-			int nSongID = (int)m_oSongList.GetItemData (m_nCurSongListCtrlIndex);
+	m_oSongManager.SetSongDetails	(m_nCurSongID, m_strCurSongTitle, m_strCurSongArtist, m_strCurSongAlbum, m_strCurSongPathToMp3);
+	UpdateSongListSpecificSong		(m_nCurSongID, m_strCurSongTitle, m_strCurSongArtist, m_strCurSongAlbum, m_strCurSongPathToMp3);
 
-			SetSongDetails;
-//			m_oSongManager.SetSongTitle (nSongID, m_strCurSongName);
-			m_oSongList.SetItemText (m_nCurSongListCtrlIndex, LIST_SONG_COL_TITLE, m_strCurSongTitle);
-		}
-		if (!m_strCurSongPathToMp3.IsEmpty () && m_strCurSongPathToMp3 != m_strLastLoadedPathToMp3)
-		{
-			int nSongID = (int)m_oSongList.GetItemData (m_nCurSongListCtrlIndex);
-
-			m_oSongManager.SetSongPathToMp3 (nSongID, m_strLastLoadedPathToMp3);
-			m_oSongList.SetItemText (m_nCurSongListCtrlIndex, LIST_SONG_COL_MP3, m_strCurSongPathToMp3);
-		}
-	}
-#endif
 } // end CSongsBestPickerDlg::SaveSongInfoFromPlayer
 
 
@@ -1444,7 +1450,10 @@ void CSongsBestPickerDlg::OnBnClickedPlaySong ()
 	//
 	//  If we're already playing, this means stop, otherwise means play...
 
-	PlaySong (m_strCurSongPathToMp3);
+	if (m_eSongPlayingStatus == ESongPlayStatus::ePlaying)
+		PauseSong ();
+	else 
+		PlaySong (m_strCurSongPathToMp3);
 
 } // end on play song
 
@@ -1814,7 +1823,13 @@ void CSongsBestPickerDlg::OnDeleteSongFromList ()
 //************************************
 void CSongsBestPickerDlg::OnEditSongInfo ()
 {
-	AfxMessageBox (L"Not yet supported");
+	int nCurListCtrlIndex = m_oSongList.GetFirstSelectedItem ();
+	if (-1 == nCurListCtrlIndex)
+		return;
+
+	int nSongID = (int) m_oSongList.GetItemData (nCurListCtrlIndex);
+	LoadSongIntoPlayer (nSongID);
+
 } // end CSongsBestPickerDlg::OnEditSongInfo
 
 
@@ -1930,10 +1945,3 @@ void CSongsBestPickerDlg::OnRClickSongList(NMHDR* pNMHDR, LRESULT* pResult)
 } // end on rclick song list
 
 
-
-void CSongsBestPickerDlg::OnBnClickedSaveSongChanges()
-{
-	UpdateData ();
-	m_oSongManager.SetSongPathToMp3 (m_nCurSongID, m_strCurSongPathToMp3);
-	UpdateSongList ();
-}
