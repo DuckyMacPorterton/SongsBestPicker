@@ -47,11 +47,9 @@ public:
 
 	static void		EloRating		(float& Ra, float& Rb, int K, int nWinnerScore, int nLoserScore);
 	static float	EloProbability	(float rating1, float rating2);
-
-
-
 };
 
+#define N2S		NumberToString
 
 
 class CRecursionCounterAuto

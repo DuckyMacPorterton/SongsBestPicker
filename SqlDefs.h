@@ -113,6 +113,21 @@ static TableDefinitionStruct VPTblMp3Tags[] = {
 
 
 
+//////////////////////////////////////////////////////////////////
+//
+#define TBL_OTHER_STUFF			L"OtherStuff"
+#define TBL_OTHER_STUFF_VER		1
+
+#define DB_COL_WHAT				L"What"			
+#define DB_COL_VALUE			L"Value"		
+
+static TableDefinitionStruct VPTblOtherStuff[] = {
+	{true,	false,	DB_COL_WHAT,		L"TEXT",	VP_DEFAULT_UNUSED},
+	{false,	false,	DB_COL_VALUE,		L"TEXT",	VP_DEFAULT_UNUSED},
+	{0,		0,		0,						0,			0}
+};
+
+
 
 
 // ***************************************************************************************************
@@ -141,6 +156,7 @@ static SVpSqlTableDefinitions arrVpSqlTableDefinitions[] = {
 	{TBL_SONG_HEAD_TO_HEAD,	VPTblSongHeadToHead,	TBL_SONG_HEAD_TO_HEAD_VER},
 	{TBL_SONG_PODS,			VPTblCurrentSchedule,	TBL_SONG_PODS_VER},
 	{TBL_MP3_TAGS,			VPTblMp3Tags,			TBL_MP3_TAGS_VER},
+	{TBL_OTHER_STUFF,		VPTblOtherStuff,		TBL_OTHER_STUFF_VER},
 	{0,						0,						0}
 }; // end VP SQL Table Definition array
 

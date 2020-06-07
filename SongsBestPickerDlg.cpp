@@ -25,6 +25,10 @@
 #define LIST_POD_COL_TITLE		1
 #define LIST_POD_COL_ARTIST		2
 
+#define LIST_STATS_COL_OPPONENT	0
+#define LIST_STATS_COL_WONLOSS	1
+#define LIST_STATS_COL_MARGIN	2
+
 
 #define SONG_STATUS_TIMER_ID	3
 #define SONG_STATUS_TIMER_MS	1000
@@ -191,12 +195,13 @@ BEGIN_MESSAGE_MAP(CSongsBestPickerDlg, CDialogEx)
 
 	ON_MESSAGE (ID_MY_NOTIFY,			OnTrayNotification)
 
+	ON_REGISTERED_MESSAGE (UWM_CLICKED_PROGRESS_CTRL,	OnClickedProgressCtrl)
+
 	ON_COMMAND(ID_DOUG_SHOWWINDOW,		OnShowMyWindow)
 	ON_COMMAND(ID_IMPORTFROMM3UFILE,	OnImportFromM3UFile)
 	ON_COMMAND(ID_RECALC_SONG_RATINGS,	OnRecalcSongRatings)
 	ON_COMMAND(ID_RESETSONGSTATISTICS,	OnResetSongStatistics)
 	ON_COMMAND(ID_DELETESONGLIST,		OnDeleteSongList)
-	ON_COMMAND(ID_REMOVEDUPLICATESONGS,	OnRemoveDuplicateSongs)
 
 	ON_COMMAND(ID_POPUP_DELETESONG,		OnDeleteSongFromList)
 	ON_COMMAND(ID_POPUP_EDITSONGINFO,	OnEditSongInfo)
@@ -259,6 +264,14 @@ BOOL CSongsBestPickerDlg::OnInitDialog()
 	m_oCurrentPodList.SetExtendedStyle (m_oSongList.GetExtendedStyle () | LVS_EX_FULLROWSELECT);
 
 	//
+	//  Some song stats
+
+	m_oStatsList.GetClientRect (rcList);
+	m_oStatsList.InsertColumn (LIST_STATS_COL_OPPONENT,		L"Opponent",	LVCFMT_LEFT,	(int) (rcList.Width () * 0.5));
+	m_oStatsList.InsertColumn (LIST_STATS_COL_WONLOSS,		L"WonLoss",		LVCFMT_CENTER,	(int) (rcList.Width () * 0.3));
+	m_oStatsList.InsertColumn (LIST_STATS_COL_MARGIN,		L"Margin",		LVCFMT_CENTER,	(int) (rcList.Width () * 0.18));
+
+	//
 	//  Our playback system
 	
 	void*		pExtraDriverData = NULL;
@@ -287,6 +300,12 @@ BOOL CSongsBestPickerDlg::OnInitDialog()
 	//  And apply the hotkeys
 
 	ApplyHotkeys ();
+
+	//
+	//  Put the window where they had it before
+
+	RestoreWindowPosition ();
+
 
 	//
 	//  Start a timer to keep tabs on things
@@ -372,6 +391,8 @@ HCURSOR CSongsBestPickerDlg::OnQueryDragIcon()
 
 void CSongsBestPickerDlg::OnBnClickedOk()
 {
+	SaveWindowPosition ();
+
 	RemoveHotkeys ();
 	CDialogEx::OnOK();
 }
@@ -673,30 +694,12 @@ void CSongsBestPickerDlg::OnDeleteSongList()
 //************************************
 void CSongsBestPickerDlg::OnResetSongStatistics()
 {
-	AfxMessageBox (L"Not supported yet");
+	if (IDYES != AfxMessageBox (L"This will delete all song statistics.  You cannot get that back.\r\n\r\nDo you really want to do this?", MB_YESNO | MB_DEFBUTTON2))
+		return;
+
+	m_oSongManager.DeleteAllSongStats ();
 
 } // end on reset song statistics
-
-
-
-
-
-//************************************
-// Method:    OnRemoveDuplicateSongs
-// FullName:  CSongsBestPickerDlg::OnRemoveDuplicateSongs
-// Access:    public 
-// Returns:   void
-// Qualifier:
-//
-//
-//
-//************************************
-void CSongsBestPickerDlg::OnRemoveDuplicateSongs ()
-{
-
-
-
-} // end CSongsBestPickerDlg::OnRemoveDuplicateSongs
 
 
 
@@ -771,6 +774,14 @@ void CSongsBestPickerDlg::UpdateSongList()
 
 	} // end loop through songs
 
+	CString strTitle;
+	strTitle.Format (L"Title (%d songs)", nSongCount);
+
+	LV_COLUMN col;
+	col.mask = LVCF_TEXT;
+	col.pszText = strTitle.GetBuffer ();
+	m_oSongList.SetColumn (LIST_SONG_COL_TITLE, &col);
+
 	m_oSongList.SetRedraw (true);
 	m_oSongList.UpdateWindow ();
 
@@ -787,11 +798,16 @@ void CSongsBestPickerDlg::UpdateSongList()
 // Qualifier:
 // Parameter: int nSongID
 //************************************
-void CSongsBestPickerDlg::UpdateSongListSpecificSong (int nSongID, CString strTitle, CString strArtist, CString strAlbum, CString strPathToMp3)
+void CSongsBestPickerDlg::UpdateSongListSpecificSong (int nSongID, CString strTitle /* = L"" */, CString strArtist /* = L"" */, CString strAlbum /* = L"" */, CString strPathToMp3 /* = L"" */)
 {
 	int nListCtrlIndex = m_oSongList.FindByItemData (nSongID);
 	if (-1 == nListCtrlIndex)
 		return;
+
+	if (strTitle.IsEmpty ())
+	{
+		m_oSongManager.GetSongDetails (nSongID, strTitle, strArtist, strAlbum, strPathToMp3);
+	}
 
 	m_oSongList.SetItemText (nListCtrlIndex, LIST_SONG_COL_TITLE,	strTitle);
 	m_oSongList.SetItemText (nListCtrlIndex, LIST_SONG_COL_ARTIST,	strArtist);
@@ -799,6 +815,35 @@ void CSongsBestPickerDlg::UpdateSongListSpecificSong (int nSongID, CString strTi
 	m_oSongList.SetItemText (nListCtrlIndex, LIST_SONG_COL_MP3,		strPathToMp3);
 
 } // end CSongsBestPickerDlg::UpdateSongListSpecificSong
+
+
+
+//************************************
+// Method:    UpdateSongListWonLossSpecificSong
+// FullName:  CSongsBestPickerDlg::UpdateSongListWonLossSpecificSong
+// Access:    public 
+// Returns:   void
+// Qualifier:
+// Parameter: int nSongID
+//************************************
+void CSongsBestPickerDlg::UpdateSongListWonLossSpecificSong (int nSongID)
+{
+	int nListCtrlIndex = m_oSongList.FindByItemData (nSongID);
+	if (-1 == nListCtrlIndex)
+		return;
+
+	int nWins = 0, nLosses = 0, nSongRating = 0;
+
+	m_oSongManager.GetWonLossRecord (nSongID, nWins, nLosses);
+	m_oSongManager.GetSongRating	(nSongID, nSongRating);
+
+	CString strWonLoss;
+	strWonLoss.Format (L"%2d / %2d", nWins, nLosses);
+
+	m_oSongList.SetItemText (nListCtrlIndex, LIST_SONG_COL_WONLOSS,	strWonLoss);
+	m_oSongList.SetItemText (nListCtrlIndex, LIST_SONG_COL_RATING,	CUtils::NumberToString (nSongRating));
+
+} // end CSongsBestPickerDlg::UpdateSongListWonLossSpecificSong
 
 
 
@@ -862,8 +907,17 @@ void CSongsBestPickerDlg::UpdateCurrentPod ()
 //************************************
 bool CSongsBestPickerDlg::SetSongRank (int nRank)
 {
-	if (-1 == m_nCurSongID)
+	//
+	//  I had this setting the rank of the currently playing song,
+	//  but I think I want it to be whichever is selected in the pod list ctrl.
+	//  That way they can move things around while another song plays.
+	//  Which is what I just tried to do and failed.
+
+	int nListCtrlIndex = m_oCurrentPodList.GetFirstSelectedItem ();
+	if (-1 == nListCtrlIndex)
 		return false;
+
+	int nSongID = (int) m_oCurrentPodList.GetItemData (nListCtrlIndex);
 
 	//
 	//  Let's just re-label our song, then call sort... actually, 
@@ -877,7 +931,7 @@ bool CSongsBestPickerDlg::SetSongRank (int nRank)
 	for (int i = 0; i < m_oCurrentPodList.GetItemCount (); i ++)
 	{
 		int nListCtrlSongID = (int) m_oCurrentPodList.GetItemData (i);
-		if (nListCtrlSongID == m_nCurSongID)
+		if (nListCtrlSongID == nSongID)
 		{
 			strTitleWeMoved		= m_oCurrentPodList.GetItemText (i, LIST_POD_COL_TITLE);
 			strArtistWeMoved	= m_oCurrentPodList.GetItemText (i, LIST_POD_COL_ARTIST);
@@ -900,7 +954,7 @@ bool CSongsBestPickerDlg::SetSongRank (int nRank)
 	int nIndex = m_oCurrentPodList.InsertItem (nRank - 1, CUtils::NumberToString (nRank));
 	m_oCurrentPodList.SetItemText (nIndex, LIST_POD_COL_TITLE,	strTitleWeMoved);
 	m_oCurrentPodList.SetItemText (nIndex, LIST_POD_COL_ARTIST, strArtistWeMoved);
-	m_oCurrentPodList.SetItemData (nIndex, m_nCurSongID);
+	m_oCurrentPodList.SetItemData (nIndex, nSongID);
 
 	m_oCurrentPodList.SelectItem (nIndex, true);	//  We don't have to unselect anything since this song was selected before we deleted it
 
@@ -931,11 +985,36 @@ bool CSongsBestPickerDlg::SetSongRank (int nRank)
 //
 //
 //************************************
-void CSongsBestPickerDlg::UpdateStatsForCurrentSong (int nSongID /* = -1 */)
+void CSongsBestPickerDlg::UpdateStatsForCurrentSong (int nSongID)
 {
 	m_oStatsList.DeleteAllItems ();
 	if (-1 == nSongID)
 		return;
+	
+	CIntArray arrOpponents, arrMargins;
+	if (! m_oSongManager.GetHeadToHeadForSong (nSongID, arrOpponents, arrMargins))
+		return;
+
+	if (arrOpponents.GetSize () != arrMargins.GetSize ())
+		return; 
+
+	for (int i = 0; i < arrOpponents.GetSize (); i ++)
+	{
+		CString strOpponent, strWonLoss;
+		m_oSongManager.GetSongTitle (arrOpponents[i], strOpponent);
+
+		if (arrMargins[i] > 0)
+			strWonLoss = L"Won";
+		else
+			strWonLoss = L"Lost";
+
+		int nIndex = m_oStatsList.InsertItem (i, strOpponent);
+		m_oStatsList.SetItemText (nIndex, LIST_STATS_COL_WONLOSS,	strWonLoss);
+		m_oStatsList.SetItemText (nIndex, LIST_STATS_COL_MARGIN,	CUtils::NumberToString (arrMargins[i]));
+
+		m_oStatsList.SetItemData (nIndex, arrOpponents[i]);
+	}
+
 
 } // end CSongsBestPickerDlg::UpdateStatsForCurrentSong
 
@@ -1352,6 +1431,7 @@ void CSongsBestPickerDlg::OnItemChangedCurrentPodList(NMHDR* pNMHDR, LRESULT* pR
 
 	if ((pNMLV->uChanged & LVIF_STATE) && (pNMLV->uNewState & LVIS_SELECTED))
 	{
+#ifdef DoThis
 		//
 		//  Woohoo!  We have a newly selected item.
 
@@ -1361,6 +1441,7 @@ void CSongsBestPickerDlg::OnItemChangedCurrentPodList(NMHDR* pNMHDR, LRESULT* pR
 			int nSongID = (int) m_oCurrentPodList.GetItemData (nListCtrlIndex);
 			LoadSongIntoPlayer (nSongID);
 		}
+#endif
 	}
 
 	*pResult = 0;
@@ -1807,7 +1888,8 @@ void CSongsBestPickerDlg::OnDeleteSongFromList ()
 
 	int nSongID = (int) m_oSongList.GetItemData (nSelectedSong);
 	m_oSongManager.DeleteSong (nSongID);
-	UpdateSongList ();
+
+	UpdateSongListSpecificSong		(m_nCurSongID);
 
 
 } // end CSongsBestPickerDlg::OnDeleteSongFromList
@@ -1856,14 +1938,96 @@ void CSongsBestPickerDlg::OnPlaySongFromSongList ()
 
 
 //************************************
+// Method:    RestoreWindowPosition
+// FullName:  CSongsBestPickerDlg::RestoreWindowPosition
+// Access:    public 
+// Returns:   void
+// Qualifier:
+//************************************
+void CSongsBestPickerDlg::RestoreWindowPosition ()
+{
+	int nHeight = 0, nWidth = 0, nX = 0, nY = 0;
+
+	CRect	rcWnd;
+	CString strVal;
+
+	m_oSongManager.GetOtherValue (L"x",			strVal);
+	if (strVal.IsEmpty ())
+		return;
+
+	rcWnd.left = _tstoi (strVal);
+
+	m_oSongManager.GetOtherValue (L"y",			strVal);
+	rcWnd.top = _tstoi (strVal);
+
+	m_oSongManager.GetOtherValue (L"height",	strVal);
+	rcWnd.bottom = rcWnd.top + _tstoi (strVal);
+
+	m_oSongManager.GetOtherValue (L"width",		strVal);
+	rcWnd.right = rcWnd.left + _tstoi (strVal);
+
+	MoveWindow (rcWnd);
+
+	//
+	//  Now the song columns
+
+	m_oSongManager.GetOtherValue (L"TitleWidth",	strVal);
+	m_oSongList.SetColumnWidth (LIST_SONG_COL_TITLE, _tstoi (strVal));
+
+	m_oSongManager.GetOtherValue (L"ArtistWidth",	strVal);
+	m_oSongList.SetColumnWidth (LIST_SONG_COL_ARTIST, _tstoi (strVal));
+
+	m_oSongManager.GetOtherValue (L"AlbumWidth",	strVal);
+	m_oSongList.SetColumnWidth (LIST_SONG_COL_ALBUM, _tstoi (strVal));
+
+	m_oSongManager.GetOtherValue (L"RecordWidth",	strVal);
+	m_oSongList.SetColumnWidth (LIST_SONG_COL_WONLOSS, _tstoi (strVal));
+
+	m_oSongManager.GetOtherValue (L"RatingWidth",	strVal);
+	m_oSongList.SetColumnWidth (LIST_SONG_COL_RATING, _tstoi (strVal));
+
+	m_oSongManager.GetOtherValue (L"PathToMp3Width",	strVal);
+	m_oSongList.SetColumnWidth (LIST_SONG_COL_MP3, _tstoi (strVal));
+
+
+} // end CSongsBestPickerDlg::RestoreWindowPosition
+
+
+
+//************************************
+// Method:    SaveWindowPosition
+// FullName:  CSongsBestPickerDlg::SaveWindowPosition
+// Access:    public 
+// Returns:   void
+// Qualifier:
+//************************************
+void CSongsBestPickerDlg::SaveWindowPosition ()
+{
+	CRect r;
+	this->GetWindowRect (r);
+
+	m_oSongManager.SetOtherValue (L"height",	CUtils::N2S (r.Height ()));
+	m_oSongManager.SetOtherValue (L"width",		CUtils::N2S (r.Width  ()));
+	m_oSongManager.SetOtherValue (L"x",			CUtils::N2S (r.left));
+	m_oSongManager.SetOtherValue (L"y",			CUtils::N2S (r.top));
+
+	m_oSongManager.SetOtherValue (L"TitleWidth",		CUtils::N2S (m_oSongList.GetColumnWidth (LIST_SONG_COL_TITLE)));
+	m_oSongManager.SetOtherValue (L"ArtistWidth",		CUtils::N2S (m_oSongList.GetColumnWidth (LIST_SONG_COL_ARTIST)));
+	m_oSongManager.SetOtherValue (L"AlbumWidth",		CUtils::N2S (m_oSongList.GetColumnWidth (LIST_SONG_COL_ALBUM)));
+	m_oSongManager.SetOtherValue (L"RecordWidth",		CUtils::N2S (m_oSongList.GetColumnWidth (LIST_SONG_COL_WONLOSS)));
+	m_oSongManager.SetOtherValue (L"RatingWidth",		CUtils::N2S (m_oSongList.GetColumnWidth (LIST_SONG_COL_RATING)));
+	m_oSongManager.SetOtherValue (L"PathToMp3Width",	CUtils::N2S (m_oSongList.GetColumnWidth (LIST_SONG_COL_MP3)));
+
+} // end CSongsBestPickerDlg::SaveWindowPosition
+
+
+
+//************************************
 // Method:    OnBnClickedSubmitPodRankings
 // FullName:  CSongsBestPickerDlg::OnBnClickedSubmitPodRankings
 // Access:    public 
 // Returns:   void
 // Qualifier:
-//
-//
-//
 //************************************
 void CSongsBestPickerDlg::OnBnClickedSubmitPodRankings()
 {
@@ -1889,7 +2053,10 @@ void CSongsBestPickerDlg::OnBnClickedSubmitPodRankings()
 	//
 	//  Update our song list with the new won/loss records.
 
-	UpdateSongList ();
+	for (int i = 0; i < arrSongIDs.GetSize (); i ++)
+	{
+		UpdateSongListWonLossSpecificSong (arrSongIDs[i]);
+	}
 
 } // end submit pod rankings
 
@@ -1943,5 +2110,44 @@ void CSongsBestPickerDlg::OnRClickSongList(NMHDR* pNMHDR, LRESULT* pResult)
 	pMenuSongList->TrackPopupMenu (TPM_LEFTALIGN | TPM_RIGHTBUTTON, ptScreen.x, ptScreen.y, this); // | TPM_RETURNCMD
 	*pResult = 0;
 } // end on rclick song list
+
+
+
+
+//************************************
+// Method:    OnClickedProgressCtrl
+// FullName:  CSongsBestPickerDlg::OnClickedProgressCtrl
+// Access:    public 
+// Returns:   LRESULT
+// Qualifier:
+// Parameter: WPARAM wParam
+// Parameter: LPARAM lParam
+//
+//
+//
+//************************************
+LRESULT CSongsBestPickerDlg::OnClickedProgressCtrl (WPARAM wParam, LPARAM lParam)
+{
+	if ((-1 == m_nCurSongID) || (NULL == m_pPlaybackChannel) || (NULL == m_pCurSong))
+		return true;
+
+	//
+	//  Move the currently playing song to nPercent
+
+	int		nPercent	= (int) wParam;
+	UINT	nSongLenMS	= 0;
+
+	auto result = m_pCurSong->getLength (&nSongLenMS, FMOD_TIMEUNIT_MS);
+	if (result != FMOD_OK) 
+		return true;
+
+	UINT	nSetPosTo = (UINT) (((float)nPercent / 100) * nSongLenMS);
+	m_pPlaybackChannel->setPosition (nSetPosTo, FMOD_TIMEUNIT_MS);
+
+	return true;
+
+} // end CSongsBestPickerDlg::OnClickedProgressCtrl
+
+
 
 

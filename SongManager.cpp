@@ -356,6 +356,7 @@ bool CSongManager::ReadSingleTag (FMOD::Sound* pSoundToLoadTags, CString strTagN
 
 
 
+
 //************************************
 // Method:    GetTagNamesForType
 // FullName:  CSongManager::GetTagNamesForType
@@ -435,6 +436,87 @@ bool CSongManager::GetTagNamesForType (CString strTagType, CStringArray& rarrTag
 
 
 //************************************
+// Method:    GetOtherValue
+// FullName:  CSongManager::GetOtherValue
+// Access:    public 
+// Returns:   bool
+// Qualifier:
+// Parameter: CString strName
+// Parameter: CString & rstrValue
+//
+//
+//
+//************************************
+bool CSongManager::GetOtherValue (CString strName, CString& rstrValue)
+{
+	if (NULL == m_pDB)
+		return false;
+
+	try
+	{
+		CString strQuery;
+		strQuery.Format (L"select %s from %s where %s=?", DB_COL_VALUE, TBL_OTHER_STUFF, DB_COL_WHAT);
+	
+		CppSQLite3Statement stmtQuery = m_pDB->compileStatement (strQuery);
+
+		stmtQuery.bind (1, strName);
+		CppSQLite3Query oQuery = stmtQuery.execQuery ();
+
+		rstrValue	= oQuery.getStringField	(DB_COL_VALUE);
+		return true;
+	}
+	catch (CppSQLite3Exception& e) {
+		return SetError (e.errorMessage ());
+	}
+	catch (CException* e) {
+		return SetError (CUtils::GetErrorMessageFromException (e, true));
+	}
+} // end CSongManager::GetOtherValue
+
+
+
+//************************************
+// Method:    SetOtherValue
+// FullName:  CSongManager::SetOtherValue
+// Access:    public 
+// Returns:   bool
+// Qualifier:
+// Parameter: CString strName
+// Parameter: CString strValue
+//
+//
+//
+//************************************
+bool CSongManager::SetOtherValue (CString strName, CString strValue)
+{
+	if (NULL == m_pDB)
+		return false;
+
+	try
+	{
+		CString strQuery;
+		strQuery.Format (L"insert or replace into %s values (?, ?)", TBL_OTHER_STUFF);
+	
+		CppSQLite3Statement stmtQuery = m_pDB->compileStatement (strQuery);
+
+		stmtQuery.bind (1, strName);
+		stmtQuery.bind (2, strValue);
+		stmtQuery.execDML();
+
+		return true;
+	}
+	catch (CppSQLite3Exception& e) {
+		return SetError (e.errorMessage ());
+	}
+	catch (CException* e) {
+		return SetError (CUtils::GetErrorMessageFromException (e, true));
+	}
+
+} // end CSongManager::SetOtherValue
+
+
+
+//************************************
 // Method:    DeleteAllSongs
 // FullName:  CSongManager::DeleteAllSongs
 // Access:    public 
@@ -469,6 +551,44 @@ bool CSongManager::DeleteAllSongs()
 		return SetError (CUtils::GetErrorMessageFromException (e, true));
 	}
 } // end delete all songs
+
+
+
+//************************************
+// Method:    DeleteAllSongStats
+// FullName:  CSongManager::DeleteAllSongStats
+// Access:    public 
+// Returns:   bool
+// Qualifier:
+//
+//
+//
+//************************************
+bool CSongManager::DeleteAllSongStats ()
+{
+	if (NULL == m_pDB)
+		return false;
+
+	try
+	{
+		CString strDelete;
+		strDelete.Format (L"delete from %s", TBL_SONG_HEAD_TO_HEAD);
+		m_pDB->execDML (strDelete);
+
+		strDelete.Format (L"delete from %s", TBL_SONG_PODS);
+		m_pDB->execDML (strDelete);
+
+		return true;
+	}
+	catch (CppSQLite3Exception& e)
+	{
+		return SetError (e.errorMessage ());
+	}
+	catch (CException* e)
+	{
+		return SetError (CUtils::GetErrorMessageFromException (e, true));
+	}
+} // end CSongManager::DeleteAllSongStats
 
 
 
@@ -562,7 +682,60 @@ bool CSongManager::GetWonLossRecord (int nSongID, int& rnWins, int& rnLosses)
 
 
 
+//************************************
+// Method:    GetHeadToHeadForSong
+// FullName:  CSongManager::GetHeadToHeadForSong
+// Access:    public 
+// Returns:   bool
+// Qualifier:
+// Parameter: int nSongID
+// Parameter: CIntArray & rarrOpponents
+// Parameter: CIntArray & rarrMargins
+//************************************
+bool CSongManager::GetHeadToHeadForSong (int nSongID, CIntArray& rarrOpponents, CIntArray& rarrMargins)
+{
+	if (NULL == m_pDB)
+		return false;
 
+	try
+	{
+		CString strQuery;
+		strQuery.Format (L"SELECT * FROM %s where %s=%d or %s=%d", TBL_SONG_HEAD_TO_HEAD, 
+			DB_COL_SONG_1_ID, nSongID, DB_COL_SONG_2_ID, nSongID);
+	
+		CppSQLite3Query oQuery = m_pDB->execQuery (strQuery);
+		for (; !oQuery.eof (); oQuery.nextRow ())
+		{
+			int nTeam1ID = oQuery.getIntField (DB_COL_SONG_1_ID);
+			int nTeam2ID = oQuery.getIntField (DB_COL_SONG_2_ID);
+			
+			if (nTeam1ID == nSongID)
+			{
+				//
+				//  We won 
+
+				rarrOpponents.Add (nTeam2ID);
+				rarrMargins.Add (oQuery.getIntField (DB_COL_SCORE_MARGIN));
+			}
+			else
+			{
+				//
+				//  We lost
+
+				rarrOpponents.Add (nTeam1ID);
+				rarrMargins.Add (-1 * oQuery.getIntField (DB_COL_SCORE_MARGIN));
+			}
+		}
+
+		return true;
+	}
+	catch (CppSQLite3Exception& e) {
+		return SetError (e.errorMessage ());
+	}
+	catch (CException* e){
+		return SetError (CUtils::GetErrorMessageFromException (e, true));
+	}
+} // end CSongManager::GetHeadToHeadForSong
 
 
 
@@ -777,8 +950,44 @@ bool CSongManager::GetSongDetails (int nSongID, CString& rstrSongTitle, CString&
 	catch (CException* e) {
 		return SetError (CUtils::GetErrorMessageFromException (e, true));
 	}
-
 } // end CSongManager::GetSongDetails
+
+
+
+
+//************************************
+// Method:    GetSongTitle
+// FullName:  CSongManager::GetSongTitle
+// Access:    public 
+// Returns:   bool
+// Qualifier:
+// Parameter: int nSongID
+// Parameter: CString & rstrSongTitle
+//************************************
+bool CSongManager::GetSongTitle (int nSongID, CString& rstrSongTitle)
+{
+	if (NULL == m_pDB)
+		return false;
+
+	try
+	{
+		CString strQuery;
+		strQuery.Format (L"select %s from %s where %s=%d", DB_COL_SONG_TITLE, TBL_SONGS, DB_COL_SONG_ID, nSongID);
+	
+		CppSQLite3Query query = m_pDB->execQuery (strQuery);
+		if (query.eof ())
+			return false;
+
+		rstrSongTitle	= query.getStringField	(DB_COL_SONG_TITLE);
+		return true;
+	}
+	catch (CppSQLite3Exception& e) {
+		return SetError (e.errorMessage ());
+	}
+	catch (CException* e) {
+		return SetError (CUtils::GetErrorMessageFromException (e, true));
+	}
+} // end CSongManager::GetSongTitle
 
 
 

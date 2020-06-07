@@ -30,15 +30,19 @@ protected:
 
 public:
 	bool	DeleteAllSongs		();
+	bool	DeleteAllSongStats	();
 	bool	DeleteSong			(int nSongID);
 
 	bool	ScheduleMorePods	();
 
 	bool	GetWonLossRecord	(int nSongID, int& rnWins, int& rnLosses);
+	bool	GetHeadToHeadForSong	(int nSongID, CIntArray&rarrOpponents, CIntArray& rarrMargins);
 
 	bool	GetSongCount	(int& rnSongCount);
 	bool	GetNextSong		(CString& rstrSongTitle, CString& rstrSongArtist, CString& rstrSongAlbum, CString& rstrPathToMp3, int& rnSongID, int nPrevSongID = -1);
 	bool	GetSongDetails	(int nSongID, CString& rstrSongTitle, CString& rstrSongArtist, CString& rstrSongAlbum, CString& rstrPathToMp3);
+	bool	GetSongTitle	(int nSongID, CString& rstrSongTitle);
+
 	bool	SetSongDetails	(int nSongID, CString strSongTitle, CString strSongArtist, CString strSongAlbum, CString strPathToMp3);
 
 	bool	GetSongRating	(int nSongID, int& rnSongRating);
@@ -47,8 +51,8 @@ public:
 
 	bool	GetAllSongsInRandomOrder (CIntArray& rarrSongIDs);
 
-	bool	SetSongTitle		(int nSongID, CString strName);
-	bool	SetSongPathToMp3(int nSongID, CString strPathtoMp3);
+//	bool	SetSongTitle		(int nSongID, CString strName);
+	bool	SetSongPathToMp3	(int nSongID, CString strPathtoMp3);
 
 	bool	GetUnfinishedPodCount	(int& rnUnfinishedPoolCount);
 	bool	GetCurrentPod			(int& rnPodID, CIntArray& rarrSongIDs);
@@ -60,6 +64,12 @@ public:
 	bool	LoadTagsFromMp3			(CString strPathToMp3, CString& rstrTitle, CString& rstrArtist, CString& rstrAlbum);
 	bool	GetTagNamesForType (CString strTagType, CStringArray& rarrTagNames);
 	bool	ReadSingleTag (FMOD::Sound* pSoundToLoadTags, CString strTagName, CString& rstrValue);
+
+	//
+	//  Non-song DB stuff
+
+	bool	GetOtherValue (CString strName, CString& rstrValue);
+	bool	SetOtherValue (CString strName, CString strValue);
 
 	//
 	//  Errors?  We never have errors

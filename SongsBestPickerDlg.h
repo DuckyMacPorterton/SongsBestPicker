@@ -13,6 +13,7 @@
 
 #include "fmod.hpp"
 #include "fmod_errors.h"
+#include "MyProgressCtrl.h"
 
 enum class ESongPlayStatus {
 	eNotStarted,
@@ -69,7 +70,7 @@ protected:
 
 	CString			m_strSongPlaybackPos;
 	CString			m_strSongPlaybackLen;
-	CProgressCtrl	m_oSongPlayingProgress;
+	CMyProgressCtrl	m_oSongPlayingProgress;
 
 	ESongPlayStatus	m_eSongPlayingStatus			= ESongPlayStatus::eNotStarted;
 	UINT_PTR		m_nSongPlayingStatusTimerID		= 0;
@@ -104,12 +105,13 @@ public:
 	void	OnRecalcSongRatings		();
 	void	OnDeleteSongList		();
 	void	OnResetSongStatistics	();
-	void	OnRemoveDuplicateSongs	();
 
 	void	UpdateSongList				();
-	void	UpdateSongListSpecificSong	(int nSongID, CString strTitle, CString strArtist, CString strAlbum, CString strPathToMp3);
+	void	UpdateSongListSpecificSong	(int nSongID, CString strTitle = L"", CString strArtist = L"", CString strAlbum = L"", CString strPathToMp3 = L"");
+	void	UpdateSongListWonLossSpecificSong (int nSongID);
+
 	void	UpdateCurrentPod			();
-	void	UpdateStatsForCurrentSong	(int nSongID = -1);
+	void	UpdateStatsForCurrentSong	(int nSongID);
 	void	UpdatePlayerStatus			();
 
 	void	LoadSongIntoPlayer	(int nSondID);
@@ -126,6 +128,8 @@ public:
 	void	OnEditSongInfo ();
 	void	OnPlaySongFromSongList ();
 
+	void	RestoreWindowPosition ();
+	void	SaveWindowPosition ();
 
 	bool	OnHandleHotkey (UINT nHotkey);
 
@@ -152,4 +156,6 @@ public:
 	void	OnBnClickedSubmitPodRankings();
 	void	OnBnClickedBrowseForSong();
 	void	OnRClickSongList(NMHDR* pNMHDR, LRESULT* pResult);
+
+	LRESULT	OnClickedProgressCtrl (WPARAM wParam, LPARAM lParam);
 };
