@@ -27,7 +27,8 @@ struct TableDefinitionStruct
 #define TBL_SONGS				L"Songs"
 //#define TBL_SONGS_VER			1
 //#define TBL_SONGS_VER			2	// Added tag info, artist, title, album
-#define TBL_SONGS_VER			3	// Removed song name
+//#define TBL_SONGS_VER			3	// Removed song name
+#define TBL_SONGS_VER			4	// Added strength of schedul
 
 #define DB_COL_SONG_ID				L"ID"
 #define DB_COL_PATH_TO_MP3			L"PathToMp3"
@@ -35,6 +36,7 @@ struct TableDefinitionStruct
 #define DB_COL_SONG_TITLE			L"Title"
 #define DB_COL_SONG_ALBUM			L"Album"
 #define DB_COL_SONG_RATING			L"Rating"
+#define DB_COL_SONG_STRENGTH_OF_SCHEDULE	L"StrengthOfSchedule"
 
 static TableDefinitionStruct VPTblSongs[] = {
 	{true,	false,	DB_COL_SONG_ID,				L"INTEGER",	VP_DEFAULT_UNUSED},
@@ -43,6 +45,7 @@ static TableDefinitionStruct VPTblSongs[] = {
 	{false,	false,	DB_COL_SONG_TITLE,			L"TEXT",	VP_DEFAULT_UNUSED},
 	{false,	false,	DB_COL_SONG_ALBUM,			L"TEXT",	VP_DEFAULT_UNUSED},
 	{false, false,	DB_COL_SONG_RATING,			L"INTEGER",	1000},
+	{false, false,	DB_COL_SONG_STRENGTH_OF_SCHEDULE,			L"INTEGER",	1000},
 	{0,		0,		0,							0,					0}
 };
 

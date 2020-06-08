@@ -843,6 +843,29 @@ bool CUtils::FindFile (CString& rstrPathToSong)
 } // end number to string
 
 
+//************************************
+// Method:    FindNumberInArray
+// FullName:  CUtils::FindNumberInArray
+// Access:    public static 
+// Returns:   -1 if not found, otherwise index
+// Qualifier:
+// Parameter: CIntArray & rarrNumbers
+// Parameter: int nToFind
+//************************************
+int CUtils::FindNumberInArray (CIntArray& rarrNumbers, int nToFind)
+{
+	for (int i = 0; i < rarrNumbers.GetSize (); i ++)
+	{
+		if (nToFind == rarrNumbers[i])
+			return i;
+	}
+
+	return -1;
+
+} // end CUtils::FindNumberInArray
+
+
+
 //////////////////////////////////////////////////////////////////////
 //
 //    M Y   A T O   I 

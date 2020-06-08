@@ -102,6 +102,7 @@ public:
 	bool	AddHotkey (int nID, UINT nModifiers, UINT nVirtualKey, CString strNameForError);
 
 	void	OnImportFromM3UFile		();
+	void	OnAddSong				();
 	void	OnRecalcSongRatings		();
 	void	OnDeleteSongList		();
 	void	OnResetSongStatistics	();
@@ -109,13 +110,15 @@ public:
 	void	UpdateSongList				();
 	void	UpdateSongListSpecificSong	(int nSongID, CString strTitle = L"", CString strArtist = L"", CString strAlbum = L"", CString strPathToMp3 = L"");
 	void	UpdateSongListWonLossSpecificSong (int nSongID);
+	void	UpdateSongCountInSongList	();
 
 	void	UpdateCurrentPod			();
 	void	UpdateStatsForCurrentSong	(int nSongID);
 	void	UpdatePlayerStatus			();
 
-	void	LoadSongIntoPlayer	(int nSondID);
-	void	SaveSongInfoFromPlayer ();
+	void	LoadSongIntoPlayer		(int nSondID);
+	void	SaveSongInfoFromPlayer	();
+	void	MakePlayerInfoEditable	(bool bEditable);
 
 	CString	GetSongTitle		(int nSongID);
 	CString	GetSongArtist		(int nSongID);
@@ -123,6 +126,7 @@ public:
 	CString	GetSongPathToMp3	(int nSongID);
 	bool	GetWonLossRecord	(int nSongID, int& rnWon, int& rnLost);
 	bool	GetSongRating		(int nSongID, int& rnRating);
+	bool	GetSongStrengthOfSchedule (int nSongID, int& rnStrengthOfSchedule);
 
 	void	OnDeleteSongFromList ();
 	void	OnEditSongInfo ();
@@ -158,4 +162,5 @@ public:
 	void	OnRClickSongList(NMHDR* pNMHDR, LRESULT* pResult);
 
 	LRESULT	OnClickedProgressCtrl (WPARAM wParam, LPARAM lParam);
+	afx_msg void OnDblclkCurrentPodList(NMHDR* pNMHDR, LRESULT* pResult);
 };

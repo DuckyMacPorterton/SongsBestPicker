@@ -4,8 +4,7 @@
 #include "Song.h"
 #include "StdioFileEx/StdioFileEx.h"
 #include <fmod.hpp>
-
-typedef CArray<int>		CIntArray;
+#include "typedefs.h"
 
 enum class EFileFormat
 {
@@ -32,6 +31,8 @@ public:
 	bool	DeleteAllSongs		();
 	bool	DeleteAllSongStats	();
 	bool	DeleteSong			(int nSongID);
+	bool	AddSong				(int& rnNewSongID, CString strTitle, CString strPathToMp3, CString strArtist = L"", CString strAlbum = L"");
+	bool	GetDoesSongExist	(int nSongID);
 
 	bool	ScheduleMorePods	();
 
@@ -49,6 +50,10 @@ public:
 	bool	SetSongRating	(int nSongID, int nSongRating);
 	bool	RecalcAllSongRatings	();
 
+	bool	GetSongStrengthOfSchedule	(int nSongID, int& rnStrengthOfSchedule);
+	bool	SetSongStrengthOfSchedule	(int nSongID, int nStrengthOfSchedule);
+	bool	RecalcStrengthOfSchedule	(int nSongID, int& rnStrengthOfSchedule);
+
 	bool	GetAllSongsInRandomOrder (CIntArray& rarrSongIDs);
 
 //	bool	SetSongTitle		(int nSongID, CString strName);
@@ -56,7 +61,7 @@ public:
 
 	bool	GetUnfinishedPodCount	(int& rnUnfinishedPoolCount);
 	bool	GetCurrentPod			(int& rnPodID, CIntArray& rarrSongIDs);
-	bool	SetPodRankings			(int nPodID, CIntArray& rarrSongIDs);
+	bool	SetPodRankings			(int nPodID, CIntArray& rarrSongIDs, bool bMarkPodFinished = true);
 
 	//
 	//   Dealing with meta tags

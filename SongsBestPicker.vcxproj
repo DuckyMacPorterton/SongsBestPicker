@@ -204,6 +204,7 @@
     <ClInclude Include="StdioFileEx\StdioFileEx.h" />
     <ClInclude Include="StdioFileEx\TemplateSmartPtr.h" />
     <ClInclude Include="ThreadPool.h" />
+    <ClInclude Include="typedefs.h" />
     <ClInclude Include="Utils.h" />
     <ClInclude Include="SongsBestPicker.h" />
     <ClInclude Include="SongsBestPickerDlg.h" />

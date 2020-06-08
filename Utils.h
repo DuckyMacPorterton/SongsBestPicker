@@ -3,7 +3,7 @@
 #include "SQLite/CppSQLite3-Unicode.h"
 #include <Mlang.h>
 #include <mciapi.h>
-
+#include "typedefs.h"
 
 class CUtils
 {
@@ -39,6 +39,7 @@ public:
 	static bool		MyAtoI (CString str, int& rnValFound, bool bRequireMatchEntireString = true);
 	static CString	NumberToString (int nNumber,		bool bOutputAsHex = false, int nPadZeroTotalDigitCount = 0);
 
+	static int		FindNumberInArray (CIntArray& rarrNumbers, int nToFind);
 
 	static bool		FileExists (CString strName);
 	static bool		FindFile (CString& rstrPathToSong);
