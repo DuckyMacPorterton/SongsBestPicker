@@ -556,6 +556,12 @@ void CSongsBestPickerDlg::PlaySong (CString strFileToPlay /* = L"" */)
 	m_oSongPlayingProgress.SetRange32 (0, nSongLenSec);
 	m_oSongPlayingProgress.SetPos (0);
 
+	//
+	//  Tell the world what we're playing
+
+	CString strTooltip;  strTooltip.Format (L"Now Playing:\n%s\n%s", m_strCurSongTitle, m_strCurSongArtist);
+	m_oTrayIcon.SetTooltipText (strTooltip);
+
 	UpdateData (false);
 
 } // end play song

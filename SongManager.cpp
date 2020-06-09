@@ -1102,15 +1102,16 @@ bool CSongManager::SetSongDetails (int nSongID, CString strSongTitle, CString st
 	try
 	{
 		CString strInsert;
-		strInsert.Format (L"update %s set %s=?, %s=?, %s=? where %s=?", TBL_SONGS, 
-			DB_COL_SONG_TITLE, DB_COL_SONG_ARTIST, DB_COL_SONG_ALBUM, DB_COL_SONG_ID);
+		strInsert.Format (L"update %s set %s=?, %s=?, %s=?, %s=? where %s=?", TBL_SONGS, 
+			DB_COL_SONG_TITLE, DB_COL_SONG_ARTIST, DB_COL_SONG_ALBUM, DB_COL_PATH_TO_MP3, DB_COL_SONG_ID);
 
 		CppSQLite3Statement stmtQuery = m_pDB->compileStatement (strInsert);
 
 		stmtQuery.bind (1, strSongTitle);
 		stmtQuery.bind (2, strSongArtist);
 		stmtQuery.bind (3, strSongAlbum);
-		stmtQuery.bind (4, nSongID);
+		stmtQuery.bind (4, strPathToMp3);
+		stmtQuery.bind (5, nSongID);
 		stmtQuery.execDML ();
 		return true;
 	}
@@ -1566,6 +1567,7 @@ bool CSongManager::GetCurrentPod (int& rnPodID, CIntArray& rarrSongIDsInPod)
 						continue;
 
 					rarrSongIDsInPod.Add (arrSongIDsToAddFrom[nToAdd]);
+					break; // out of inner loop, which adds one song at most
 				}
 			}
 
@@ -1654,8 +1656,8 @@ bool CSongManager::SetPodRankings (int nPodID, CIntArray& rarrSongIDs, bool bMar
 					float fLoserRating	= (float) nLoserRating;
 					CUtils::EloRating (fWinnerRating, fLoserRating, ELO_DEFAULT_K, m_nPoolSize - nWinner, m_nPoolSize - nLoser);
 
-					SetSongRating (nWinner, (int) fWinnerRating);
-					SetSongRating (nLoser,	(int) fLoserRating);
+					SetSongRating (rarrSongIDs[nWinner],	(int) fWinnerRating);
+					SetSongRating (rarrSongIDs[nLoser],		(int) fLoserRating);
 				}
 			}
 		}
