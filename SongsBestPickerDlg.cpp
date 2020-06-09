@@ -197,6 +197,8 @@ BEGIN_MESSAGE_MAP(CSongsBestPickerDlg, CDialogEx)
 	ON_MESSAGE (ID_MY_NOTIFY,			OnTrayNotification)
 
 	ON_REGISTERED_MESSAGE (UWM_CLICKED_PROGRESS_CTRL,	OnClickedProgressCtrl)
+	ON_REGISTERED_MESSAGE (UWM_SONG_HEADER_DRAG_COL,	OnHeaderDragCol)
+
 
 	ON_COMMAND(ID_DOUG_SHOWWINDOW,		OnShowMyWindow)
 	ON_COMMAND(ID_IMPORTFROMM3UFILE,	OnImportFromM3UFile)
@@ -826,7 +828,7 @@ void CSongsBestPickerDlg::UpdateSongList()
 	m_oSongList.SetRedraw (true);
 	m_oSongList.UpdateWindow ();
 
-	UpdateSongCountInSongList ();
+	UpdateSongCount ();
 
 } // end CSongsBestPickerDlg::UpdateSongList
 
@@ -900,18 +902,34 @@ void CSongsBestPickerDlg::UpdateSongListWonLossSpecificSong (int nSongID)
 // Returns:   void
 // Qualifier:
 //************************************
-void CSongsBestPickerDlg::UpdateSongCountInSongList ()
+void CSongsBestPickerDlg::UpdateSongCount ()
 {
+	if (m_arrActiveColumns.GetSize () == 0)
+		return;
+
 	int nSongCount = 0;
 	m_oSongManager.GetSongCount (nSongCount);
 
+	CString strRoot		= L"Title";
+	int		nTitleCol	= CUtils::FindNumberInArray (m_arrActiveColumns, LIST_SONG_COL_TITLE);
+	if (-1 == nTitleCol)
+	{
+		//
+		//  We don't have a title showing, just choose the first col - but get the text to show
+
+		int nWidth, nFormat, nType;
+		m_oSongManager.GetColumnSetupInfo (0, nType, strRoot, nFormat, nWidth);
+		nTitleCol = 0;
+	}
+
 	CString strTitle;
-	strTitle.Format (L"Title (%d songs)", nSongCount);
+	strTitle.Format (L"%s (%d songs)", strRoot, nSongCount);
+
 
 	LV_COLUMN col;
 	col.mask = LVCF_TEXT;
 	col.pszText = strTitle.GetBuffer ();
-	m_oSongList.SetColumn (LIST_SONG_COL_TITLE, &col);
+	m_oSongList.SetColumn (nTitleCol, &col);
 
 } // end CSongsBestPickerDlg::UpdateSongCountInSongList
 
@@ -1194,6 +1212,127 @@ bool CSongsBestPickerDlg::GetColumnSetupInfo (int nColIndex, int& rnColType, CSt
 		return false;
 	}
 } // end CSongsBestPickerDlg::GetColumnSetupInfo
+
+
+
+//************************************
+// Method:    GetColumnType
+// FullName:  CSongsBestPickerDlg::GetColumnType
+// Access:    public 
+// Returns:   int
+// Qualifier:
+// Parameter: int nColIndex
+//
+//
+//
+//************************************
+int CSongsBestPickerDlg::GetColumnType (int nColIndex)
+{
+	if (nColIndex < 0 || nColIndex >= m_arrActiveColumns.GetSize ())
+		return -1;
+
+	return m_arrActiveColumns[nColIndex];
+
+} // end CSongsBestPickerDlg::GetColumnType
+
+
+
+//************************************
+// Method:    SwapColumns
+// FullName:  CSongsBestPickerDlg::SwapColumns
+// Access:    public 
+// Returns:   bool
+// Qualifier:
+// Parameter: int nSwapFrom
+// Parameter: int nSwapTo
+//
+//
+//
+//************************************
+bool CSongsBestPickerDlg::SwapColumns (int nSwapFrom, int nSwapTo)
+{
+	//
+	//  Switch our columns...
+
+	int nFromType = 0,		nFromFormat = 0,	nFromWidth = 0;
+	int nToType = 0,		nToFormat = 0,		nToWidth = 0;
+	CString strFromName, strToName;
+
+	if (! m_oSongManager.GetColumnSetupInfo (nSwapFrom,	nFromType,	strFromName,	nFromFormat,	nFromWidth))
+		return false;
+	if (! m_oSongManager.GetColumnSetupInfo (nSwapTo,	nToType,	strToName,		nToFormat,		nToWidth))
+		return false;
+
+	if (! m_oSongManager.SetColumnSetupInfo (nSwapFrom,	nToType,	strToName,		nToFormat,		nToWidth))
+		return false;
+	if (! m_oSongManager.SetColumnSetupInfo (nSwapTo,	nFromType,	strFromName,	nFromFormat,	nFromWidth))
+		return false;
+
+	int nTemp = m_arrActiveColumns[nSwapFrom];
+	m_arrActiveColumns[nSwapFrom]	= m_arrActiveColumns[nSwapTo];
+	m_arrActiveColumns[nSwapTo]		= nTemp;
+
+	return true;
+
+} // end CSongsBestPickerDlg::SwapColumns
+
+
+
+
+//************************************
+// Method:    OnHeaderDragCol
+// FullName:  CSongsBestPickerDlg::OnHeaderDragCol
+// Access:    public 
+// Returns:   LRESULT
+// Qualifier:
+// Parameter: WPARAM wSource
+// Parameter: LPARAM lDest
+//************************************
+LRESULT CSongsBestPickerDlg::OnHeaderDragCol (WPARAM wSource, LPARAM lDest)
+{
+	int nDragFrom	= (int) wSource;
+	int nDropTo		= (int) lDest;
+
+	//
+	//  Depending on whether we're dragging right to left (or left to right), 
+	//  we'll shift column #'s differently
+
+
+	if (nDragFrom > nDropTo)
+	{
+		//
+		//  Dragged right to left, so need to shift everything >= nDropTo up by 1
+		//  To avoid having to store this column info here, we'll just swap our way up
+
+		SwapColumns (nDragFrom, nDropTo);
+		for (int i = nDropTo + 1; i <= nDragFrom; i ++)
+		{
+			SwapColumns (i, nDragFrom);	
+		}
+	}
+	else
+	{
+		//
+		//  Dragged left to right, so need to shift everything >= nDropTo up by 1
+		//  To avoid having to store this column info here, we'll just swap our way up
+
+		nDropTo --;
+		SwapColumns (nDragFrom, nDropTo);
+		for (int i = nDropTo - 1; i >= nDragFrom; i --)
+		{
+			SwapColumns (i, nDragFrom);	
+		}
+	}
+
+	return true;
+
+} // end CSongsBestPickerDlg::OnHeaderDragCol
+
+
+
+
+
+
 
 
 
@@ -1909,7 +2048,9 @@ int CSongsBestPickerDlg::SortCompareSongListCtrl (LPARAM lParam1, LPARAM lParam2
 	//
 	//  Sort differently based on which column we're sorting
 
-	if (LIST_SONG_COL_ARTIST == pDlg->m_nSongsSortCol)
+	switch (pDlg->GetColumnType (pDlg->m_nSongsSortCol))
+	{
+	case LIST_SONG_COL_ARTIST:
 	{
 		//
 		//  Sorting on name column...  this is either alpha or by classification order
@@ -1923,9 +2064,8 @@ int CSongsBestPickerDlg::SortCompareSongListCtrl (LPARAM lParam1, LPARAM lParam2
 
 		//
 		//  Otherwise return the title compare
-
 	}
-	else if (LIST_SONG_COL_ALBUM == pDlg->m_nSongsSortCol)
+	case LIST_SONG_COL_ALBUM:
 	{
 		//
 		//  Sorting on name column...  this is either alpha or by classification order
@@ -1936,7 +2076,7 @@ int CSongsBestPickerDlg::SortCompareSongListCtrl (LPARAM lParam1, LPARAM lParam2
 		return nOrderMultiplier * str1.CompareNoCase(str2);
 	}
 
-	else if (LIST_SONG_COL_WONLOSS == pDlg->m_nSongsSortCol)
+	case LIST_SONG_COL_WONLOSS: 
 	{
 		//
 		//  Sorting on confidence
@@ -1973,7 +2113,7 @@ int CSongsBestPickerDlg::SortCompareSongListCtrl (LPARAM lParam1, LPARAM lParam2
 
 		return 0;
 	}
-	else if (LIST_SONG_COL_RATING == pDlg->m_nSongsSortCol)
+	case LIST_SONG_COL_RATING:
 	{
 		int nSong1Rating = 0, nSong2Rating = 0;
 
@@ -1987,14 +2127,14 @@ int CSongsBestPickerDlg::SortCompareSongListCtrl (LPARAM lParam1, LPARAM lParam2
 
 		return 0;
 	}
-	else if (LIST_SONG_COL_MP3 == pDlg->m_nSongsSortCol)
+	case LIST_SONG_COL_MP3:
 	{
 		CString str1 = pDlg->GetSongPathToMp3 (nSongID1);
 		CString str2 = pDlg->GetSongPathToMp3 (nSongID2);
 
 		return nOrderMultiplier * str1.CompareNoCase(str2);
 	}
-	else if (LIST_SONG_COL_SOS == pDlg->m_nSongsSortCol)
+	case LIST_SONG_COL_SOS:
 	{
 		int nSong1SoS = 0, nSong2SoS = 0;
 
@@ -2006,6 +2146,7 @@ int CSongsBestPickerDlg::SortCompareSongListCtrl (LPARAM lParam1, LPARAM lParam2
 		if (nSong1SoS > nSong2SoS)
 			return nOrderMultiplier * 1;
 	}
+	} // end switch
 
 	//
 	//  Title compare is our backup sort for every column.   That's why
@@ -2204,7 +2345,7 @@ void CSongsBestPickerDlg::OnDeleteSongFromList ()
 	if (-1 == nListCtrlIndex)
 		return;
 	m_oSongList.DeleteItem (nListCtrlIndex);
-	UpdateSongCountInSongList ();
+	UpdateSongCount ();
 
 } // end CSongsBestPickerDlg::OnDeleteSongFromList
 
@@ -2463,7 +2604,5 @@ LRESULT CSongsBestPickerDlg::OnClickedProgressCtrl (WPARAM wParam, LPARAM lParam
 	return true;
 
 } // end CSongsBestPickerDlg::OnClickedProgressCtrl
-
-
 
 

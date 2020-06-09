@@ -1,8 +1,7 @@
 #pragma once
 #include <afxtooltipctrl.h>
+#include "MyListCtrlHeader.h"
 
-
-static const UINT UWM_VP_AUTO_CLASSIFY_RECORDS	= ::RegisterWindowMessage(_T("UWM_VP_AUTO_CLASSIFY_RECORDS"));
 
 enum EVpListCtrlTipTypeToShow
 {
@@ -21,7 +20,7 @@ public:
 	CMyListCtrl();
 	virtual ~CMyListCtrl();
 
-
+	CMyListCtrlHeaderCtrl   m_oHeaderCtrl;
 //	CMyListCtrlHeader m_oRecordClassificationHeaderCtrl;
 
 	void	SelectAll ();
@@ -68,10 +67,12 @@ protected:
 
 			void CreateToolTip ();
 
-	afx_msg void OnMouseMove(UINT nFlags, CPoint point);
-	afx_msg void OnTimer (UINT_PTR nIDEvent);
+	void OnMouseMove(UINT nFlags, CPoint point);
+	void OnTimer (UINT_PTR nIDEvent);
 
-	afx_msg void OnCustomDrawList (NMHDR* pNMHDR, LRESULT* pResult);
+	void OnCustomDrawList (NMHDR* pNMHDR, LRESULT* pResult);
+
+	LRESULT OnHeaderDragCol (WPARAM wSource, LPARAM lDest);
 
 	DECLARE_MESSAGE_MAP()
 };

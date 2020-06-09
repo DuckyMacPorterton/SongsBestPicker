@@ -22,6 +22,8 @@ CMyListCtrl::CMyListCtrl()
 	m_ptLastTipPos.x = -1;
 	m_ptLastTipPos.y = -1;
 
+
+//	m_oHeaderCtrl.SetCallback( this, (void (CWnd::*)(int, int))DragColumn );
 }
 
 CMyListCtrl::~CMyListCtrl()
@@ -36,6 +38,9 @@ BEGIN_MESSAGE_MAP(CMyListCtrl, CListCtrl)
 	ON_WM_TIMER()
 	ON_NOTIFY_REFLECT ( NM_CUSTOMDRAW, OnCustomDrawList )
 	ON_WM_CREATE ()
+
+	ON_REGISTERED_MESSAGE (UWM_SONG_HEADER_DRAG_COL, OnHeaderDragCol)
+
 END_MESSAGE_MAP()
 
 
@@ -85,10 +90,11 @@ int CMyListCtrl::OnCreate (LPCREATESTRUCT lpCreateStruct)
 // PreSubclassWindow
 void CMyListCtrl::PreSubclassWindow() 
 {
-	//use our custom CHeaderCtrl as long as there
-	//is a headerctrl object to subclass
+	//use our custom CHeaderCtrl as long as there is a headerctrl object to subclass
 //	if (m_bRecordClassificationListCtrl && (NULL != GetHeaderCtrl ()))
 //		m_oRecordClassificationHeaderCtrl.SubclassWindow (GetHeaderCtrl()->m_hWnd);
+
+	m_oHeaderCtrl.SubclassWindow (GetHeaderCtrl()->GetSafeHwnd ()); //	::GetDlgItem (m_hWnd,0));
 
 	CListCtrl::PreSubclassWindow();
 	if (! m_bCreatedDynamically) {
@@ -518,5 +524,84 @@ void CMyListCtrl::HideToolTip ()
 	m_oToolTip.Pop ();
 	::SendMessage(m_hWndToolTip, TTM_TRACKACTIVATE, FALSE, (LPARAM)(LPTOOLINFO) &m_ToolInfo);
 }
+
+
+
+//************************************
+// Method:    OnHeaderDragCol
+// FullName:  CMyListCtrl::OnHeaderDragCol
+// Access:    protected 
+// Returns:   LRESULT
+// Qualifier:
+// Parameter: WPARAM wSource
+// Parameter: LPARAM lDest
+//
+//
+//
+//************************************
+LRESULT CMyListCtrl::OnHeaderDragCol (WPARAM wSource, LPARAM lDest)
+{
+	int nSource = (int) wSource;
+	int nDest	= (int) lDest;
+
+	TCHAR sColText[160];
+	memset (sColText, 0, sizeof (sColText));
+
+	//
+	//  Insert a column at dest
+
+	LV_COLUMN       lv_col;
+	lv_col.mask			= LVCF_FMT | LVCF_TEXT | LVCF_WIDTH | LVCF_SUBITEM;
+	lv_col.pszText		= sColText;
+	lv_col.cchTextMax	= 159;
+	
+	GetColumn(nSource, &lv_col);
+
+	lv_col.iSubItem		= nDest;
+	InsertColumn(nDest, &lv_col);
+
+	//  
+	//  Adjust source col number since it might have changed because a new column was inserted
+	if (nSource > nDest)
+		nSource++;
+
+	//
+	// Moving a col to position 0 is a special case
+	if (nDest == 0)
+		for (int i = GetItemCount() - 1; i > -1; i--)
+			SetItemText(i, 1, GetItemText(i, 0));
+
+	// Copy sub item from source to dest
+	for (int i = GetItemCount() - 1; i > -1; i--)
+		SetItemText(i, nDest, GetItemText(i, nSource));
+
+	// Delete the source column, but not if it is the first
+	if (nSource != 0)
+		DeleteColumn(nSource);
+	else
+	{
+		// If source col is 0, then copy col# 1 to col#0
+		// and then delete col# 1
+		GetColumn(1, &lv_col);
+		lv_col.iSubItem = 0;
+		SetColumn(0, &lv_col);
+		for (int i = GetItemCount() - 1; i > -1; i--)
+			SetItemText(i, 0, GetItemText(i, 1));
+		DeleteColumn(1);
+	}
+
+	Invalidate();
+
+	//
+	//  Now tell our main dialog about the change so it can save the new order
+
+	CWnd* pParent = GetParent ();
+	if (NULL != pParent)
+		pParent->SendMessage (UWM_SONG_HEADER_DRAG_COL, wSource, lDest);
+
+	return true;
+
+} // end CMyListCtrl::OnHeaderDragCol
+
 
 

@@ -192,6 +192,7 @@
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="MyListCtrlHeader.h" />
     <ClInclude Include="MyProgressCtrl.h" />
     <ClInclude Include="MyListCtrl.h" />
     <ClInclude Include="SqlDefs.h" />
@@ -214,6 +215,7 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="MyListCtrlHeader.cpp" />
     <ClCompile Include="MyProgressCtrl.cpp" />
     <ClCompile Include="MyListCtrl.cpp" />
     <ClCompile Include="Song.cpp" />

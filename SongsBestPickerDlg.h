@@ -112,7 +112,7 @@ public:
 	void	UpdateSongList				();
 	void	UpdateSongListSpecificSong	(int nSongID, CString strTitle = L"", CString strArtist = L"", CString strAlbum = L"", CString strPathToMp3 = L"");
 	void	UpdateSongListWonLossSpecificSong (int nSongID);
-	void	UpdateSongCountInSongList	();
+	void	UpdateSongCount	();
 
 	void	UpdateCurrentPod			();
 	void	UpdateStatsForCurrentSong	(int nSongID);
@@ -151,7 +151,8 @@ public:
 
 	bool	GetDisplayStringForCol	(int nSongID, int nColIndex, CString& rstrDisplayString);
 	bool	GetColumnSetupInfo		(int nColIndex, int& rnColType, CString& rstrColName, int& rnFormat, int& rnWidth);
-
+	int		GetColumnType			(int nColIndex);
+	bool	SwapColumns				(int nSwapFrom, int nSwapTo);
 
 	//
 	//  and back to your regularly scheduled program...
@@ -176,6 +177,9 @@ public:
 	void	OnBnClickedBrowseForSong();
 	void	OnRClickSongList(NMHDR* pNMHDR, LRESULT* pResult);
 
-	LRESULT	OnClickedProgressCtrl (WPARAM wParam, LPARAM lParam);
-	afx_msg void OnDblclkCurrentPodList(NMHDR* pNMHDR, LRESULT* pResult);
+	LRESULT	OnClickedProgressCtrl	(WPARAM wParam, LPARAM lParam);
+	LRESULT OnHeaderDragCol			(WPARAM wSource, LPARAM lDest);
+
+	void	OnDblclkCurrentPodList	(NMHDR* pNMHDR, LRESULT* pResult);
+
 };
