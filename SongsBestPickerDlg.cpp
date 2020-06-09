@@ -164,7 +164,7 @@ CSongsBestPickerDlg::CSongsBestPickerDlg (CWnd* pParent /*=NULL*/)
 	, m_strCurSongArtist(_T(""))
 	, m_strCurSongAlbum(_T(""))
 {
-	m_hIcon = AfxGetApp()->LoadIcon(IDI_SONGS_BEST_PICKER); // IDR_MAINFRAME);
+	m_hIcon = AfxGetApp()->LoadIcon(IDI_SONGS_BEST_PICKER);
 }
 
 void CSongsBestPickerDlg::DoDataExchange(CDataExchange* pDX)
@@ -240,21 +240,42 @@ BOOL CSongsBestPickerDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// Set small icon
 
 	//
-	//  Setup our list control
+	//  Set the default columns, if we haven't already
 
-	m_oListCtrlFont.CreatePointFont (90, L"Courier New");
-	m_oSongList.SetFont (&m_oListCtrlFont);
+	int nActiveColCount = 0;
+	m_oSongManager.GetColumnCount (nActiveColCount);
 
 	CRect rcList;
 	m_oSongList.GetClientRect (rcList);
 
-	m_oSongList.InsertColumn (LIST_SONG_COL_TITLE,		L"Title",	LVCFMT_LEFT,	(int) (rcList.Width () * 0.24));
-	m_oSongList.InsertColumn (LIST_SONG_COL_ARTIST,		L"Artist",	LVCFMT_LEFT,	(int) (rcList.Width () * 0.24));
-	m_oSongList.InsertColumn (LIST_SONG_COL_ALBUM,		L"Album",	LVCFMT_LEFT,	(int) (rcList.Width () * 0.24));
-	m_oSongList.InsertColumn (LIST_SONG_COL_WONLOSS,	L"Record",	LVCFMT_CENTER,	(int) (rcList.Width () * 0.09));
-	m_oSongList.InsertColumn (LIST_SONG_COL_RATING,		L"Rating",	LVCFMT_CENTER,	(int) (rcList.Width () * 0.08));
-	m_oSongList.InsertColumn (LIST_SONG_COL_MP3,		L"MP3",		LVCFMT_LEFT,	(int) (rcList.Width () * 0.10));
-	m_oSongList.InsertColumn (LIST_SONG_COL_SOS,		L"SoS",		LVCFMT_LEFT,	(int) (rcList.Width () * 0.10));
+	if (0 == nActiveColCount)
+	{
+		m_oSongManager.SetColumnSetupInfo (0, LIST_SONG_COL_TITLE,		L"Title",	LVCFMT_LEFT,	(int) (rcList.Width () * 0.24));
+		m_oSongManager.SetColumnSetupInfo (1, LIST_SONG_COL_ARTIST,		L"Artist",	LVCFMT_LEFT,	(int) (rcList.Width () * 0.24));
+		m_oSongManager.SetColumnSetupInfo (2, LIST_SONG_COL_ALBUM,		L"Album",	LVCFMT_LEFT,	(int) (rcList.Width () * 0.24));
+		m_oSongManager.SetColumnSetupInfo (3, LIST_SONG_COL_WONLOSS,	L"Record",	LVCFMT_CENTER,	(int) (rcList.Width () * 0.09));
+		m_oSongManager.SetColumnSetupInfo (4, LIST_SONG_COL_RATING,		L"Rating",	LVCFMT_CENTER,	(int) (rcList.Width () * 0.08));
+		m_oSongManager.SetColumnSetupInfo (5, LIST_SONG_COL_MP3,		L"MP3",		LVCFMT_LEFT,	(int) (rcList.Width () * 0.10));
+		m_oSongManager.SetColumnSetupInfo (6, LIST_SONG_COL_SOS,		L"SoS",		LVCFMT_LEFT,	(int) (rcList.Width () * 0.10));
+	}
+
+	//
+	//  Setup our list control
+
+	m_oListCtrlFont.CreatePointFont (90, L"Courier New");
+	m_oSongList.SetFont (&m_oListCtrlFont);
+	m_arrActiveColumns.SetSize (0);
+
+	for (int i = 0; i < nActiveColCount; i ++)
+	{
+		int nColType = -1, nColFormat = LVCFMT_LEFT, nColWidth = 10;
+		CString strColName;
+
+		m_oSongManager.GetColumnSetupInfo (i, nColType, strColName, nColFormat, nColWidth);
+		m_oSongList.InsertColumn (i, strColName, nColFormat, nColWidth);
+		m_arrActiveColumns.Add (nColType);	//  One of the few things we're keeping in memory, as opposed to querying DB every time
+ 	} // end loop to create columns
+
 
 	m_oSongList.SetExtendedStyle (m_oSongList.GetExtendedStyle () | LVS_EX_FULLROWSELECT);
 
@@ -790,31 +811,16 @@ void CSongsBestPickerDlg::UpdateSongList()
 			return;
 		}
 
-		int nIndex = m_oSongList.InsertItem (i,					strSongTitle);
+		CString strToDisplay;
+		GetDisplayStringForCol (nLastID, 0, strToDisplay);
+		int nIndex = m_oSongList.InsertItem (i, strToDisplay);
 		m_oSongList.SetItemData (nIndex, nLastID);
 
-		m_oSongList.SetItemText (nIndex, LIST_SONG_COL_ARTIST,	strSongArtist);
-		m_oSongList.SetItemText (nIndex, LIST_SONG_COL_ALBUM,	strSongAlbum);
-		m_oSongList.SetItemText (nIndex, LIST_SONG_COL_MP3,		strPathToMp3);
-
-		if (! m_oSongManager.GetWonLossRecord (nLastID, nWins, nLosses)) {
-			AfxMessageBox (m_oSongManager.GetError ());
-			m_oSongList.SetRedraw (true);
-			m_oSongList.UpdateWindow ();
-			return;
+		for (int nCol = 1; nCol < m_arrActiveColumns.GetSize (); nCol ++)
+		{
+			if (GetDisplayStringForCol (nLastID, nCol, strToDisplay))
+				m_oSongList.SetItemText (nIndex, nCol, strToDisplay);
 		}
-
-		strWonLoss.Format (L"%2d / %2d", nWins, nLosses);
-		m_oSongList.SetItemText (nIndex, LIST_SONG_COL_WONLOSS, strWonLoss);
-
-		int nRating = -1;
-		if (m_oSongManager.GetSongRating (nLastID, nRating))
-			m_oSongList.SetItemText (nIndex, LIST_SONG_COL_RATING, CUtils::NumberToString (nRating));
-
-		int nStrengthOfSchedule = 0;
-		if (m_oSongManager.GetSongStrengthOfSchedule (nLastID, nStrengthOfSchedule))
-			m_oSongList.SetItemText (nIndex, LIST_SONG_COL_SOS, CUtils::NumberToString (nStrengthOfSchedule));
-
 	} // end loop through songs
 
 	m_oSongList.SetRedraw (true);
@@ -877,7 +883,7 @@ void CSongsBestPickerDlg::UpdateSongListWonLossSpecificSong (int nSongID)
 
 
 	CString strWonLoss;
-	strWonLoss.Format (L"%2d / %2d", nWins, nLosses);
+	strWonLoss.Format (L"%2d - %2d", nWins, nLosses);
 
 	m_oSongList.SetItemText (nListCtrlIndex, LIST_SONG_COL_WONLOSS,	strWonLoss);
 	m_oSongList.SetItemText (nListCtrlIndex, LIST_SONG_COL_RATING,	CUtils::NumberToString (nSongRating));
@@ -1034,7 +1040,160 @@ bool CSongsBestPickerDlg::SetSongRank (int nRank)
 
 
 
+//************************************
+// Method:    GetDisplayStringForCol
+// FullName:  CSongsBestPickerDlg::GetDisplayStringForCol
+// Access:    public 
+// Returns:   bool
+// Qualifier:
+// Parameter: int nColIndex
+// Parameter: CString & rstrDisplayString
+//************************************
+bool CSongsBestPickerDlg::GetDisplayStringForCol (int nSongID, int nColIndex, CString& rstrDisplayString)
+{
+	if (nColIndex < 0 || nColIndex >= m_arrActiveColumns.GetSize ())
+		return false;
 
+	switch (m_arrActiveColumns[nColIndex])
+	{
+	case LIST_SONG_COL_TITLE:
+	{
+		rstrDisplayString = GetSongTitle (nSongID);
+		return true;
+	}
+	case LIST_SONG_COL_ARTIST:
+	{
+		rstrDisplayString = GetSongArtist (nSongID);
+		return true;
+	}
+	case LIST_SONG_COL_ALBUM:
+	{
+		rstrDisplayString = GetSongAlbum (nSongID);
+		return true;
+	}
+	case LIST_SONG_COL_WONLOSS:
+	{
+		int nWon = 0, nLost = 0;
+		if (! GetWonLossRecord (nSongID, nWon, nLost))
+			return false;
+		rstrDisplayString.Format (L"%2d - %2d", nWon, nLost);
+		return true;
+	}
+	case LIST_SONG_COL_RATING:
+	{
+		int nRating = 0;
+		if (! GetSongRating (nSongID, nRating))
+			return false;
+		rstrDisplayString = CUtils::N2S (nRating);
+		return true;
+	}
+	case LIST_SONG_COL_MP3:
+	{
+		rstrDisplayString = GetSongPathToMp3 (nSongID);
+		return true;
+	}
+	case LIST_SONG_COL_SOS:
+	{
+		int nSoS = 0;
+		if (! GetSongStrengthOfSchedule (nSongID, nSoS))
+			return false;
+		rstrDisplayString = CUtils::N2S (nSoS);
+		return true;
+	}
+
+	default:
+		return false;
+	}
+} // end CSongsBestPickerDlg::GetDisplayStringForCol
+
+
+
+//************************************
+// Method:    GetColumnSetupInfo
+// FullName:  CSongsBestPickerDlg::GetColumnSetupInfo
+// Access:    public 
+// Returns:   bool
+// Qualifier:
+// Parameter: int nColIndex
+// Parameter: int & rnColType
+// Parameter: CString & rstrColName
+// Parameter: int & rnFormat
+// Parameter: int & rnWidth
+//************************************
+bool CSongsBestPickerDlg::GetColumnSetupInfo (int nColIndex, int& rnColType, CString& rstrColName, int& rnFormat, int& rnWidth)
+{
+	if (nColIndex < 0 || nColIndex >= m_arrActiveColumns.GetSize ())
+		return false;
+
+	//
+	//  If they've saved something, use it
+
+	if (m_oSongManager.GetColumnSetupInfo (nColIndex, rnColType, rstrColName, rnFormat, rnWidth))
+		return true;
+
+	//
+	//  If not, use the defaults
+
+	CRect rcSongList;
+	m_oSongList.GetClientRect (&rcSongList);
+
+	switch (m_arrActiveColumns[nColIndex])
+	{
+	case LIST_SONG_COL_TITLE:
+	{
+		rnColType = LIST_SONG_COL_TITLE;
+		rstrColName = L"Title";
+		rnFormat = LVCFMT_LEFT;
+		rnWidth = (int) ((double) rcSongList.Width () * 0.24);
+		return true;
+	}
+	case LIST_SONG_COL_ARTIST:
+	{
+		rnColType = LIST_SONG_COL_ARTIST;
+		rstrColName = L"Artist";
+		rnFormat = LVCFMT_LEFT;
+		rnWidth = (int) ((double) rcSongList.Width () * 0.24);
+	}
+	case LIST_SONG_COL_ALBUM:
+	{
+		rnColType = LIST_SONG_COL_ALBUM;
+		rstrColName = L"Album";
+		rnFormat = LVCFMT_LEFT;
+		rnWidth = (int) ((double) rcSongList.Width () * 0.15);
+	}
+	case LIST_SONG_COL_WONLOSS:
+	{
+		rnColType = LIST_SONG_COL_WONLOSS;
+		rstrColName = L"Record";
+		rnFormat = LVCFMT_CENTER;
+		rnWidth = (int) ((double) rcSongList.Width () * 0.09);
+	}
+	case LIST_SONG_COL_RATING:
+	{
+		rnColType = LIST_SONG_COL_RATING;
+		rstrColName = L"Rating";
+		rnFormat = LVCFMT_CENTER;
+		rnWidth = (int) ((double) rcSongList.Width () * 0.08);
+	}
+	case LIST_SONG_COL_MP3:
+	{
+		rnColType = LIST_SONG_COL_MP3;
+		rstrColName = L"MP3";
+		rnFormat = LVCFMT_LEFT;
+		rnWidth = (int) ((double) rcSongList.Width () * 0.10);
+	}
+	case LIST_SONG_COL_SOS:
+	{
+		rnColType = LIST_SONG_COL_SOS;
+		rstrColName = L"SoS";
+		rnFormat = LVCFMT_LEFT;
+		rnWidth = (int) ((double) rcSongList.Width () * 0.10);
+	}
+
+	default:
+		return false;
+	}
+} // end CSongsBestPickerDlg::GetColumnSetupInfo
 
 
 

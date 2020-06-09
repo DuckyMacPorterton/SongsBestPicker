@@ -50,6 +50,8 @@ protected:
 	bool			m_bSongsSortAscending	= true;
 	int				m_nSongsSortCol			= 0;
 
+	CIntArray		m_arrActiveColumns;
+
 	//
 	//  Handles info about what song is currently loaded into our player / editor
 
@@ -79,16 +81,16 @@ protected:
 	bool					m_bHotkeysApplied = false;
 
 protected:
+	DECLARE_MESSAGE_MAP()
+
 	virtual BOOL	OnInitDialog();
 	void			OnSysCommand(UINT nID, LPARAM lParam);
 	void			OnPaint();
 	HCURSOR			OnQueryDragIcon();
-	DECLARE_MESSAGE_MAP()
 
 	static int CALLBACK SortCompareSongListCtrl (LPARAM lParam1, LPARAM lParam2, LPARAM lParamSort);
 	static int CALLBACK ComparePodSongRank	(LPARAM lParam1, LPARAM lParam2, LPARAM lParamSort);
 
-	int GetCurrentPodSongRank (int nSongID);
 
 public:
 	void	PlaySong (CString strFileToPlay = L"");
@@ -120,10 +122,12 @@ public:
 	void	SaveSongInfoFromPlayer	();
 	void	MakePlayerInfoEditable	(bool bEditable);
 
-	CString	GetSongTitle		(int nSongID);
-	CString	GetSongArtist		(int nSongID);
-	CString	GetSongAlbum		(int nSongID);
-	CString	GetSongPathToMp3	(int nSongID);
+	CString	GetSongTitle			(int nSongID);
+	CString	GetSongArtist			(int nSongID);
+	CString	GetSongAlbum			(int nSongID);
+	CString	GetSongPathToMp3		(int nSongID);
+	int		GetCurrentPodSongRank	(int nSongID);
+
 	bool	GetWonLossRecord	(int nSongID, int& rnWon, int& rnLost);
 	bool	GetSongRating		(int nSongID, int& rnRating);
 	bool	GetSongStrengthOfSchedule (int nSongID, int& rnStrengthOfSchedule);
@@ -141,6 +145,17 @@ public:
 	bool	SetNextSongActive ();
 	bool	SetPrevSongActive ();
 	bool	SetSongRank (int nRank);
+
+	//
+	//  These are for our user-configurable columns in the song list
+
+	bool	GetDisplayStringForCol	(int nSongID, int nColIndex, CString& rstrDisplayString);
+	bool	GetColumnSetupInfo		(int nColIndex, int& rnColType, CString& rstrColName, int& rnFormat, int& rnWidth);
+
+
+	//
+	//  and back to your regularly scheduled program...
+
 
 	CString GetKeyName (unsigned int virtualKey);
 	void	OnHotKey(UINT nHotKeyId, UINT nKey1, UINT nKey2);

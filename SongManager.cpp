@@ -590,6 +590,127 @@ bool CSongManager::SetOtherValue (CString strName, CString strValue)
 
 
 
+
+//************************************
+// Method:    GetColumnCount
+// FullName:  CSongManager::GetColumnCount
+// Access:    public 
+// Returns:   bool
+// Qualifier:
+// Parameter: int & rnColumnsToDisplay
+//
+//
+//
+//************************************
+bool CSongManager::GetColumnCount (int& rnColumnsToDisplay)
+{
+	if (NULL == m_pDB)
+		return false;
+
+	try
+	{
+		CString strQuery;
+		strQuery.Format (L"select count(*) from %s", TBL_COLUMNS);
+
+		rnColumnsToDisplay = m_pDB->execScalar (strQuery);
+		return true;
+	}
+	catch (CppSQLite3Exception& e) {
+		return SetError (e.errorMessage ());
+	}
+	catch (CException* e) {
+		return SetError (CUtils::GetErrorMessageFromException (e, true));
+	}
+} // end CSongManager::GetColumnCount
+
+
+
+//************************************
+// Method:    GetColumnSetupInfo
+// FullName:  CSongManager::GetColumnSetupInfo
+// Access:    public 
+// Returns:   bool
+// Qualifier:
+// Parameter: int nColIndex
+// Parameter: int & rnColType
+// Parameter: CString & rstrColName
+// Parameter: int & rnFormat
+// Parameter: int & rnWidth
+//************************************
+bool CSongManager::GetColumnSetupInfo (int nColIndex, int& rnColType, CString& rstrColName, int& rnFormat, int& rnWidth)
+{
+	if (NULL == m_pDB)
+		return false;
+
+	try
+	{
+		CString strQuery;
+		strQuery.Format (L"select * from %s where %s=%d", TBL_COLUMNS, DB_COL_INDEX, nColIndex);
+
+		CppSQLite3Query oQuery = m_pDB->execQuery (strQuery);
+		if (oQuery.eof ())
+			return false;
+
+		rnColType	= oQuery.getIntField	(DB_COL_TYPE);
+		rstrColName = oQuery.getStringField (DB_COL_NAME);
+		rnFormat	= oQuery.getIntField	(DB_COL_FORMAT);
+		rnWidth		= oQuery.getIntField	(DB_COL_WIDTH);
+		return true;
+	}
+	catch (CppSQLite3Exception& e) {
+		return SetError (e.errorMessage ());
+	}
+	catch (CException* e) {
+		return SetError (CUtils::GetErrorMessageFromException (e, true));
+	}
+} // end CSongManager::GetColumnSetupInfo
+
+
+
+//************************************
+// Method:    SetColumnSetupInfo
+// FullName:  CSongManager::SetColumnSetupInfo
+// Access:    public 
+// Returns:   bool
+// Qualifier:
+// Parameter: int nColIndex
+// Parameter: int nColType
+// Parameter: CString strColName
+// Parameter: int nFormat
+// Parameter: int nWidth
+//************************************
+bool CSongManager::SetColumnSetupInfo (int nColIndex, int nColType, CString strColName, int nFormat, int nWidth)
+{
+	if (NULL == m_pDB)
+		return false;
+
+	try
+	{
+		CString strQuery;
+		strQuery.Format (L"insert or replace into %s (%s, %s, %s, %s, %s) values (?, ?, ?, ?, ?)", TBL_COLUMNS,
+			DB_COL_INDEX, DB_COL_TYPE, DB_COL_NAME, DB_COL_FORMAT, DB_COL_WIDTH);
+	
+		CppSQLite3Statement stmtQuery = m_pDB->compileStatement (strQuery);
+
+		stmtQuery.bind (1, nColIndex);
+		stmtQuery.bind (2, nColType);
+		stmtQuery.bind (3, strColName);
+		stmtQuery.bind (4, nFormat);
+		stmtQuery.bind (5, nWidth);
+		stmtQuery.execDML();
+
+		return true;
+	}
+	catch (CppSQLite3Exception& e) {
+		return SetError (e.errorMessage ());
+	}
+	catch (CException* e) {
+		return SetError (CUtils::GetErrorMessageFromException (e, true));
+	}
+} // end CSongManager::SetColumnSetupInfo
+
+
+
 //************************************
 // Method:    DeleteAllSongs
 // FullName:  CSongManager::DeleteAllSongs

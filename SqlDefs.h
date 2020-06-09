@@ -132,6 +132,26 @@ static TableDefinitionStruct VPTblOtherStuff[] = {
 
 
 
+//////////////////////////////////////////////////////////////////
+//
+#define TBL_COLUMNS			L"Columns"
+#define TBL_COLUMNS_VER		1
+
+#define DB_COL_INDEX		L"ColIndex"
+#define DB_COL_TYPE			L"ColType"		
+#define DB_COL_NAME			L"Name"
+#define DB_COL_FORMAT		L"Format"
+#define DB_COL_WIDTH		L"Width"
+
+static TableDefinitionStruct VPTblColumns[] = {
+	{true,	false,	DB_COL_INDEX,		L"INTEGER",	VP_DEFAULT_UNUSED},
+	{false,	false,	DB_COL_TYPE,		L"INTEGER",	VP_DEFAULT_UNUSED},
+	{false,	false,	DB_COL_NAME,		L"TEXT",	VP_DEFAULT_UNUSED},
+	{false,	false,	DB_COL_FORMAT,		L"INTEGER",	VP_DEFAULT_UNUSED},
+	{false,	false,	DB_COL_WIDTH,		L"INTEGER",	VP_DEFAULT_UNUSED},
+	{0,		0,		0,					0,			0}
+};
+
 
 // ***************************************************************************************************
 // ***************************************************************************************************
@@ -160,6 +180,7 @@ static SVpSqlTableDefinitions arrVpSqlTableDefinitions[] = {
 	{TBL_SONG_PODS,			VPTblCurrentSchedule,	TBL_SONG_PODS_VER},
 	{TBL_MP3_TAGS,			VPTblMp3Tags,			TBL_MP3_TAGS_VER},
 	{TBL_OTHER_STUFF,		VPTblOtherStuff,		TBL_OTHER_STUFF_VER},
+	{TBL_COLUMNS,			VPTblColumns,			TBL_COLUMNS_VER},
 	{0,						0,						0}
 }; // end VP SQL Table Definition array
 

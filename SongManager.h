@@ -76,6 +76,10 @@ public:
 	bool	GetOtherValue (CString strName, CString& rstrValue);
 	bool	SetOtherValue (CString strName, CString strValue);
 
+	bool	GetColumnCount		(int& rnColumnsToDisplay);
+	bool	GetColumnSetupInfo	(int nColIndex, int& rnColType, CString& rstrColName, int& rnFormat, int& rnWidth);
+	bool	SetColumnSetupInfo	(int nColIndex, int nColType, CString strColName, int nFormat, int nWidth);
+
 	//
 	//  Errors?  We never have errors
 
