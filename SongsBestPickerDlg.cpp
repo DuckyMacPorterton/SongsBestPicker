@@ -14,14 +14,6 @@
 #endif
 
 
-#define LIST_SONG_COL_TITLE		0
-#define LIST_SONG_COL_ARTIST	1
-#define LIST_SONG_COL_ALBUM		2
-#define LIST_SONG_COL_WONLOSS	3
-#define LIST_SONG_COL_RATING	4
-#define LIST_SONG_COL_MP3		5
-#define LIST_SONG_COL_SOS		6
-
 #define LIST_POD_COL_RANK		0
 #define LIST_POD_COL_TITLE		1
 #define LIST_POD_COL_ARTIST		2
@@ -73,10 +65,9 @@ struct HotkeyCommandDefinitionStruct
 };
 
 //
-//  Here are our commands...
+//  Here are our hotkeys
 
 static HotkeyCommandDefinitionStruct HKInit[] = {
-
 	{ID_SHOW_OUR_APP,			L"Bring this glorious app to the front", L"", MOD_CONTROL | MOD_SHIFT | MOD_ALT, 'A'},
 
 	{ID_PLAY_OR_PAUSE_SONG,		L"Play or Pause Song",	L"",	MOD_CONTROL | MOD_SHIFT, 'A'},
@@ -88,11 +79,43 @@ static HotkeyCommandDefinitionStruct HKInit[] = {
 	{ID_RANK_3,					L"Rank 3",				L"",	MOD_CONTROL | MOD_SHIFT, '3'},
 	{ID_RANK_4,					L"Rank 4",				L"",	MOD_CONTROL | MOD_SHIFT, '4'},
 	{ID_RANK_5,					L"Rank 5",				L"",	MOD_CONTROL | MOD_SHIFT, '5'},
-
 };
 
 #define HOTKEY_INIT_NUM_COMMANDS (sizeof (HKInit) / sizeof (HotkeyCommandDefinitionStruct))
 
+//
+//  These are the available columns
+
+struct ColumnDefinitionStruct
+{
+	int				nType;
+	const TCHAR*	strColumnName;
+	int				nFormat;
+	float			fWidthAsPercent;
+};
+
+//
+//  Numbers do need to correspond to the index into garrSongList...  because I'm lazy.
+
+#define LIST_SONG_COL_TITLE		0
+#define LIST_SONG_COL_ARTIST	1
+#define LIST_SONG_COL_ALBUM		2
+#define LIST_SONG_COL_WONLOSS	3
+#define LIST_SONG_COL_RATING	4
+#define LIST_SONG_COL_MP3		5
+#define LIST_SONG_COL_SOS		6
+
+static ColumnDefinitionStruct garrSongColsAval[] = {
+	{LIST_SONG_COL_TITLE,		L"Title",	LVCFMT_LEFT,	(float) 0.24},
+	{LIST_SONG_COL_ARTIST,		L"Artist",	LVCFMT_LEFT,	(float) 0.24},
+	{LIST_SONG_COL_ALBUM,		L"Album",	LVCFMT_LEFT,	(float) 0.24},
+	{LIST_SONG_COL_WONLOSS,		L"Record",	LVCFMT_CENTER,	(float) 0.09},
+	{LIST_SONG_COL_RATING,		L"Rating",	LVCFMT_CENTER,	(float) 0.08},
+	{LIST_SONG_COL_MP3,			L"MP3",		LVCFMT_LEFT,	(float) 0.10},
+	{LIST_SONG_COL_SOS,			L"SoS",		LVCFMT_CENTER,	(float) 0.10},
+};
+
+#define SONG_LIST_AVAILABLE_COLUMN_COUNT (sizeof (garrSongColsAval) / sizeof (ColumnDefinitionStruct))
 
 
 CString GetHotkeyCommandName (int nCmdID)
@@ -219,12 +242,13 @@ BEGIN_MESSAGE_MAP(CSongsBestPickerDlg, CDialogEx)
 //	ON_BN_CLICKED(IDC_PAUSE_SONG,	&CSongsBestPickerDlg::PauseSong)
 //	ON_BN_CLICKED(IDC_STOP_SONG,	&CSongsBestPickerDlg::StopSong)
 
-	ON_NOTIFY(HDN_ITEMDBLCLICK, 0, &CSongsBestPickerDlg::OnSongHeaderDblClick)
-	ON_BN_CLICKED(IDC_SUBMIT_POD_RANKINGS, &CSongsBestPickerDlg::OnBnClickedSubmitPodRankings)
-	ON_BN_CLICKED(IDC_BROWSE_FOR_SONG, &CSongsBestPickerDlg::OnBnClickedBrowseForSong)
-	ON_NOTIFY(NM_RCLICK, IDC_SONG_LIST, &CSongsBestPickerDlg::OnRClickSongList)
-	ON_BN_CLICKED(IDC_SAVE_SONG_CHANGES, &CSongsBestPickerDlg::SaveSongInfoFromPlayer)
-	ON_NOTIFY(NM_DBLCLK, IDC_CURRENT_POD_LIST, &CSongsBestPickerDlg::OnDblclkCurrentPodList)
+	ON_NOTIFY(HDN_ITEMDBLCLICK, 0,				&CSongsBestPickerDlg::OnSongHeaderDblClick)
+
+	ON_BN_CLICKED(IDC_SUBMIT_POD_RANKINGS,		&CSongsBestPickerDlg::OnBnClickedSubmitPodRankings)
+	ON_BN_CLICKED(IDC_BROWSE_FOR_SONG,			&CSongsBestPickerDlg::OnBnClickedBrowseForSong)
+	ON_NOTIFY(NM_RCLICK, IDC_SONG_LIST,			&CSongsBestPickerDlg::OnRClickSongList)
+	ON_BN_CLICKED(IDC_SAVE_SONG_CHANGES,		&CSongsBestPickerDlg::SaveSongInfoFromPlayer)
+	ON_NOTIFY(NM_DBLCLK, IDC_CURRENT_POD_LIST,	&CSongsBestPickerDlg::OnDblclkCurrentPodList)
 END_MESSAGE_MAP()
 
 
@@ -252,13 +276,10 @@ BOOL CSongsBestPickerDlg::OnInitDialog()
 
 	if (0 == nActiveColCount)
 	{
-		m_oSongManager.SetColumnSetupInfo (0, LIST_SONG_COL_TITLE,		L"Title",	LVCFMT_LEFT,	(int) (rcList.Width () * 0.24));
-		m_oSongManager.SetColumnSetupInfo (1, LIST_SONG_COL_ARTIST,		L"Artist",	LVCFMT_LEFT,	(int) (rcList.Width () * 0.24));
-		m_oSongManager.SetColumnSetupInfo (2, LIST_SONG_COL_ALBUM,		L"Album",	LVCFMT_LEFT,	(int) (rcList.Width () * 0.24));
-		m_oSongManager.SetColumnSetupInfo (3, LIST_SONG_COL_WONLOSS,	L"Record",	LVCFMT_CENTER,	(int) (rcList.Width () * 0.09));
-		m_oSongManager.SetColumnSetupInfo (4, LIST_SONG_COL_RATING,		L"Rating",	LVCFMT_CENTER,	(int) (rcList.Width () * 0.08));
-		m_oSongManager.SetColumnSetupInfo (5, LIST_SONG_COL_MP3,		L"MP3",		LVCFMT_LEFT,	(int) (rcList.Width () * 0.10));
-		m_oSongManager.SetColumnSetupInfo (6, LIST_SONG_COL_SOS,		L"SoS",		LVCFMT_LEFT,	(int) (rcList.Width () * 0.10));
+		for (int i = 0; i < SONG_LIST_AVAILABLE_COLUMN_COUNT; i ++)
+		{
+			m_oSongManager.SetColumnSetupInfo (i, garrSongColsAval[i].nType, garrSongColsAval[i].strColumnName, garrSongColsAval[i].nFormat, (int) (garrSongColsAval[i].fWidthAsPercent * rcList.Width ()));
+		}
 	}
 
 	//
@@ -266,19 +287,6 @@ BOOL CSongsBestPickerDlg::OnInitDialog()
 
 	m_oListCtrlFont.CreatePointFont (90, L"Courier New");
 	m_oSongList.SetFont (&m_oListCtrlFont);
-	m_arrActiveColumns.SetSize (0);
-
-	for (int i = 0; i < nActiveColCount; i ++)
-	{
-		int nColType = -1, nColFormat = LVCFMT_LEFT, nColWidth = 10;
-		CString strColName;
-
-		m_oSongManager.GetColumnSetupInfo (i, nColType, strColName, nColFormat, nColWidth);
-		m_oSongList.InsertColumn (i, strColName, nColFormat, nColWidth);
-		m_arrActiveColumns.Add (nColType);	//  One of the few things we're keeping in memory, as opposed to querying DB every time
- 	} // end loop to create columns
-
-
 	m_oSongList.SetExtendedStyle (m_oSongList.GetExtendedStyle () | LVS_EX_FULLROWSELECT);
 
 	//
@@ -316,7 +324,7 @@ BOOL CSongsBestPickerDlg::OnInitDialog()
 	if (! m_oSongManager.GetError ().IsEmpty ())
 		AfxMessageBox (L"Error: " + m_oSongManager.GetError ());
 	else
-		UpdateSongList ();
+		UpdateSongList (true);	// true to init columns
 
 	//
 	//  Let's allow ourselves to minimize to system tray
@@ -775,8 +783,13 @@ void CSongsBestPickerDlg::OnResetSongStatistics()
 //
 //
 //************************************
-void CSongsBestPickerDlg::UpdateSongList()
+void CSongsBestPickerDlg::UpdateSongList (bool bInitCols /* = false */)
 {
+	if (bInitCols)
+	{
+		RestoreSongListColumns ();
+	}
+
 	//
 	//  For now, assume we'll have few enough songs that we don't need
 	//  to do a virtual list control
@@ -854,10 +867,12 @@ void CSongsBestPickerDlg::UpdateSongListSpecificSong (int nSongID, CString strTi
 		m_oSongManager.GetSongDetails (nSongID, strTitle, strArtist, strAlbum, strPathToMp3);
 	}
 
-	m_oSongList.SetItemText (nListCtrlIndex, LIST_SONG_COL_TITLE,	strTitle);
-	m_oSongList.SetItemText (nListCtrlIndex, LIST_SONG_COL_ARTIST,	strArtist);
-	m_oSongList.SetItemText (nListCtrlIndex, LIST_SONG_COL_ALBUM,	strAlbum);
-	m_oSongList.SetItemText (nListCtrlIndex, LIST_SONG_COL_MP3,		strPathToMp3);
+	CString strToDisplay;
+	for (int nCol = 0; nCol < m_arrActiveColumns.GetSize (); nCol++)
+	{
+		if (GetDisplayStringForCol (nSongID,			nCol, strToDisplay))
+			m_oSongList.SetItemText (nListCtrlIndex,	nCol, strToDisplay);
+	}
 
 } // end CSongsBestPickerDlg::UpdateSongListSpecificSong
 
@@ -877,19 +892,12 @@ void CSongsBestPickerDlg::UpdateSongListWonLossSpecificSong (int nSongID)
 	if (-1 == nListCtrlIndex)
 		return;
 
-	int nWins = 0, nLosses = 0, nSongRating = 0, nSoS = 0;
-
-	m_oSongManager.GetWonLossRecord (nSongID, nWins, nLosses);
-	m_oSongManager.GetSongRating	(nSongID, nSongRating);
-	m_oSongManager.GetSongStrengthOfSchedule	(nSongID, nSoS);
-
-
-	CString strWonLoss;
-	strWonLoss.Format (L"%2d - %2d", nWins, nLosses);
-
-	m_oSongList.SetItemText (nListCtrlIndex, LIST_SONG_COL_WONLOSS,	strWonLoss);
-	m_oSongList.SetItemText (nListCtrlIndex, LIST_SONG_COL_RATING,	CUtils::NumberToString (nSongRating));
-	m_oSongList.SetItemText (nListCtrlIndex, LIST_SONG_COL_SOS,		CUtils::NumberToString (nSoS));
+	CString strToDisplay;
+	for (int nCol = 0; nCol < m_arrActiveColumns.GetSize (); nCol++)
+	{
+		if (GetDisplayStringForCol (nSongID,			nCol, strToDisplay))
+			m_oSongList.SetItemText (nListCtrlIndex,	nCol, strToDisplay);
+	}
 
 } // end CSongsBestPickerDlg::UpdateSongListWonLossSpecificSong
 
@@ -1280,6 +1288,46 @@ bool CSongsBestPickerDlg::SwapColumns (int nSwapFrom, int nSwapTo)
 
 
 //************************************
+// Method:    ShowSongListColumnChooser
+// FullName:  CSongsBestPickerDlg::ShowSongListColumnChooser
+// Access:    public 
+// Returns:   void
+// Qualifier:
+//************************************
+void CSongsBestPickerDlg::ShowSongListColumnChooser ()
+{
+	CMenu	menuPopup;
+
+	VERIFY(menuPopup.LoadMenu(IDR_MENU_SONG_POPUP));
+	CMenu* pMenuCols = menuPopup.GetSubMenu(0);
+	if (NULL == pMenuCols)
+		return;
+
+	while (pMenuCols->DeleteMenu (0, MF_BYPOSITION));
+
+	//
+	//  Now add our available columns to the menu
+
+	for (int i = 0; i < SONG_LIST_AVAILABLE_COLUMN_COUNT; i++)
+	{
+		pMenuCols->InsertMenu (i, MF_STRING | MF_BYPOSITION, IDC_COLUMN_BLOCK_START + i, garrSongColsAval[i].strColumnName);
+	
+		//
+		//  If it's currently shown, add check mark
+
+		if (-1 != CUtils::FindNumberInArray (m_arrActiveColumns, garrSongColsAval[i].nType))
+			pMenuCols->CheckMenuItem (i, MF_BYPOSITION | MF_CHECKED);
+	}
+
+	CPoint ptScreen;
+	GetCursorPos (&ptScreen);
+	pMenuCols->TrackPopupMenu (TPM_LEFTALIGN | TPM_RIGHTBUTTON, ptScreen.x, ptScreen.y, this); // | TPM_RETURNCMD
+
+} // end CSongsBestPickerDlg::ShowSongListColumnChooser
+
+
+
+//************************************
 // Method:    OnHeaderDragCol
 // FullName:  CSongsBestPickerDlg::OnHeaderDragCol
 // Access:    public 
@@ -1324,6 +1372,11 @@ LRESULT CSongsBestPickerDlg::OnHeaderDragCol (WPARAM wSource, LPARAM lDest)
 		}
 	}
 
+	//
+	//  // Because when we try to do it nicely in the listctlr, dragging to column 0 is buggy
+
+	if (nDropTo == 0)
+		UpdateSongList (); 
 	return true;
 
 } // end CSongsBestPickerDlg::OnHeaderDragCol
@@ -2424,28 +2477,6 @@ void CSongsBestPickerDlg::RestoreWindowPosition ()
 
 	MoveWindow (rcWnd);
 
-	//
-	//  Now the song columns
-
-	m_oSongManager.GetOtherValue (L"TitleWidth",	strVal);
-	m_oSongList.SetColumnWidth (LIST_SONG_COL_TITLE, _tstoi (strVal));
-
-	m_oSongManager.GetOtherValue (L"ArtistWidth",	strVal);
-	m_oSongList.SetColumnWidth (LIST_SONG_COL_ARTIST, _tstoi (strVal));
-
-	m_oSongManager.GetOtherValue (L"AlbumWidth",	strVal);
-	m_oSongList.SetColumnWidth (LIST_SONG_COL_ALBUM, _tstoi (strVal));
-
-	m_oSongManager.GetOtherValue (L"RecordWidth",	strVal);
-	m_oSongList.SetColumnWidth (LIST_SONG_COL_WONLOSS, _tstoi (strVal));
-
-	m_oSongManager.GetOtherValue (L"RatingWidth",	strVal);
-	m_oSongList.SetColumnWidth (LIST_SONG_COL_RATING, _tstoi (strVal));
-
-	m_oSongManager.GetOtherValue (L"PathToMp3Width",	strVal);
-	m_oSongList.SetColumnWidth (LIST_SONG_COL_MP3, _tstoi (strVal));
-
-
 } // end CSongsBestPickerDlg::RestoreWindowPosition
 
 
@@ -2474,7 +2505,80 @@ void CSongsBestPickerDlg::SaveWindowPosition ()
 	m_oSongManager.SetOtherValue (L"RatingWidth",		CUtils::N2S (m_oSongList.GetColumnWidth (LIST_SONG_COL_RATING)));
 	m_oSongManager.SetOtherValue (L"PathToMp3Width",	CUtils::N2S (m_oSongList.GetColumnWidth (LIST_SONG_COL_MP3)));
 
+	//
+	//  Let's save the column positions from the song list
+
+	SaveSongListColumns ();
+
 } // end CSongsBestPickerDlg::SaveWindowPosition
+
+
+
+
+
+//************************************
+// Method:    RestoreSongListColumns
+// FullName:  CSongsBestPickerDlg::RestoreSongListColumns
+// Access:    public 
+// Returns:   void
+// Qualifier:
+//************************************
+void CSongsBestPickerDlg::RestoreSongListColumns ()
+{
+	//
+	//  Clear 'em out to start...
+
+	while (m_oSongList.DeleteColumn (0));
+
+	//
+	//  ... then build 'em back up
+
+	int nActiveColCount = 0;
+	m_oSongManager.GetColumnCount (nActiveColCount);
+
+	m_arrActiveColumns.SetSize (0);
+	for (int i = 0; i < nActiveColCount; i++)
+	{
+		int nColType = -1, nColFormat = LVCFMT_LEFT, nColWidth = 10;
+		CString strColName;
+
+		m_oSongManager.GetColumnSetupInfo (i, nColType, strColName, nColFormat, nColWidth);
+		m_oSongList.InsertColumn (i, strColName, nColFormat, nColWidth);
+		m_arrActiveColumns.Add (nColType);	//  One of the few things we're keeping in memory, as opposed to querying DB every time
+	} // end loop to create columns
+} // end CSongsBestPickerDlg::RestoreSongListColumns
+
+
+
+//************************************
+// Method:    SaveSongListColumns
+// FullName:  CSongsBestPickerDlg::SaveSongListColumns
+// Access:    public 
+// Returns:   void
+// Qualifier:
+//************************************
+void CSongsBestPickerDlg::SaveSongListColumns ()
+{
+	CRect rcList;
+	m_oSongList.GetClientRect (&rcList);
+
+	m_oSongManager.DeleteAllColumns ();
+
+	for (int i = 0; i  < m_arrActiveColumns.GetSize (); i ++)
+	{
+		int nColType	= m_arrActiveColumns[i];
+		int nColWidth	= 0;
+		if (i < m_oSongList.GetColumnCount ())
+			nColWidth = m_oSongList.GetColumnWidth (i);
+		else
+			nColWidth = (int) (rcList.Width () * garrSongColsAval[nColType].fWidthAsPercent);
+
+		if (nColWidth < 5)
+			nColWidth = 5;
+
+		m_oSongManager.SetColumnSetupInfo (i, nColType, garrSongColsAval[nColType].strColumnName, garrSongColsAval[nColType].nFormat, nColWidth);
+	}
+} // end CSongsBestPickerDlg::SaveSongListColumns
 
 
 
@@ -2565,8 +2669,60 @@ void CSongsBestPickerDlg::OnRClickSongList(NMHDR* pNMHDR, LRESULT* pResult)
 		return;
 
 	pMenuSongList->TrackPopupMenu (TPM_LEFTALIGN | TPM_RIGHTBUTTON, ptScreen.x, ptScreen.y, this); // | TPM_RETURNCMD
-	*pResult = 0;
+	*pResult = 1;
 } // end on rclick song list
+
+
+
+//////////////////////////////////////////////////////////////////////
+//
+//  W I N D O W   P R O C
+//
+//  Hey, look at me!  This is the first time I've ever used the window
+//  proc function.  I hope it works.  I'm doing it because I want to
+//  grab the OnContextMenu for the list controls.
+//
+LRESULT CSongsBestPickerDlg::WindowProc(UINT message, WPARAM wParam, LPARAM lParam) 
+{
+	if (message == WM_CONTEXTMENU)
+	{
+		//
+		//  If the window is one of our list controls, grab it...
+
+		HWND hWnd = (HWND) wParam;
+		if (hWnd == m_oSongList.GetSafeHwnd ())
+		{
+			ShowSongListColumnChooser ();
+			return true;
+		}
+		else if (hWnd == m_oCurrentPodList.GetSafeHwnd ())
+		{
+			return true;
+		}
+		else if (hWnd == m_oStatsList.GetSafeHwnd ())
+		{
+			return true;
+		}
+
+#ifdef Whatever
+		for (int i = 0; i < m_arrListCtrls.GetSize (); i ++)
+		{
+			if (hWnd == m_arrListCtrls[i]->m_hWnd)
+			{
+				int xPos = GET_X_LPARAM(lParam); 
+				int yPos = GET_Y_LPARAM(lParam); 
+				PopupMenuListCtrl (i, xPos, yPos);
+				break;
+			}
+		}
+#endif
+
+	}
+	
+	return CDialog::WindowProc(message, wParam, lParam);
+} // end window proc
+
+
 
 
 
@@ -2606,3 +2762,41 @@ LRESULT CSongsBestPickerDlg::OnClickedProgressCtrl (WPARAM wParam, LPARAM lParam
 } // end CSongsBestPickerDlg::OnClickedProgressCtrl
 
 
+
+
+
+
+///////////////////////////////////////////////////////////////////////
+//
+//   O N   C O M M A N D
+//
+//   Catch our script commands...  we don't know which ones they'll be
+//   at compile time
+//
+BOOL CSongsBestPickerDlg::OnCommand (WPARAM wParam, LPARAM lParam)
+{
+	int nID = LOWORD (wParam);
+
+	//
+	//  First handle script commands
+
+	if ((nID >= IDC_COLUMN_BLOCK_START) && (nID <= IDC_COLUMN_BLOCK_END))
+	{
+		//
+		//  Show (or hide) this command
+
+		int nColumnType = garrSongColsAval[nID - IDC_COLUMN_BLOCK_START].nType;
+		int nCurIndex = CUtils::FindNumberInArray (m_arrActiveColumns, nColumnType);
+		if (-1 != nCurIndex)
+			m_arrActiveColumns.RemoveAt (nCurIndex);	//  Hide it...
+		else
+			m_arrActiveColumns.Add (nColumnType);		//  Add as a new column....
+
+		SaveSongListColumns ();
+		UpdateSongList (true);	// true to re-do columns
+
+		return true;
+	} // end if command to show or hide a column type
+
+	return __super::OnCommand (wParam, lParam);
+} // end on command

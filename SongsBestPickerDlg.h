@@ -109,7 +109,7 @@ public:
 	void	OnDeleteSongList		();
 	void	OnResetSongStatistics	();
 
-	void	UpdateSongList				();
+	void	UpdateSongList				(bool bInitCols = false);
 	void	UpdateSongListSpecificSong	(int nSongID, CString strTitle = L"", CString strArtist = L"", CString strAlbum = L"", CString strPathToMp3 = L"");
 	void	UpdateSongListWonLossSpecificSong (int nSongID);
 	void	UpdateSongCount	();
@@ -139,6 +139,9 @@ public:
 	void	RestoreWindowPosition ();
 	void	SaveWindowPosition ();
 
+	void	RestoreSongListColumns ();
+	void	SaveSongListColumns ();
+
 	bool	OnHandleHotkey (UINT nHotkey);
 
 	bool	PlayOrPauseSong ();
@@ -154,12 +157,18 @@ public:
 	int		GetColumnType			(int nColIndex);
 	bool	SwapColumns				(int nSwapFrom, int nSwapTo);
 
+	void	ShowSongListColumnChooser ();
+
 	//
 	//  and back to your regularly scheduled program...
 
 
+
 	CString GetKeyName (unsigned int virtualKey);
 	void	OnHotKey(UINT nHotKeyId, UINT nKey1, UINT nKey2);
+
+	BOOL	OnCommand (WPARAM wParam, LPARAM lParam);
+
 
 	LRESULT	OnTrayNotification (WPARAM wParam, LPARAM lParam);
 	void	OnTimer (UINT_PTR nIDEvent);
@@ -176,6 +185,7 @@ public:
 	void	OnBnClickedSubmitPodRankings();
 	void	OnBnClickedBrowseForSong();
 	void	OnRClickSongList(NMHDR* pNMHDR, LRESULT* pResult);
+	LRESULT WindowProc (UINT message, WPARAM wParam, LPARAM lParam);
 
 	LRESULT	OnClickedProgressCtrl	(WPARAM wParam, LPARAM lParam);
 	LRESULT OnHeaderDragCol			(WPARAM wSource, LPARAM lDest);

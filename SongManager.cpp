@@ -712,6 +712,36 @@ bool CSongManager::SetColumnSetupInfo (int nColIndex, int nColType, CString strC
 
 
 //************************************
+// Method:    DeleteAllColumns
+// FullName:  CSongManager::DeleteAllColumns
+// Access:    public 
+// Returns:   bool
+// Qualifier:
+//************************************
+bool CSongManager::DeleteAllColumns ()
+{
+	if (NULL == m_pDB)
+		return false;
+
+	try
+	{
+		CString strQuery;
+		strQuery.Format (L"delete from %s", TBL_COLUMNS);
+		m_pDB->execDML (strQuery);
+
+		return true;
+	}
+	catch (CppSQLite3Exception& e) {
+		return SetError (e.errorMessage ());
+	}
+	catch (CException* e) {
+		return SetError (CUtils::GetErrorMessageFromException (e, true));
+	}
+} // end CSongManager::DeleteAllColumns
+
+
+
+//************************************
 // Method:    DeleteAllSongs
 // FullName:  CSongManager::DeleteAllSongs
 // Access:    public 

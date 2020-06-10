@@ -23,6 +23,9 @@ public:
 	CMyListCtrlHeaderCtrl   m_oHeaderCtrl;
 //	CMyListCtrlHeader m_oRecordClassificationHeaderCtrl;
 
+	int		GetColumnCount ();
+	CString	GetColumnName (int nCol);
+
 	void	SelectAll ();
 	void	SelectNone ();
 	void	UnselectAll ();

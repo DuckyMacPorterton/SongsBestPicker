@@ -381,6 +381,53 @@ void CMyListCtrl::OnCustomDrawList ( NMHDR* pNMHDR, LRESULT* pResult )
 
 
 
+//************************************
+// Method:    GetColumnCount
+// FullName:  CMyListCtrl::GetColumnCount
+// Access:    public 
+// Returns:   int
+// Qualifier:
+//
+//
+//
+//************************************
+int CMyListCtrl::GetColumnCount ()
+{
+	auto pHeader = GetHeaderCtrl ();
+	if (NULL == pHeader)
+		return -1;
+
+	return pHeader->GetItemCount ();
+} // end CMyListCtrl::GetColumnCount
+
+
+
+//************************************
+// Method:    GetColumnName
+// FullName:  CMyListCtrl::GetColumnName
+// Access:    public 
+// Returns:   CString
+// Qualifier:
+// Parameter: int nCol
+//************************************
+CString CMyListCtrl::GetColumnName (int nCol)
+{
+	TCHAR sColText[160];
+	memset (sColText, 0, sizeof (sColText));
+
+	LVCOLUMN lvColumnInfo;
+	memset (&lvColumnInfo, 0, sizeof (lvColumnInfo));
+	lvColumnInfo.mask = LVCF_TEXT;
+	lvColumnInfo.pszText = sColText;
+	lvColumnInfo.cchTextMax= 159;
+	if (! GetColumn (nCol, &lvColumnInfo))
+		return L"";
+	return lvColumnInfo.pszText;
+
+} // end CMyListCtrl::GetColumnName
+
+
+
 void CMyListCtrl::SelectAll ()
 {
 	for (int i = 0; i < GetItemCount (); i ++)
@@ -558,7 +605,7 @@ LRESULT CMyListCtrl::OnHeaderDragCol (WPARAM wSource, LPARAM lDest)
 	GetColumn(nSource, &lv_col);
 
 	lv_col.iSubItem		= nDest;
-	InsertColumn(nDest, &lv_col);
+	int nResult = InsertColumn(nDest, &lv_col);
 
 	//  
 	//  Adjust source col number since it might have changed because a new column was inserted
