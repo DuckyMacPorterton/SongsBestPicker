@@ -48,7 +48,7 @@ public:
 
 	bool	GetSongRating	(int nSongID, int& rnSongRating);
 	bool	SetSongRating	(int nSongID, int nSongRating);
-	bool	RecalcAllSongRatings	();
+	bool	RecalcAllSongRatings	(bool bResetExistingRatingsFirst = true);
 
 	bool	GetSongStrengthOfSchedule	(int nSongID, int& rnStrengthOfSchedule);
 	bool	SetSongStrengthOfSchedule	(int nSongID, int nStrengthOfSchedule);

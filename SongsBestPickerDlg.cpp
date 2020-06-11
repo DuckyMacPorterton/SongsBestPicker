@@ -226,6 +226,7 @@ BEGIN_MESSAGE_MAP(CSongsBestPickerDlg, CDialogEx)
 	ON_COMMAND(ID_DOUG_SHOWWINDOW,		OnShowMyWindow)
 	ON_COMMAND(ID_IMPORTFROMM3UFILE,	OnImportFromM3UFile)
 	ON_COMMAND(ID_RECALC_SONG_RATINGS,	OnRecalcSongRatings)
+	ON_COMMAND(ID_RECALC_SONG_RATINGS_DONT_RESET,	OnRecalcSongRatingsNoReset)
 	ON_COMMAND(ID_RESETSONGSTATISTICS,	OnResetSongStatistics)
 	ON_COMMAND(ID_DELETESONGLIST,		OnDeleteSongList)
 	ON_COMMAND(ID_FILE_ADDSONG,			OnAddSong)
@@ -233,6 +234,7 @@ BEGIN_MESSAGE_MAP(CSongsBestPickerDlg, CDialogEx)
 	ON_COMMAND(ID_POPUP_DELETESONG,		OnDeleteSongFromList)
 	ON_COMMAND(ID_POPUP_EDITSONGINFO,	OnEditSongInfo)
 	ON_COMMAND(ID_PLAY_SONG,			OnPlaySongFromSongList)
+	ON_COMMAND(ID_EXPORT_SONG_DATA,		ExportSongData)
 
 	ON_WM_TIMER()
 	ON_NOTIFY(LVN_ITEMCHANGED, IDC_SONG_LIST,			&CSongsBestPickerDlg::OnItemChangedSongList)
@@ -737,6 +739,25 @@ void CSongsBestPickerDlg::OnRecalcSongRatings ()
 
 
 //************************************
+// Method:    OnRecalcSongRatingsNoReset
+// FullName:  CSongsBestPickerDlg::OnRecalcSongRatingsNoReset
+// Access:    public 
+// Returns:   void
+// Qualifier:
+//
+//
+//
+//************************************
+void CSongsBestPickerDlg::OnRecalcSongRatingsNoReset ()
+{
+	m_oSongManager.RecalcAllSongRatings (false);	//  False not to clear existing ratings first
+	UpdateSongList ();
+
+} // end CSongsBestPickerDlg::OnRecalcSongRatingsNoReset
+
+
+
+//************************************
 // Method:    OnDeleteSongList
 // FullName:  CSongsBestPickerDlg::OnDeleteSongList
 // Access:    public 
@@ -1063,6 +1084,72 @@ bool CSongsBestPickerDlg::SetSongRank (int nRank)
 	return true;
 
 } // end CSongsBestPickerDlg::SetSongRank
+
+
+
+//************************************
+// Method:    ExportSongData
+// FullName:  CSongsBestPickerDlg::ExportSongData
+// Access:    public 
+// Returns:   bool
+// Qualifier:
+//************************************
+void CSongsBestPickerDlg::ExportSongData ()
+{
+	CFileDialog oDlg (false, L"*.*");
+	if (IDOK != oDlg.DoModal ())
+		return;
+
+	CStdioFileExPtr pOutFile = CStdioFileExPtr (new CStdioFileEx);
+	if (! pOutFile->Open (oDlg.GetPathName (), CFile::modeCreate | CFile::modeWrite)) {
+		AfxMessageBox (L"Unable to open output file: " + oDlg.GetPathName ());
+		return;
+	}
+
+	//
+	//  Export the column names
+
+	for (int i = 0; i < m_oSongList.GetColumnCount (); i ++)
+	{
+		if (i > 0)
+			pOutFile->WriteString (L"\t");
+		pOutFile->WriteString (m_oSongList.GetColumnName (i));
+	}
+	pOutFile->WriteString (L"\n");
+
+
+	//
+	//  Then the data
+
+	int nSongCount = 0;
+	m_oSongManager.GetSongCount (nSongCount);
+	int nLastID = -1;
+	for (int i = 0; i < nSongCount; i ++)
+	{
+		CString strSongTitle, strSongArtist, strSongAlbum, strPathToMp3, strWonLoss;
+		if (!m_oSongManager.GetNextSong (strSongTitle, strSongArtist, strSongAlbum, strPathToMp3, nLastID, nLastID))
+		{
+			AfxMessageBox (m_oSongManager.GetError ());
+			return;
+		}
+
+		CString strToDisplay;
+		GetDisplayStringForCol (nLastID, 0, strToDisplay);
+		pOutFile->WriteString (strToDisplay);
+
+		for (int nCol = 1; nCol < m_arrActiveColumns.GetSize (); nCol ++)
+		{
+			pOutFile->WriteString (L"\t");
+
+			if (GetDisplayStringForCol (nLastID, nCol, strToDisplay))
+				pOutFile->WriteString (strToDisplay);
+		}
+		pOutFile->WriteString (L"\n");
+	} // end loop through songs
+
+	pOutFile->Close ();
+
+} // end CSongsBestPickerDlg::ExportSongData
 
 
 

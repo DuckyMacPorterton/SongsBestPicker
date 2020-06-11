@@ -1360,7 +1360,7 @@ bool CSongManager::SetSongRating (int nSongID, int nSongRating)
 //
 //
 //************************************
-bool CSongManager::RecalcAllSongRatings ()
+bool CSongManager::RecalcAllSongRatings (bool bResetExistingRatingsFirst /* = true */)
 {
 	if (NULL == m_pDB)
 		return false;
@@ -1370,9 +1370,12 @@ bool CSongManager::RecalcAllSongRatings ()
 		//
 		//  First clear out all the old ratings
 
-		CString strInsert;
-		strInsert.Format (L"update %s set %s=%d", TBL_SONGS, DB_COL_SONG_RATING, 1000);
-		m_pDB->execDML (strInsert);
+		if (bResetExistingRatingsFirst)
+		{
+			CString strInsert;
+			strInsert.Format (L"update %s set %s=%d", TBL_SONGS, DB_COL_SONG_RATING, 1000);
+			m_pDB->execDML (strInsert);
+		}
 
 		//
 		//  Now just loop through all the games and run ELO on the results

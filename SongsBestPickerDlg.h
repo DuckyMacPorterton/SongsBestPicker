@@ -106,6 +106,7 @@ public:
 	void	OnImportFromM3UFile		();
 	void	OnAddSong				();
 	void	OnRecalcSongRatings		();
+	void	OnRecalcSongRatingsNoReset ();
 	void	OnDeleteSongList		();
 	void	OnResetSongStatistics	();
 
@@ -148,6 +149,8 @@ public:
 	bool	SetNextSongActive ();
 	bool	SetPrevSongActive ();
 	bool	SetSongRank (int nRank);
+
+	void	ExportSongData ();
 
 	//
 	//  These are for our user-configurable columns in the song list
