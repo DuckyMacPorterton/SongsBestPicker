@@ -1522,7 +1522,11 @@ bool CSongManager::RecalcStrengthOfSchedule (int nSongID, int& rnStrengthOfSched
 			DB_COL_SONG_2_ID,	TBL_SONG_HEAD_TO_HEAD,
 			DB_COL_SONG_1_ID,	nSongID);
 
-		int nStrengthOfScheduleSum = 0, nOpponentCount = 0;
+		double	nStrengthOfScheduleSum	= 0;
+		int		nOpponentCount			= 0;
+
+		//
+		//  We're going to use the harmonic mean for our strength of schedule
 
 		CppSQLite3Query oQuery = m_pDB->execQuery (strQuery);
 		for (; !oQuery.eof (); oQuery.nextRow ())
@@ -1532,14 +1536,15 @@ bool CSongManager::RecalcStrengthOfSchedule (int nSongID, int& rnStrengthOfSched
 			if (! GetSongRating (nOpponentID, nOpponentRating))
 				return SetError (L"Unable to calculate strength of schedule");
 
-			nStrengthOfScheduleSum += nOpponentRating;
+			nStrengthOfScheduleSum += ((double)1 / nOpponentRating);
 			nOpponentCount ++;
 		}
 
-		if (0 == nOpponentCount)
+		if (0 == nStrengthOfScheduleSum)
 			rnStrengthOfSchedule = 0;
 		else
-			rnStrengthOfSchedule = (int) ((float) nStrengthOfScheduleSum / nOpponentCount);
+			rnStrengthOfSchedule = (int) (nOpponentCount / nStrengthOfScheduleSum);
+			
 		SetSongStrengthOfSchedule (nSongID, rnStrengthOfSchedule);
 		return true;
 	}

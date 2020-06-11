@@ -731,6 +731,7 @@ void CSongsBestPickerDlg::OnAddSong ()
 //************************************
 void CSongsBestPickerDlg::OnRecalcSongRatings ()
 {
+	CWaitCursor wc;
 	m_oSongManager.RecalcAllSongRatings ();
 	UpdateSongList ();
 
