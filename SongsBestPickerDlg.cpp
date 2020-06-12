@@ -245,6 +245,7 @@ BEGIN_MESSAGE_MAP(CSongsBestPickerDlg, CDialogEx)
 //	ON_BN_CLICKED(IDC_STOP_SONG,	&CSongsBestPickerDlg::StopSong)
 
 	ON_NOTIFY(HDN_ITEMDBLCLICK, 0,				&CSongsBestPickerDlg::OnSongHeaderDblClick)
+	ON_NOTIFY(HDN_ITEMCLICK, 0,					&CSongsBestPickerDlg::OnSongHeaderDblClick)
 
 	ON_BN_CLICKED(IDC_SUBMIT_POD_RANKINGS,		&CSongsBestPickerDlg::OnBnClickedSubmitPodRankings)
 	ON_BN_CLICKED(IDC_BROWSE_FOR_SONG,			&CSongsBestPickerDlg::OnBnClickedBrowseForSong)
