@@ -70,6 +70,8 @@ bool CUtils::CreateDBTable (CString& rstrError, CMyCppSQLite3DBPtr pDB, CString 
 
 	int nNumPrimaryKeys = 0;
 
+	CStringArray arrIndexesToCreate;
+
 	int numFields = CUtils::GetNumFieldsInTable (TableInfo);
 	for (int i = 0; i < numFields; i++)
 	{
@@ -97,8 +99,12 @@ bool CUtils::CreateDBTable (CString& rstrError, CMyCppSQLite3DBPtr pDB, CString 
 				strPrimaryKey += _T (", ");
 			strPrimaryKey += TableInfo[i].strColumnName;
 		}
-		else if (TableInfo[i].bUnique)
+		else if (S_INDEX_UNIQUE == TableInfo[i].nIndexType)
 			strCol += L" NOT NULL UNIQUE";
+		else if (S_INDEX_INDEX == TableInfo[i].nIndexType)
+		{
+			arrIndexesToCreate.Add (L"create index " + strTableName + TableInfo[i].strColumnName + L" on " + strTableName + L" (" + TableInfo[i].strColumnName + L");");
+		}
 
 		strDML += strCol;
 	}
@@ -115,6 +121,15 @@ bool CUtils::CreateDBTable (CString& rstrError, CMyCppSQLite3DBPtr pDB, CString 
 
 	try {
 		pDB->execDML (strDML);
+
+		//
+		//  Now create our indexes
+
+		for (int i = 0; i < arrIndexesToCreate.GetSize (); i ++)
+		{
+			pDB->execDML (arrIndexesToCreate[i]);
+		}
+
 		return true;
 	}
 	catch (CppSQLite3Exception& e)

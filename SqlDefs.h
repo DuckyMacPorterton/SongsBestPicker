@@ -14,12 +14,16 @@
 struct TableDefinitionStruct
 {
 	BOOL			bPrimaryKey;
-	BOOL			bUnique;
+	int				nIndexType;
 	const wchar_t*	strColumnName;
 	const wchar_t*	strDataType;
 	int				nDefaultVal;
 };
 
+
+#define S_INDEX_NONE	0
+#define S_INDEX_UNIQUE	1
+#define S_INDEX_INDEX	2
 
 
 //////////////////////////////////////////////////////////////////
@@ -39,13 +43,13 @@ struct TableDefinitionStruct
 #define DB_COL_SONG_STRENGTH_OF_SCHEDULE	L"StrengthOfSchedule"
 
 static TableDefinitionStruct VPTblSongs[] = {
-	{true,	false,	DB_COL_SONG_ID,				L"INTEGER",	VP_DEFAULT_UNUSED},
-	{false,	true,	DB_COL_PATH_TO_MP3,			L"TEXT",	VP_DEFAULT_UNUSED},
-	{false,	false,	DB_COL_SONG_ARTIST,			L"TEXT",	VP_DEFAULT_UNUSED},
-	{false,	false,	DB_COL_SONG_TITLE,			L"TEXT",	VP_DEFAULT_UNUSED},
-	{false,	false,	DB_COL_SONG_ALBUM,			L"TEXT",	VP_DEFAULT_UNUSED},
-	{false, false,	DB_COL_SONG_RATING,			L"INTEGER",	1000},
-	{false, false,	DB_COL_SONG_STRENGTH_OF_SCHEDULE,			L"INTEGER",	1000},
+	{true,	S_INDEX_NONE,	DB_COL_SONG_ID,				L"INTEGER",	VP_DEFAULT_UNUSED},
+	{false,	S_INDEX_UNIQUE,	DB_COL_PATH_TO_MP3,			L"TEXT",	VP_DEFAULT_UNUSED},
+	{false,	S_INDEX_NONE,	DB_COL_SONG_ARTIST,			L"TEXT",	VP_DEFAULT_UNUSED},
+	{false,	S_INDEX_NONE,	DB_COL_SONG_TITLE,			L"TEXT",	VP_DEFAULT_UNUSED},
+	{false,	S_INDEX_NONE,	DB_COL_SONG_ALBUM,			L"TEXT",	VP_DEFAULT_UNUSED},
+	{false, S_INDEX_NONE,	DB_COL_SONG_RATING,			L"INTEGER",	1000},
+	{false, S_INDEX_NONE,	DB_COL_SONG_STRENGTH_OF_SCHEDULE,			L"INTEGER",	1000},
 	{0,		0,		0,							0,					0}
 };
 
@@ -61,10 +65,10 @@ static TableDefinitionStruct VPTblSongs[] = {
 #define DB_COL_SCORE_MARGIN				L"ScoreMargin"
 
 static TableDefinitionStruct VPTblSongHeadToHead[] = {
-	{false,	false,	DB_COL_POD_ID,				L"INTEGER",	VP_DEFAULT_UNUSED},
-	{false,	false,	DB_COL_SONG_1_ID,			L"INTEGER",	VP_DEFAULT_UNUSED},
-	{false,	false,	DB_COL_SONG_2_ID,			L"INTEGER",	VP_DEFAULT_UNUSED},
-	{false,	false,	DB_COL_SCORE_MARGIN,		L"INTEGER",	VP_DEFAULT_UNUSED},
+	{false,	S_INDEX_INDEX,	DB_COL_POD_ID,				L"INTEGER",	VP_DEFAULT_UNUSED},
+	{false,	S_INDEX_INDEX,	DB_COL_SONG_1_ID,			L"INTEGER",	VP_DEFAULT_UNUSED},
+	{false,	S_INDEX_INDEX,	DB_COL_SONG_2_ID,			L"INTEGER",	VP_DEFAULT_UNUSED},
+	{false,	S_INDEX_NONE,	DB_COL_SCORE_MARGIN,		L"INTEGER",	VP_DEFAULT_UNUSED},
 	{0,		0,		0,							0,					0}
 };
 
@@ -86,13 +90,13 @@ static TableDefinitionStruct VPTblSongHeadToHead[] = {
 #define DB_COL_POOL_FINISHED			L"Finished"
 
 static TableDefinitionStruct VPTblCurrentSchedule[] = {
-	{true,	false,	DB_COL_POD_ID,					L"INTEGER",	VP_DEFAULT_UNUSED},
-	{false,	false,	DB_COL_SONG_1_ID,				L"INTEGER",	VP_DEFAULT_UNUSED},
-	{false,	false,	DB_COL_SONG_2_ID,				L"INTEGER",	-1},
-	{false,	false,	DB_COL_SONG_3_ID,				L"INTEGER",	-1},
-	{false,	false,	DB_COL_SONG_4_ID,				L"INTEGER",	-1},
-	{false,	false,	DB_COL_SONG_5_ID,				L"INTEGER",	-1},
-	{false, false,  DB_COL_POOL_FINISHED,			L"INTEGER",  0},
+	{true,	S_INDEX_NONE,	DB_COL_POD_ID,					L"INTEGER",	VP_DEFAULT_UNUSED},
+	{false,	S_INDEX_INDEX,	DB_COL_SONG_1_ID,				L"INTEGER",	VP_DEFAULT_UNUSED},
+	{false,	S_INDEX_INDEX,	DB_COL_SONG_2_ID,				L"INTEGER",	-1},
+	{false,	S_INDEX_INDEX,	DB_COL_SONG_3_ID,				L"INTEGER",	-1},
+	{false,	S_INDEX_INDEX,	DB_COL_SONG_4_ID,				L"INTEGER",	-1},
+	{false,	S_INDEX_INDEX,	DB_COL_SONG_5_ID,				L"INTEGER",	-1},
+	{false, S_INDEX_NONE,	DB_COL_POOL_FINISHED,			L"INTEGER",  0},
 	{0,		0,		0,							0,					0}
 };
 
@@ -109,8 +113,8 @@ static TableDefinitionStruct VPTblCurrentSchedule[] = {
 #define DB_COL_TAG_NAME				L"TagName"		//  TPE1 or TP1 or whatever cryptic crap is in there
 
 static TableDefinitionStruct VPTblMp3Tags[] = {
-	{false,	false,	DB_COL_TAG_TYPE,		L"TEXT",	VP_DEFAULT_UNUSED},
-	{false,	false,	DB_COL_TAG_NAME,		L"TEXT",	VP_DEFAULT_UNUSED},
+	{false,	S_INDEX_NONE,	DB_COL_TAG_TYPE,		L"TEXT",	VP_DEFAULT_UNUSED},
+	{false,	S_INDEX_NONE,	DB_COL_TAG_NAME,		L"TEXT",	VP_DEFAULT_UNUSED},
 	{0,		0,		0,						0,			0}
 };
 
@@ -125,8 +129,8 @@ static TableDefinitionStruct VPTblMp3Tags[] = {
 #define DB_COL_VALUE			L"Value"		
 
 static TableDefinitionStruct VPTblOtherStuff[] = {
-	{true,	false,	DB_COL_WHAT,		L"TEXT",	VP_DEFAULT_UNUSED},
-	{false,	false,	DB_COL_VALUE,		L"TEXT",	VP_DEFAULT_UNUSED},
+	{true,	S_INDEX_NONE,	DB_COL_WHAT,		L"TEXT",	VP_DEFAULT_UNUSED},
+	{false,	S_INDEX_NONE,	DB_COL_VALUE,		L"TEXT",	VP_DEFAULT_UNUSED},
 	{0,		0,		0,						0,			0}
 };
 
@@ -144,11 +148,11 @@ static TableDefinitionStruct VPTblOtherStuff[] = {
 #define DB_COL_WIDTH		L"Width"
 
 static TableDefinitionStruct VPTblColumns[] = {
-	{true,	false,	DB_COL_INDEX,		L"INTEGER",	VP_DEFAULT_UNUSED},
-	{false,	false,	DB_COL_TYPE,		L"INTEGER",	VP_DEFAULT_UNUSED},
-	{false,	false,	DB_COL_NAME,		L"TEXT",	VP_DEFAULT_UNUSED},
-	{false,	false,	DB_COL_FORMAT,		L"INTEGER",	VP_DEFAULT_UNUSED},
-	{false,	false,	DB_COL_WIDTH,		L"INTEGER",	VP_DEFAULT_UNUSED},
+	{true,	S_INDEX_NONE,	DB_COL_INDEX,		L"INTEGER",	VP_DEFAULT_UNUSED},
+	{false,	S_INDEX_NONE,	DB_COL_TYPE,		L"INTEGER",	VP_DEFAULT_UNUSED},
+	{false,	S_INDEX_NONE,	DB_COL_NAME,		L"TEXT",	VP_DEFAULT_UNUSED},
+	{false,	S_INDEX_NONE,	DB_COL_FORMAT,		L"INTEGER",	VP_DEFAULT_UNUSED},
+	{false,	S_INDEX_NONE,	DB_COL_WIDTH,		L"INTEGER",	VP_DEFAULT_UNUSED},
 	{0,		0,		0,					0,			0}
 };
 
