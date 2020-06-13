@@ -297,10 +297,8 @@ bool CSongManager::LoadTagsFromMp3 (CString strPathToMp3, CString& rstrTitle, CS
 	FMOD::Sound* pSoundToLoadTags = NULL;
 
 	FMOD_RESULT result = m_pFmodSystem->createSound (CUtils::UTF16toUTF8 (strPathToMp3), FMOD_OPENONLY, 0, &pSoundToLoadTags);	// FMOD_DEFAULT
-	if (result != FMOD_OK) {
-		TRACE (L"LoadTagsFromMp3: Error loading song: " + CUtils::UTF8toUTF16 (FMOD_ErrorString (result)) + L" / " + strPathToMp3);
-		return false;
-	}
+	if (result != FMOD_OK) 
+		return SetError (L"LoadTagsFromMp3: Error loading song: " + CUtils::UTF8toUTF16 (FMOD_ErrorString (result)) + L" / " + strPathToMp3);
 
 	//
 	//  First get the artist
@@ -1638,6 +1636,36 @@ bool CSongManager::SetSongPathToMp3 (int nSongID, CString strPathtoMp3)
 
 
 //************************************
+// Method:    GetFinishedPodCount
+// FullName:  CSongManager::GetFinishedPodCount
+// Access:    public 
+// Returns:   bool
+// Qualifier:
+// Parameter: int & rnFinishedPoolCount
+//************************************
+bool CSongManager::GetFinishedPodCount (int& rnFinishedPoolCount)
+{
+	if (NULL == m_pDB)
+		return false;
+
+	try
+	{
+		CString strQuery;
+		strQuery.Format (L"select count(*) from %s where %s=1", TBL_SONG_PODS, DB_COL_POOL_FINISHED);
+		rnFinishedPoolCount = m_pDB->execScalar (strQuery);
+		return true;
+	}
+	catch (CppSQLite3Exception& e) {
+		return SetError (e.errorMessage ());
+	}
+	catch (CException* e) {
+		return SetError (CUtils::GetErrorMessageFromException (e, true));
+	}
+} // end CSongManager::GetFinishedPodCount
+
+
+
+//************************************
 // Method:    GetUnfinishedPoolCount
 // FullName:  CSongManager::GetUnfinishedPoolCount
 // Access:    public 
@@ -1847,6 +1875,70 @@ bool CSongManager::SetPodRankings (int nPodID, CIntArray& rarrSongIDs, bool bMar
 } // end CSongManager::SetPodRankings
 
 
+
+
+
+//************************************
+// Method:    GetUndefeatedSongCount
+// FullName:  CSongManager::GetUndefeatedSongCount
+// Access:    public 
+// Returns:   bool
+// Qualifier:
+// Parameter: int & rnUndefeatedSongCount
+//************************************
+bool CSongManager::GetUndefeatedSongCount (int& rnUndefeatedSongCount)
+{
+	if (NULL == m_pDB)
+		return false;
+
+	try
+	{
+		CString strQuery;
+		strQuery.Format (L"select count (distinct %s) from %s where %s in (select distinct %s from %s) and %s not in (select distinct %s from %s)",
+			DB_COL_SONG_1_ID, TBL_SONG_HEAD_TO_HEAD, DB_COL_SONG_1_ID, DB_COL_SONG_1_ID, TBL_SONG_HEAD_TO_HEAD, DB_COL_SONG_1_ID, DB_COL_SONG_2_ID, TBL_SONG_HEAD_TO_HEAD);
+			
+		rnUndefeatedSongCount = m_pDB->execScalar (strQuery);
+		return true;
+	}
+	catch (CppSQLite3Exception& e) {
+		return SetError (e.errorMessage ());
+	}
+	catch (CException* e) {
+		return SetError (CUtils::GetErrorMessageFromException (e, true));
+	}
+} // end CSongManager::GetUndefeatedSongCount
+
+
+
+//************************************
+// Method:    GetSongsNotPlayedCount
+// FullName:  CSongManager::GetSongsNotPlayedCount
+// Access:    public 
+// Returns:   bool
+// Qualifier:
+// Parameter: int & rnSongsThatHaveNotPlayed
+//************************************
+bool CSongManager::GetSongsNotPlayedCount (int& rnSongsThatHaveNotPlayed)
+{
+	if (NULL == m_pDB)
+		return false;
+
+	try
+	{
+		CString strQuery;
+		strQuery.Format (L"select count(%s) from %s where %s not in (Select %s from %s) and %s not in (select %s from %s)",
+			DB_COL_SONG_ID, TBL_SONGS, DB_COL_SONG_ID, DB_COL_SONG_1_ID, TBL_SONG_HEAD_TO_HEAD, DB_COL_SONG_ID, DB_COL_SONG_2_ID, TBL_SONG_HEAD_TO_HEAD);
+
+		rnSongsThatHaveNotPlayed = m_pDB->execScalar (strQuery);
+		return true;
+	}
+	catch (CppSQLite3Exception& e) {
+		return SetError (e.errorMessage ());
+	}
+	catch (CException* e) {
+		return SetError (CUtils::GetErrorMessageFromException (e, true));
+	}
+} // end CSongManager::GetSongsNotPlayedCount
 
 
 

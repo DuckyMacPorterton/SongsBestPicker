@@ -59,9 +59,13 @@ public:
 //	bool	SetSongTitle		(int nSongID, CString strName);
 	bool	SetSongPathToMp3	(int nSongID, CString strPathtoMp3);
 
+	bool	GetFinishedPodCount		(int& rnFinishedPoolCount);
 	bool	GetUnfinishedPodCount	(int& rnUnfinishedPoolCount);
 	bool	GetCurrentPod			(int& rnPodID, CIntArray& rarrSongIDs);
 	bool	SetPodRankings			(int nPodID, CIntArray& rarrSongIDs, bool bMarkPodFinished = true);
+
+	bool	GetUndefeatedSongCount	(int& rnUndefeatedSongCount);
+	bool	GetSongsNotPlayedCount	(int& rnSongsThatHaveNotPlayed);
 
 	//
 	//   Dealing with meta tags

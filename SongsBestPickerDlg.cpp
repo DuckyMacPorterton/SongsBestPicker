@@ -18,10 +18,12 @@
 #define LIST_POD_COL_TITLE		1
 #define LIST_POD_COL_ARTIST		2
 
-#define LIST_STATS_COL_OPPONENT	0
-#define LIST_STATS_COL_WONLOSS	1
-#define LIST_STATS_COL_MARGIN	2
+#define LIST_GAMES_COL_OPPONENT	0
+#define LIST_GAMES_COL_WONLOSS	1
+#define LIST_GAMES_COL_MARGIN	2
 
+#define LIST_STATS_WHAT			0
+#define LIST_STATS_VALUE		1
 
 #define SONG_STATUS_TIMER_ID	3
 #define SONG_STATUS_TIMER_MS	1000
@@ -194,7 +196,7 @@ void CSongsBestPickerDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
 	DDX_Control(pDX, IDC_SONG_LIST, m_oSongList);
-	DDX_Control(pDX, IDC_STATS, m_oStatsList);
+	DDX_Control(pDX, IDC_SONG_GAMES_LIST, m_oSongGameResultList);
 	DDX_Control(pDX, IDC_CURRENT_POD_LIST, m_oCurrentPodList);
 	DDX_Text(pDX, IDC_EDIT1, m_strCurSongTitle);
 	DDX_Text(pDX, IDC_EDIT2, m_strCurSongPathToMp3);
@@ -203,6 +205,7 @@ void CSongsBestPickerDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_PROGRESS1, m_oSongPlayingProgress);
 	DDX_Text(pDX, IDC_EDIT_ARTIST, m_strCurSongArtist);
 	DDX_Text(pDX, IDC_EDIT_ALBUM, m_strCurSongAlbum);
+	DDX_Control(pDX, IDC_STATS_LIST, m_oStatsList);
 }
 
 BEGIN_MESSAGE_MAP(CSongsBestPickerDlg, CDialogEx)
@@ -211,6 +214,7 @@ BEGIN_MESSAGE_MAP(CSongsBestPickerDlg, CDialogEx)
 	ON_WM_HOTKEY()
 	ON_WM_KEYUP()
 	ON_WM_QUERYDRAGICON()
+	ON_WM_DROPFILES()
 
 	ON_BN_CLICKED(IDOK,				&CSongsBestPickerDlg::OnBnClickedOk)
 	ON_BN_CLICKED(IDCANCEL,			&CSongsBestPickerDlg::OnBnClickedCancel)
@@ -244,7 +248,7 @@ BEGIN_MESSAGE_MAP(CSongsBestPickerDlg, CDialogEx)
 //	ON_BN_CLICKED(IDC_PAUSE_SONG,	&CSongsBestPickerDlg::PauseSong)
 //	ON_BN_CLICKED(IDC_STOP_SONG,	&CSongsBestPickerDlg::StopSong)
 
-	ON_NOTIFY(HDN_ITEMDBLCLICK, 0,				&CSongsBestPickerDlg::OnSongHeaderDblClick)
+//	ON_NOTIFY(HDN_ITEMDBLCLICK, 0,				&CSongsBestPickerDlg::OnSongHeaderDblClick)
 	ON_NOTIFY(HDN_ITEMCLICK, 0,					&CSongsBestPickerDlg::OnSongHeaderDblClick)
 
 	ON_BN_CLICKED(IDC_SUBMIT_POD_RANKINGS,		&CSongsBestPickerDlg::OnBnClickedSubmitPodRankings)
@@ -267,6 +271,15 @@ BOOL CSongsBestPickerDlg::OnInitDialog()
 	//  when the application's main window is not a dialog
 	SetIcon(m_hIcon, TRUE);			// Set big icon
 	SetIcon(m_hIcon, FALSE);		// Set small icon
+
+	//
+	//  We want user to be able to drag / drop files into us
+
+	DragAcceptFiles (true);
+
+	ChangeWindowMessageFilter (WM_DROPFILES,	MSGFLT_ADD);
+	ChangeWindowMessageFilter (WM_COPYDATA,		MSGFLT_ADD);
+	ChangeWindowMessageFilter (0x0049,			MSGFLT_ADD);
 
 	//
 	//  Set the default columns, if we haven't already
@@ -302,12 +315,21 @@ BOOL CSongsBestPickerDlg::OnInitDialog()
 	m_oCurrentPodList.SetExtendedStyle (m_oSongList.GetExtendedStyle () | LVS_EX_FULLROWSELECT);
 
 	//
-	//  Some song stats
+	//  Head to head results for a particular song
+
+	m_oSongGameResultList.GetClientRect (rcList);
+	m_oSongGameResultList.InsertColumn (LIST_GAMES_COL_OPPONENT,		L"Opponent",	LVCFMT_LEFT,	(int) (rcList.Width () * 0.5));
+	m_oSongGameResultList.InsertColumn (LIST_GAMES_COL_WONLOSS,		L"WonLoss",		LVCFMT_CENTER,	(int) (rcList.Width () * 0.3));
+	m_oSongGameResultList.InsertColumn (LIST_GAMES_COL_MARGIN,		L"Margin",		LVCFMT_CENTER,	(int) (rcList.Width () * 0.18));
+
+	//
+	//  Some various stats
 
 	m_oStatsList.GetClientRect (rcList);
-	m_oStatsList.InsertColumn (LIST_STATS_COL_OPPONENT,		L"Opponent",	LVCFMT_LEFT,	(int) (rcList.Width () * 0.5));
-	m_oStatsList.InsertColumn (LIST_STATS_COL_WONLOSS,		L"WonLoss",		LVCFMT_CENTER,	(int) (rcList.Width () * 0.3));
-	m_oStatsList.InsertColumn (LIST_STATS_COL_MARGIN,		L"Margin",		LVCFMT_CENTER,	(int) (rcList.Width () * 0.18));
+	m_oStatsList.InsertColumn (LIST_STATS_WHAT,		L"What?",	LVCFMT_LEFT, (int)(rcList.Width () * 0.49));
+	m_oStatsList.InsertColumn (LIST_STATS_VALUE,	L"Value",	LVCFMT_LEFT, (int)(rcList.Width () * 0.49));
+	m_oStatsList.SetExtendedStyle (m_oStatsList.GetExtendedStyle () | LVS_EX_FULLROWSELECT);
+
 
 	//
 	//  Our playback system
@@ -359,6 +381,7 @@ BOOL CSongsBestPickerDlg::OnInitDialog()
 	if (m_eSongPlayingStatus == ESongPlayStatus::ePlaying)
 		PlaySong ();
 
+	UpdateGeneralStats ();
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
 } // end on init dialog
@@ -849,16 +872,8 @@ void CSongsBestPickerDlg::UpdateSongList (bool bInitCols /* = false */)
 			return;
 		}
 
-		CString strToDisplay;
-		GetDisplayStringForCol (nLastID, 0, strToDisplay);
-		int nIndex = m_oSongList.InsertItem (i, strToDisplay);
-		m_oSongList.SetItemData (nIndex, nLastID);
+		AddSongToSongListCtrl (nLastID);
 
-		for (int nCol = 1; nCol < m_arrActiveColumns.GetSize (); nCol ++)
-		{
-			if (GetDisplayStringForCol (nLastID, nCol, strToDisplay))
-				m_oSongList.SetItemText (nIndex, nCol, strToDisplay);
-		}
 	} // end loop through songs
 
 	m_oSongList.SetRedraw (true);
@@ -867,6 +882,30 @@ void CSongsBestPickerDlg::UpdateSongList (bool bInitCols /* = false */)
 	UpdateSongCount ();
 
 } // end CSongsBestPickerDlg::UpdateSongList
+
+
+
+//************************************
+// Method:    AddSongToSongListCtrl
+// FullName:  CSongsBestPickerDlg::AddSongToSongListCtrl
+// Access:    public 
+// Returns:   void
+// Qualifier:
+// Parameter: int nSongID
+//************************************
+void CSongsBestPickerDlg::AddSongToSongListCtrl (int nSongID)
+{
+	CString strToDisplay;
+	GetDisplayStringForCol (nSongID, 0, strToDisplay);
+	int nIndex = m_oSongList.InsertItem (m_oSongList.GetItemCount (), strToDisplay);
+	m_oSongList.SetItemData (nIndex, nSongID);
+
+	for (int nCol = 1; nCol < m_arrActiveColumns.GetSize (); nCol++)
+	{
+		if (GetDisplayStringForCol (nSongID, nCol, strToDisplay))
+			m_oSongList.SetItemText (nIndex, nCol, strToDisplay);
+	}
+} // end CSongsBestPickerDlg::AddSongToSongListCtrl
 
 
 
@@ -883,7 +922,13 @@ void CSongsBestPickerDlg::UpdateSongListSpecificSong (int nSongID, CString strTi
 {
 	int nListCtrlIndex = m_oSongList.FindByItemData (nSongID);
 	if (-1 == nListCtrlIndex)
+	{
+		//
+		//  It's not here yet - add it
+
+		AddSongToSongListCtrl (nSongID);
 		return;
+	}
 
 	if (strTitle.IsEmpty ())
 	{
@@ -923,6 +968,7 @@ void CSongsBestPickerDlg::UpdateSongListWonLossSpecificSong (int nSongID)
 	}
 
 } // end CSongsBestPickerDlg::UpdateSongListWonLossSpecificSong
+
 
 
 
@@ -1489,9 +1535,9 @@ LRESULT CSongsBestPickerDlg::OnHeaderDragCol (WPARAM wSource, LPARAM lDest)
 //
 //
 //************************************
-void CSongsBestPickerDlg::UpdateStatsForCurrentSong (int nSongID)
+void CSongsBestPickerDlg::UpdateGameResultsForCurrentSong (int nSongID)
 {
-	m_oStatsList.DeleteAllItems ();
+	m_oSongGameResultList.DeleteAllItems ();
 	if (-1 == nSongID)
 		return;
 	
@@ -1512,11 +1558,11 @@ void CSongsBestPickerDlg::UpdateStatsForCurrentSong (int nSongID)
 		else
 			strWonLoss = L"Lost";
 
-		int nIndex = m_oStatsList.InsertItem (i, strOpponent);
-		m_oStatsList.SetItemText (nIndex, LIST_STATS_COL_WONLOSS,	strWonLoss);
-		m_oStatsList.SetItemText (nIndex, LIST_STATS_COL_MARGIN,	CUtils::NumberToString (arrMargins[i]));
+		int nIndex = m_oSongGameResultList.InsertItem (i, strOpponent);
+		m_oSongGameResultList.SetItemText (nIndex, LIST_GAMES_COL_WONLOSS,	strWonLoss);
+		m_oSongGameResultList.SetItemText (nIndex, LIST_GAMES_COL_MARGIN,	CUtils::NumberToString (arrMargins[i]));
 
-		m_oStatsList.SetItemData (nIndex, arrOpponents[i]);
+		m_oSongGameResultList.SetItemData (nIndex, arrOpponents[i]);
 	}
 
 
@@ -1569,6 +1615,33 @@ void CSongsBestPickerDlg::UpdatePlayerStatus ()
 
 } // end CSongsBestPickerDlg::UpdatePlayerStatus
 
+
+
+
+//************************************
+// Method:    UpdateGeneralStats
+// FullName:  CSongsBestPickerDlg::UpdateGeneralStats
+// Access:    public 
+// Returns:   void
+// Qualifier:
+//************************************
+void CSongsBestPickerDlg::UpdateGeneralStats ()
+{
+	m_oStatsList.DeleteAllItems ();
+	int nValue = 0;
+	int nIndex = m_oStatsList.InsertItem (0, L"Pods Ranked");
+	m_oSongManager.GetFinishedPodCount (nValue);
+	m_oStatsList.SetItemText (nIndex, LIST_STATS_VALUE, CUtils::N2S (nValue));
+
+	nIndex = m_oStatsList.InsertItem (0, L"Songs without rankings");
+	m_oSongManager.GetSongsNotPlayedCount (nValue);
+	m_oStatsList.SetItemText (nIndex, LIST_STATS_VALUE, CUtils::N2S (nValue));
+
+	nIndex = m_oStatsList.InsertItem (0, L"Undefeated Songs");
+	m_oSongManager.GetUndefeatedSongCount (nValue);
+	m_oStatsList.SetItemText (nIndex, LIST_STATS_VALUE, CUtils::N2S (nValue));
+
+} // end CSongsBestPickerDlg::UpdateGeneralStats
 
 
 
@@ -1900,7 +1973,7 @@ void CSongsBestPickerDlg::OnItemChangedSongList (NMHDR* pNMHDR, LRESULT* pResult
 			nSongID = -1;
 		else {
 			nSongID = (int)m_oSongList.GetItemData (nListCtrlIndex);
-			UpdateStatsForCurrentSong (nSongID);
+			UpdateGameResultsForCurrentSong (nSongID);
 		} // end if we have a valid song to check out
 
 #ifdef LoadSongsFromMainList
@@ -2015,7 +2088,7 @@ void CSongsBestPickerDlg::LoadSongIntoPlayer (int nSongID)
 	UpdateData (false);
 
 //	UpdateCurrentPod			(nSongID);	// NOT the list ctrl index
-	UpdateStatsForCurrentSong	(nSongID);	// NOT the list ctrl index
+	UpdateGameResultsForCurrentSong	(nSongID);	// NOT the list ctrl index
 
 
 } // end load song into player
@@ -2707,6 +2780,8 @@ void CSongsBestPickerDlg::OnBnClickedSubmitPodRankings()
 		UpdateSongListWonLossSpecificSong (arrSongIDs[i]);
 	}
 
+	UpdateGeneralStats ();
+
 } // end submit pod rankings
 
 
@@ -2788,7 +2863,7 @@ LRESULT CSongsBestPickerDlg::WindowProc(UINT message, WPARAM wParam, LPARAM lPar
 		{
 			return true;
 		}
-		else if (hWnd == m_oStatsList.GetSafeHwnd ())
+		else if (hWnd == m_oSongGameResultList.GetSafeHwnd ())
 		{
 			return true;
 		}
@@ -2889,3 +2964,54 @@ BOOL CSongsBestPickerDlg::OnCommand (WPARAM wParam, LPARAM lParam)
 
 	return __super::OnCommand (wParam, lParam);
 } // end on command
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//  ON DROP FILES
+//
+//
+void CSongsBestPickerDlg::OnDropFiles (HDROP hDropInfo)
+{
+	DWORD	nBuffer			= 0;
+	UINT	nFilesDropped	= DragQueryFile (hDropInfo, 0xFFFFFFFF, NULL, 0);
+
+	for (UINT i = 0; i < nFilesDropped; i ++)
+	{
+		// Get the buffer size for the first filename
+		nBuffer = DragQueryFile (hDropInfo, i, NULL, 0);
+
+		// Get path and name of the file
+
+		CString    strPathToMp3;
+		DragQueryFile (hDropInfo, i, strPathToMp3.GetBuffer (nBuffer + 1), nBuffer + 1);
+		strPathToMp3.ReleaseBuffer();
+
+		//
+		//  Let's see if we can get some tags on this file
+
+		m_oSongManager.GetError (true); // true to clear - which is why we're doing this
+		CString strTitle, strArtist, strAlbum;
+		if (! m_oSongManager.LoadTagsFromMp3 (strPathToMp3, strTitle, strArtist, strAlbum))
+			continue;
+
+		if (strTitle.IsEmpty ())
+			strTitle = CUtils::GetFileNameFromPath (strPathToMp3);
+
+		//
+		//  Add to our database.  null for the ID makes it auto-choose, though not technically "autoincrement"
+
+		int nNewSongID = -1;
+		if (m_oSongManager.AddSong (nNewSongID, strTitle, strPathToMp3, strArtist, strAlbum))
+			UpdateSongListSpecificSong (nNewSongID, strTitle, strArtist, strAlbum, strPathToMp3);
+
+	} // end loop through files dropped on us
+
+	CString strError = m_oSongManager.GetError (true);
+	if (! strError.IsEmpty ())
+		AfxMessageBox (strError);
+
+	DragFinish(hDropInfo);
+}

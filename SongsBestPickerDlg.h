@@ -42,8 +42,10 @@ protected:
 
 	CSystemTray		m_oTrayIcon; 
 	CMyListCtrl		m_oSongList;
-	CMyListCtrl		m_oStatsList;
+	CMyListCtrl		m_oSongGameResultList;
 	CMyListCtrl		m_oCurrentPodList;
+	CMyListCtrl		m_oStatsList;
+
 
 	CSongManager	m_oSongManager;
 
@@ -113,11 +115,14 @@ public:
 	void	UpdateSongList				(bool bInitCols = false);
 	void	UpdateSongListSpecificSong	(int nSongID, CString strTitle = L"", CString strArtist = L"", CString strAlbum = L"", CString strPathToMp3 = L"");
 	void	UpdateSongListWonLossSpecificSong (int nSongID);
+	void	AddSongToSongListCtrl		(int nSongID);
+	
 	void	UpdateSongCount	();
 
 	void	UpdateCurrentPod			();
-	void	UpdateStatsForCurrentSong	(int nSongID);
+	void	UpdateGameResultsForCurrentSong	(int nSongID);
 	void	UpdatePlayerStatus			();
+	void	UpdateGeneralStats			();
 
 	void	LoadSongIntoPlayer		(int nSondID);
 	void	SaveSongInfoFromPlayer	();
@@ -188,6 +193,8 @@ public:
 	void	OnBnClickedSubmitPodRankings();
 	void	OnBnClickedBrowseForSong();
 	void	OnRClickSongList(NMHDR* pNMHDR, LRESULT* pResult);
+	void	OnDropFiles (HDROP hDropInfo);
+
 	LRESULT WindowProc (UINT message, WPARAM wParam, LPARAM lParam);
 
 	LRESULT	OnClickedProgressCtrl	(WPARAM wParam, LPARAM lParam);
