@@ -94,6 +94,7 @@ struct ColumnDefinitionStruct
 	const TCHAR*	strColumnName;
 	int				nFormat;
 	float			fWidthAsPercent;
+	bool			bDefaultSortAscending;
 };
 
 //
@@ -108,13 +109,13 @@ struct ColumnDefinitionStruct
 #define LIST_SONG_COL_SOS		6
 
 static ColumnDefinitionStruct garrSongColsAval[] = {
-	{LIST_SONG_COL_TITLE,		L"Title",	LVCFMT_LEFT,	(float) 0.24},
-	{LIST_SONG_COL_ARTIST,		L"Artist",	LVCFMT_LEFT,	(float) 0.24},
-	{LIST_SONG_COL_ALBUM,		L"Album",	LVCFMT_LEFT,	(float) 0.24},
-	{LIST_SONG_COL_WONLOSS,		L"Record",	LVCFMT_CENTER,	(float) 0.09},
-	{LIST_SONG_COL_RATING,		L"Rating",	LVCFMT_CENTER,	(float) 0.08},
-	{LIST_SONG_COL_MP3,			L"MP3",		LVCFMT_LEFT,	(float) 0.10},
-	{LIST_SONG_COL_SOS,			L"SoS",		LVCFMT_CENTER,	(float) 0.10},
+	{LIST_SONG_COL_TITLE,		L"Title",	LVCFMT_LEFT,	(float) 0.24,	true},
+	{LIST_SONG_COL_ARTIST,		L"Artist",	LVCFMT_LEFT,	(float) 0.24,	true},
+	{LIST_SONG_COL_ALBUM,		L"Album",	LVCFMT_LEFT,	(float) 0.24,	true},
+	{LIST_SONG_COL_WONLOSS,		L"Record",	LVCFMT_CENTER,	(float) 0.09,	false},
+	{LIST_SONG_COL_RATING,		L"Rating",	LVCFMT_CENTER,	(float) 0.08,	false},
+	{LIST_SONG_COL_MP3,			L"MP3",		LVCFMT_LEFT,	(float) 0.10,	true},
+	{LIST_SONG_COL_SOS,			L"SoS",		LVCFMT_CENTER,	(float) 0.10,	false},
 };
 
 #define SONG_LIST_AVAILABLE_COLUMN_COUNT (sizeof (garrSongColsAval) / sizeof (ColumnDefinitionStruct))
@@ -2180,11 +2181,11 @@ void CSongsBestPickerDlg::OnSongHeaderDblClick(NMHDR* pNMHDR, LRESULT* pResult)
 		//
 		//  Sort win pct or rating descending by default
 
-		if (phdr->iItem == LIST_SONG_COL_WONLOSS ||
-			phdr->iItem == LIST_SONG_COL_RATING)
-			m_bSongsSortAscending = false;
-		else
+		int nColType = GetColumnType (phdr->iItem);
+		if (-1 == nColType)
 			m_bSongsSortAscending = true;
+		else
+			m_bSongsSortAscending = garrSongColsAval[nColType].bDefaultSortAscending;
 	}
 
 	m_nSongsSortCol = phdr->iItem;
