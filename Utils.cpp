@@ -1,6 +1,8 @@
 #include "stdafx.h"
 #include "Utils.h"
 #include <direct.h>
+#include "MultiMon/Monitors.h"
+#include "MultiMon/MultiMonitor.h"
 
 
 //////////////////////////////////////////////////////////////////////
@@ -821,6 +823,32 @@ bool CUtils::FindFile (CString& rstrPathToSong)
 
 
 //************************************
+// Method:    GetHotkeyText
+// FullName:  CUtils::GetHotkeyText
+// Access:    public static 
+// Returns:   CString
+// Qualifier:
+// Parameter: UINT nKey
+// Parameter: UINT nModifiers
+//************************************
+CString CUtils::GetHotkeyText (UINT nKey, UINT nModifiers)
+{
+	CString str;
+	if (nModifiers & MOD_CONTROL)
+		str = "Ctrl+";
+	if (nModifiers & MOD_ALT)
+		str += "Alt+";
+	if (nModifiers & MOD_SHIFT)
+		str += "Shift+";
+
+	str += CUtils::GetKeyName (nKey); // , nModifiers & MOD_EXTENDED);
+	return str;
+
+} // end CUtils::GetHotkeyText
+
+
+
+//************************************
 // Method:    NumberToString
 // FullName:  CVPUtils::NumberToString
 // Access:    public static 
@@ -1072,3 +1100,149 @@ int main()
     return 0; 
 } 
 #endif
+
+
+///////////////////////////////////////////////////////////////
+//
+//  E N S U R E   W I N D O W   I S   V I S I B L E
+//
+//  Makes sure a window (a rectangle in screen coordinates) fits entirely on the
+//  screen.  If not, adjusts it so it will
+//
+//  Returns true if we had to change the position, false if not
+//
+bool CUtils::EnsureWindowIsVisible (CRect& rc)
+{
+	CRect rcPassedIn = rc;
+
+	CMonitors oMonitors;
+	CMonitor  oNearestMonitor = oMonitors.GetNearestMonitor (rc);
+	
+	//
+	//  We only mess with things if the window is not completely visible
+
+	if (! oNearestMonitor.IsCompletelyOnMonitor (rc))
+	{
+		oNearestMonitor.ClipRectToMonitor (rc, true);
+		oNearestMonitor.CenterRectToMonitor (rc, true);
+	}
+
+	return rc != rcPassedIn;
+
+
+} // end ensure window is visible
+
+
+
+
+/*************************************
+
+  S T R I S T R
+
+  Performs strstr in a case insensitive manner.  
+
+  I'm still not sure whether to be proud or tremendously ashamed of this routine,
+  but it's used quite a lot so if you happen to know that doing it this way
+  really sucks, please change it (and let me know) -- dlp 3/98
+
+  2019/03/19 DLP -	Well, 20 years later, I ran into a bug in the entity extraction 
+					routine that calls this, which prompted me to look at this.  And, yeah,
+					I made it quite a bit better.
+
+*************************************/
+TCHAR* CUtils::stristr (wchar_t* pstrHaystack, const wchar_t* pstrNeedle, int* pnMatchStart /* = NULL */)
+{
+	int nHaystackCount	= (int) _tcslen (pstrHaystack);
+	int nNeedleCount	= (int) _tcslen (pstrNeedle);
+	if (0 == nNeedleCount)
+		return NULL;
+
+	int nToCheck = nHaystackCount - nNeedleCount +1;
+
+	for (int nHaystack = 0; nHaystack < nToCheck; nHaystack ++)
+	{
+		//
+		//  First char match, let's check the rest...
+
+		if (_wcsnicmp (&(pstrHaystack[nHaystack]), pstrNeedle, nNeedleCount) == 0)
+		{
+			//
+			//  Match!
+
+			if (NULL != pnMatchStart)
+				*pnMatchStart = nHaystack;
+			return &(pstrHaystack[nHaystack]);
+		} // end if we matched
+	} // end loop through haystack
+
+	if (NULL != pnMatchStart)
+		*pnMatchStart = -1;
+
+	return NULL;
+
+} // end stristr
+
+
+
+
+
+
+
+
+CString CUtils::GetKeyName (unsigned int virtualKey)
+{
+	switch (virtualKey)
+	{
+        case VK_LEFT:	return _T("Left");
+		case VK_UP:		return _T("Up");
+		case VK_RIGHT:	return _T("Right");
+		case VK_DOWN:	return _T("Down");
+        case VK_PRIOR:  return _T("PgUp");
+		case VK_NEXT:	return _T("PgDown");
+
+		case VK_END:	return _T("End");
+		case VK_HOME:	return _T("Home");
+        case VK_INSERT:	return _T("Insert");
+		case VK_DELETE:	return _T("Delete");
+        case VK_DIVIDE: return _T("/");
+        case VK_NUMLOCK:return _T("NumLock");
+	}
+
+	if (virtualKey >= 0x30 && virtualKey <= 0x5a)
+	{
+		TCHAR tc = (TCHAR) virtualKey;
+		CString s (tc);
+		return s;
+	}
+
+	return _T("Unknown");
+
+#ifdef TryToDoItRight
+	unsigned int scanCode = MapVirtualKey (virtualKey, MAPVK_VK_TO_VSC);
+
+    // because MapVirtualKey strips the extended bit for some keys
+    switch (virtualKey)
+    {
+        case VK_LEFT: case VK_UP: case VK_RIGHT: case VK_DOWN: // arrow keys
+        case VK_PRIOR: case VK_NEXT: // page up and page down
+        case VK_END: case VK_HOME:
+        case VK_INSERT: case VK_DELETE:
+        case VK_DIVIDE: // numpad slash
+        case VK_NUMLOCK:
+        {
+            scanCode |= 0x100; // set extended bit
+            break;
+        }
+    }
+
+	CString strKeyName;
+    if (GetKeyNameText (scanCode << 16, strKeyName.GetBuffer (), strKeyName.GetLength ()) != 0)
+    {
+        return strKeyName;
+    }
+    else
+    {
+		return GetLastErrorAsString ();
+    }
+#endif
+}

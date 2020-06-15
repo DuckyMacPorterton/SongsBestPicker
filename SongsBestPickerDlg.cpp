@@ -8,6 +8,9 @@
 #include "afxdialogex.h"
 
 #include "Utils.h"
+#include "HotkeyManagementDlg.h"
+#include "HotkeyCommandDefs.h"
+#include "HotkeyCommand.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -38,52 +41,8 @@
 //
 //  Command ids
 
-#define ID_SHOW_OUR_APP					WM_USER + 9
-
-#define ID_PLAY_OR_PAUSE_SONG			WM_USER + 1
-#define ID_NEXT_SONG					WM_USER + 2
-#define ID_PREV_SONG					WM_USER + 3
-
-#define ID_RANK_1						WM_USER + 4
-#define ID_RANK_2						WM_USER + 5
-#define ID_RANK_3						WM_USER + 6
-#define ID_RANK_4						WM_USER + 7
-#define ID_RANK_5						WM_USER + 8
-
-
 #define ID_MY_NOTIFY					WM_APP + 0
 
-//
-//  Put them in a nice clean struct
-
-struct HotkeyCommandDefinitionStruct
-{
-	int          nCommandID;
-	const TCHAR *strCommandName;
-	const TCHAR *strCommandDescription;
-
-	UINT         nDefaultModifiers;
-	UINT         nDefaultKey;
-};
-
-//
-//  Here are our hotkeys
-
-static HotkeyCommandDefinitionStruct HKInit[] = {
-	{ID_SHOW_OUR_APP,			L"Bring this glorious app to the front", L"", MOD_CONTROL | MOD_SHIFT | MOD_ALT, 'A'},
-
-	{ID_PLAY_OR_PAUSE_SONG,		L"Play or Pause Song",	L"",	MOD_CONTROL | MOD_SHIFT, 'A'},
-	{ID_NEXT_SONG,				L"Next Song",			L"",	MOD_CONTROL | MOD_SHIFT, VK_NEXT},
-	{ID_PREV_SONG,				L"Prev Song",			L"",	MOD_CONTROL | MOD_SHIFT, VK_PRIOR},
-
-	{ID_RANK_1,					L"Rank 1",				L"",	MOD_CONTROL | MOD_SHIFT, '1'},
-	{ID_RANK_2,					L"Rank 2",				L"",	MOD_CONTROL | MOD_SHIFT, '2'},
-	{ID_RANK_3,					L"Rank 3",				L"",	MOD_CONTROL | MOD_SHIFT, '3'},
-	{ID_RANK_4,					L"Rank 4",				L"",	MOD_CONTROL | MOD_SHIFT, '4'},
-	{ID_RANK_5,					L"Rank 5",				L"",	MOD_CONTROL | MOD_SHIFT, '5'},
-};
-
-#define HOTKEY_INIT_NUM_COMMANDS (sizeof (HKInit) / sizeof (HotkeyCommandDefinitionStruct))
 
 //
 //  These are the available columns
@@ -189,6 +148,7 @@ CSongsBestPickerDlg::CSongsBestPickerDlg (CWnd* pParent /*=NULL*/)
 	, m_strSongPlaybackLen(_T(""))
 	, m_strCurSongArtist(_T(""))
 	, m_strCurSongAlbum(_T(""))
+
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDI_SONGS_BEST_PICKER);
 }
@@ -239,7 +199,8 @@ BEGIN_MESSAGE_MAP(CSongsBestPickerDlg, CDialogEx)
 	ON_COMMAND(ID_POPUP_DELETESONG,		OnDeleteSongFromList)
 	ON_COMMAND(ID_POPUP_EDITSONGINFO,	OnEditSongInfo)
 	ON_COMMAND(ID_PLAY_SONG,			OnPlaySongFromSongList)
-	ON_COMMAND(ID_EXPORT_SONG_DATA,		ExportSongData)
+	ON_COMMAND(ID_EXPORT_SONG_DATA,		OnExportSongData)
+	ON_COMMAND(ID_EDITHOTKEYS,			OnEditHotkeys)
 
 	ON_WM_TIMER()
 	ON_NOTIFY(LVN_ITEMCHANGED, IDC_SONG_LIST,			&CSongsBestPickerDlg::OnItemChangedSongList)
@@ -360,6 +321,10 @@ BOOL CSongsBestPickerDlg::OnInitDialog()
 	//
 	//  And apply the hotkeys
 
+	m_oHotkeyManager.LoadHotkeys (m_oSongManager.GetDB ());
+	if (m_oHotkeyManager.GetCommandCount () == 0)
+		m_oHotkeyManager.ResetToSystemDefaults ();
+
 	ApplyHotkeys ();
 
 	//
@@ -465,98 +430,6 @@ void CSongsBestPickerDlg::OnBnClickedCancel()
 	m_oTrayIcon.MinimiseToTray (this);	
 //	OnBnClickedOk ();
 }
-
-
-void CSongsBestPickerDlg::OnBnClickedApplyHotkeys()
-{
-	if (! m_bHotkeysApplied)
-	{
-		ApplyHotkeys ();
-	}
-	else
-	{
-		RemoveHotkeys ();
-	}
-}
-
-
-
-void CSongsBestPickerDlg::ApplyHotkeys ()
-{
-	//
-	//  Keeping Left edge in place
-
-	for (int i = 0; i < HOTKEY_INIT_NUM_COMMANDS; i ++)
-	{
-		AddHotkey (HKInit[i].nCommandID, HKInit[i].nDefaultModifiers, HKInit[i].nDefaultKey, HKInit[i].strCommandName);
-	}
-
-	m_bHotkeysApplied = true;
-
-#ifdef ShowHotkeysInList
-	//
-	//  Now update user visible stuff, if necessary
-
-	CWnd* pWnd = GetDlgItem (ID_APPLY_HOTKEYS);
-	if (NULL != pWnd)
-		pWnd->SetWindowText (_T("Remove Hotkeys"));
-
-	if (NULL != m_oSongList.GetSafeHwnd ())
-	{
-		m_oSongList.DeleteAllItems ();
-
-		for (auto it  = m_mapHotkeys.begin (); it != m_mapHotkeys.end (); it ++)
-		{
-			CString strID = GetHotkeyCommandName ((*it).first);
-			CString strKey	= (*it).second;
-
-			int nIndex = m_oSongList.InsertItem (0, strID);
-			m_oSongList.SetItemText (nIndex, 1, strKey);
-		}
-	}
-#endif
-} // end ApplyHotkeys
-
-
-
-
-
-bool CSongsBestPickerDlg::AddHotkey (int nID, UINT nModifiers, UINT nVirtualKey, CString strNameForError)
-{
-	CString strFailed = _T("");
-	if (! RegisterHotKey (m_hWnd, nID,		nModifiers, nVirtualKey))
-	{
-//		AfxMessageBox (_T("Failed to register ") + strNameForError);
-		strFailed = _T("*FAILED* ");
-	}
-
-	CString strKeyName = strFailed;
-	if (nModifiers & MOD_CONTROL)
-		strKeyName += _T("Ctrl + ");
-	else
-		strKeyName += _T("       ");
-
-	if (nModifiers & MOD_ALT)
-		strKeyName += _T("Alt + ");
-	else
-		strKeyName += _T("      ");
-
-	if (nModifiers & MOD_SHIFT)
-		strKeyName += _T("Shift + ");
-	else
-		strKeyName += _T("        ");
-
-	if (nModifiers & MOD_WIN)
-		strKeyName += _T("Win + ");
-	else
-		strKeyName += _T("      ");
-
-	strKeyName += GetKeyName (nVirtualKey);
-
-	m_mapHotkeys[nID] = strKeyName;
-	return true;
-}
-
 
 
 //************************************
@@ -1143,7 +1016,7 @@ bool CSongsBestPickerDlg::SetSongRank (int nRank)
 // Returns:   bool
 // Qualifier:
 //************************************
-void CSongsBestPickerDlg::ExportSongData ()
+void CSongsBestPickerDlg::OnExportSongData ()
 {
 	CFileDialog oDlg (false, L"*.*");
 	if (IDOK != oDlg.DoModal ())
@@ -1199,6 +1072,7 @@ void CSongsBestPickerDlg::ExportSongData ()
 	pOutFile->Close ();
 
 } // end CSongsBestPickerDlg::ExportSongData
+
 
 
 
@@ -1646,6 +1520,123 @@ void CSongsBestPickerDlg::UpdateGeneralStats ()
 
 
 
+
+
+
+
+
+
+
+//************************************
+// Method:    OnEditHotkeys
+// FullName:  CSongsBestPickerDlg::OnEditHotkeys
+// Access:    public 
+// Returns:   void
+// Qualifier:
+//************************************
+void CSongsBestPickerDlg::OnEditHotkeys ()
+{
+	CHotkeyManagementDlg oHK (&m_oHotkeyManager);
+	if (IDOK != oHK.DoModal ())
+		return;
+
+	ApplyHotkeys ();
+	m_oHotkeyManager.SaveHotkeys (m_oSongManager.GetDB ());
+
+} // end CSongsBestPickerDlg::OnEditHotkeys
+
+
+
+
+
+
+void CSongsBestPickerDlg::OnBnClickedApplyHotkeys()
+{
+	if (! m_bHotkeysApplied)
+	{
+		ApplyHotkeys ();
+	}
+	else
+	{
+		RemoveHotkeys ();
+	}
+}
+
+
+
+void CSongsBestPickerDlg::ApplyHotkeys ()
+{
+//	for (int i = 0; i < HOTKEY_INIT_NUM_COMMANDS; i ++)
+	for (int i = 0; i < m_oHotkeyManager.GetCommandCount (); i ++)
+	{
+		//
+		//  Add hotkey registers this with the system.  It used to also display them in a list ctrl.
+
+		CHotkeyCommand* pHKC = m_oHotkeyManager.GetCommandByIndex (i);
+		if (NULL == pHKC)
+			continue;
+
+		//
+		//  Each command can have multiple hotkeys that trigger it
+
+		for (int nHotkey = 0; nHotkey < pHKC->GetHotkeyCount (); nHotkey ++)
+		{
+			UINT nKey = 0, nModifiers = 0;
+			pHKC->GetHotkeyByIndex (nHotkey, nKey, nModifiers);
+
+			if (! RegisterHotKey (m_hWnd, pHKC->GetID (), nModifiers, nKey))
+			{
+				TRACE (L"Unable to register hotkey: %s:  %s\n", pHKC->GetName (), CUtils::GetHotkeyText (nKey, nModifiers));
+			}
+		}
+	}
+
+	m_bHotkeysApplied = true;
+
+} // end ApplyHotkeys
+
+
+
+
+
+bool CSongsBestPickerDlg::AddHotkey (int nID, UINT nModifiers, UINT nVirtualKey, CString strNameForError)
+{
+	CString strFailed = _T("");
+	if (! RegisterHotKey (m_hWnd, nID,		nModifiers, nVirtualKey))
+	{
+//		AfxMessageBox (_T("Failed to register ") + strNameForError);
+		strFailed = _T("*FAILED* ");
+	}
+
+	CString strKeyName = strFailed;
+	if (nModifiers & MOD_CONTROL)
+		strKeyName += _T("Ctrl + ");
+	else
+		strKeyName += _T("       ");
+
+	if (nModifiers & MOD_ALT)
+		strKeyName += _T("Alt + ");
+	else
+		strKeyName += _T("      ");
+
+	if (nModifiers & MOD_SHIFT)
+		strKeyName += _T("Shift + ");
+	else
+		strKeyName += _T("        ");
+
+	if (nModifiers & MOD_WIN)
+		strKeyName += _T("Win + ");
+	else
+		strKeyName += _T("      ");
+
+	strKeyName += CUtils::GetKeyName (nVirtualKey);
+
+	m_mapHotkeys[nID] = strKeyName;
+	return true;
+}
+
+
+
 void CSongsBestPickerDlg::RemoveHotkeys ()
 {
 	for (auto it  = m_mapHotkeys.begin (); it != m_mapHotkeys.end (); it ++)
@@ -1875,64 +1866,6 @@ void CSongsBestPickerDlg::OnShowMyWindow ()
 }
 
 
-
-CString CSongsBestPickerDlg::GetKeyName (unsigned int virtualKey)
-{
-	switch (virtualKey)
-	{
-        case VK_LEFT:	return _T("Left");
-		case VK_UP:		return _T("Up");
-		case VK_RIGHT:	return _T("Right");
-		case VK_DOWN:	return _T("Down");
-        case VK_PRIOR:  return _T("PgUp");
-		case VK_NEXT:	return _T("PgDown");
-
-		case VK_END:	return _T("End");
-		case VK_HOME:	return _T("Home");
-        case VK_INSERT:	return _T("Insert");
-		case VK_DELETE:	return _T("Delete");
-        case VK_DIVIDE: return _T("/");
-        case VK_NUMLOCK:return _T("NumLock");
-	}
-
-	if (virtualKey >= 0x30 && virtualKey <= 0x5a)
-	{
-		TCHAR tc = (TCHAR) virtualKey;
-		CString s (tc);
-		return s;
-	}
-
-	return _T("Unknown");
-
-#ifdef TryToDoItRight
-	unsigned int scanCode = MapVirtualKey (virtualKey, MAPVK_VK_TO_VSC);
-
-    // because MapVirtualKey strips the extended bit for some keys
-    switch (virtualKey)
-    {
-        case VK_LEFT: case VK_UP: case VK_RIGHT: case VK_DOWN: // arrow keys
-        case VK_PRIOR: case VK_NEXT: // page up and page down
-        case VK_END: case VK_HOME:
-        case VK_INSERT: case VK_DELETE:
-        case VK_DIVIDE: // numpad slash
-        case VK_NUMLOCK:
-        {
-            scanCode |= 0x100; // set extended bit
-            break;
-        }
-    }
-
-	CString strKeyName;
-    if (GetKeyNameText (scanCode << 16, strKeyName.GetBuffer (), strKeyName.GetLength ()) != 0)
-    {
-        return strKeyName;
-    }
-    else
-    {
-		return GetLastErrorAsString ();
-    }
-#endif
-}
 
 
 
@@ -2638,6 +2571,7 @@ void CSongsBestPickerDlg::RestoreWindowPosition ()
 	m_oSongManager.GetOtherValue (L"width",		strVal);
 	rcWnd.right = rcWnd.left + _tstoi (strVal);
 
+	CUtils::EnsureWindowIsVisible (rcWnd);
 	MoveWindow (rcWnd);
 
 } // end CSongsBestPickerDlg::RestoreWindowPosition

@@ -19,6 +19,8 @@ public:
 	CSongManager ();
 	~CSongManager ();
 
+	CMyCppSQLite3DBPtr GetDB () {return m_pDB;};
+
 	void	SetFmodSystem (FMOD::System* pFmodSystem) {m_pFmodSystem = pFmodSystem;};
 
 	CString	GetError (bool bClearError = false);

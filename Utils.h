@@ -8,6 +8,9 @@
 class CUtils
 {
 public:
+	//
+	//  DB stuff
+
 	static bool		EnsureDBTablesExist (CString& rstrError, CMyCppSQLite3DBPtr pDB);
 	static bool		CreateDBTable		(CString& rstrError, CMyCppSQLite3DBPtr pDB, CString strTableName, TableDefinitionStruct TableInfo[]);
 	static int		GetNumFieldsInTable (TableDefinitionStruct TableDef[]);
@@ -18,6 +21,9 @@ public:
 
 	static bool		DoesTableExist		(CString& rstrError, CMyCppSQLite3DBPtr pDB, CString strTableName);
 
+	//
+	//  Uhmm, other stuff
+
 	static CString	GetErrorMessageFromException (CException* pE, bool bDeleteException = false);
 	static CString	GetMciErrorString (MCIERROR nMciError);
 
@@ -27,6 +33,9 @@ public:
 
 	static bool		GetIsCharInsideSubExpression (CString strHaystack, int nCharIndex, CString strExpressionStart, CString strExpressionEnd, bool bSupportQuoting = false, int nStartAtIndex = 0);
 	static int		CountInstancesOfString (CString strBig, CString strLittle, int nCharsToCheck = -1, bool bSkipQuotedBsChars = false);
+
+	static wchar_t* stristr (wchar_t* pstrHaystack, const wchar_t* pstrNeedle, int* pnMatchStart = NULL);
+
 
 	static CStringA UTF16toUTF8 (const CStringW& utf16);
 	static CStringW UTF8toUTF16 (const CStringA& utf8);
@@ -44,10 +53,23 @@ public:
 	static bool		FileExists (CString strName);
 	static bool		FindFile (CString& rstrPathToSong);
 
+	static CString	GetHotkeyText (UINT nKey, UINT nModifiers);
+	static CString	GetKeyName(UINT vk);
+
 	static BOOL		SleepMsg (DWORD dwTimeoutMS);
+
+	//
+	//  Rating stuff
 
 	static void		EloRating		(float& Ra, float& Rb, int K, int nWinnerScore, int nLoserScore);
 	static float	EloProbability	(float rating1, float rating2);
+
+	//
+	//  Visible windows are good
+
+	static bool	    EnsureWindowIsVisible (CRect& rc);
+
+
 };
 
 #define N2S		NumberToString

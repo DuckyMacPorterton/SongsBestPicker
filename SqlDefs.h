@@ -153,7 +153,44 @@ static TableDefinitionStruct VPTblColumns[] = {
 	{false,	S_INDEX_NONE,	DB_COL_NAME,		L"TEXT",	VP_DEFAULT_UNUSED},
 	{false,	S_INDEX_NONE,	DB_COL_FORMAT,		L"INTEGER",	VP_DEFAULT_UNUSED},
 	{false,	S_INDEX_NONE,	DB_COL_WIDTH,		L"INTEGER",	VP_DEFAULT_UNUSED},
-	{0,		0,		0,					0,			0}
+	{0,		0,				0,					0,			0}
+};
+
+
+
+//////////////////////////////////////////////////////////////////
+//
+#define TBL_HOTKEYS			L"Hotkeys"
+#define TBL_HOTKEYS_VER		1
+
+#define DB_COL_COMMAND_ID	L"ColIndex"
+#define DB_COL_NAME			L"Name"
+#define DB_COL_DATA			L"Data"
+
+static TableDefinitionStruct VPTblHotkeys[] = {
+	{true,	S_INDEX_NONE,	DB_COL_COMMAND_ID,		L"INTEGER",	VP_DEFAULT_UNUSED},
+	{false,	S_INDEX_NONE,	DB_COL_NAME,			L"TEXT",	VP_DEFAULT_UNUSED},
+	{false,	S_INDEX_NONE,	DB_COL_DATA,			L"INTEGER",	VP_DEFAULT_UNUSED},
+	{0,		0,				0,						0,			0}
+};
+
+
+
+
+//////////////////////////////////////////////////////////////////
+//
+#define TBL_HOTKEY_COMBOS		L"HotkeyCombos"
+#define TBL_HOTKEY_COMBOS_VER	1
+
+#define DB_COL_COMMAND_ID	L"ColIndex"
+#define DB_COL_KEY			L"Key"
+#define DB_COL_MODIFIERS	L"Modifiers"
+
+static TableDefinitionStruct VPTblHotkeyCombos[] = {
+	{false,	S_INDEX_INDEX,	DB_COL_COMMAND_ID,		L"INTEGER",	VP_DEFAULT_UNUSED},
+	{false,	S_INDEX_NONE,	DB_COL_KEY,				L"TEXT",	VP_DEFAULT_UNUSED},
+	{false,	S_INDEX_NONE,	DB_COL_MODIFIERS,		L"INTEGER",	VP_DEFAULT_UNUSED},
+	{0,		0,				0,						0,			0}
 };
 
 
@@ -176,8 +213,6 @@ struct SVpSqlTableDefinitions
 	int								m_nTableVersion;
 };
 
-
-
 static SVpSqlTableDefinitions arrVpSqlTableDefinitions[] = {
 	{TBL_SONGS,				VPTblSongs,				TBL_SONGS_VER},
 	{TBL_SONG_HEAD_TO_HEAD,	VPTblSongHeadToHead,	TBL_SONG_HEAD_TO_HEAD_VER},
@@ -185,6 +220,8 @@ static SVpSqlTableDefinitions arrVpSqlTableDefinitions[] = {
 	{TBL_MP3_TAGS,			VPTblMp3Tags,			TBL_MP3_TAGS_VER},
 	{TBL_OTHER_STUFF,		VPTblOtherStuff,		TBL_OTHER_STUFF_VER},
 	{TBL_COLUMNS,			VPTblColumns,			TBL_COLUMNS_VER},
+	{TBL_HOTKEYS,			VPTblHotkeys,			TBL_HOTKEYS_VER},
+	{TBL_HOTKEY_COMBOS,		VPTblHotkeyCombos,		TBL_HOTKEY_COMBOS_VER},
 	{0,						0,						0}
 }; // end VP SQL Table Definition array
 

@@ -14,6 +14,7 @@
 #include "fmod.hpp"
 #include "fmod_errors.h"
 #include "MyProgressCtrl.h"
+#include "HotkeyManager.h"
 
 enum class ESongPlayStatus {
 	eNotStarted,
@@ -81,6 +82,7 @@ protected:
 
 	std::map<int, CString>	m_mapHotkeys;
 	bool					m_bHotkeysApplied = false;
+	CHotkeyManager	m_oHotkeyManager;
 
 protected:
 	DECLARE_MESSAGE_MAP()
@@ -155,7 +157,8 @@ public:
 	bool	SetPrevSongActive ();
 	bool	SetSongRank (int nRank);
 
-	void	ExportSongData ();
+	void	OnExportSongData ();
+	void	OnEditHotkeys ();
 
 	//
 	//  These are for our user-configurable columns in the song list
