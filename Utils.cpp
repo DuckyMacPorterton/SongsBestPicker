@@ -887,6 +887,32 @@ CString CUtils::GetHotkeyText (UINT nKey, UINT nModifiers)
 
 
 //************************************
+// Method:    NumberToString
+// FullName:  CUtils::NumberToString
+// Access:    public static 
+// Returns:   CString
+// Qualifier:
+// Parameter: float fNumber
+// Parameter: int nPadZeroTotalDigitCount
+//
+//
+//
+//************************************
+CString CUtils::NumberToString (float fNumber, int nDigitsPastZero /* = 2 */, int nPadZeroTotalDigitCount /*= 0*/)
+{
+	CString strPretty;
+
+	if (nPadZeroTotalDigitCount > 0)
+		strPretty.Format (L"%0*.*f", nDigitsPastZero, nPadZeroTotalDigitCount, fNumber);
+	else
+		strPretty.Format (L"%.*f", nDigitsPastZero, fNumber);
+
+	return strPretty;
+} // end CUtils::NumberToString
+
+
+
+//************************************
 // Method:    FindNumberInArray
 // FullName:  CUtils::FindNumberInArray
 // Access:    public static 

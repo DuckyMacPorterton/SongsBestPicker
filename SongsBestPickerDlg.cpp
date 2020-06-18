@@ -1521,25 +1521,78 @@ void CSongsBestPickerDlg::UpdateAccessoryListCtrl ()
 	{
 	case EShowingInList::eGeneralStats:
 	{
+		//
+		//  # songs
+
 		nIndex = m_oAccessoryList.InsertItem (0, L"Total Songs");
 		m_oSongManager.GetSongCount (nValue);
 		m_oAccessoryList.SetItemText (nIndex, LIST_STATS_VALUE, CUtils::N2S (nValue));
 
-		nIndex = m_oAccessoryList.InsertItem (0, L"Songs without rankings");
-		m_oSongManager.GetSongsNotPlayedCount (nValue);
-		m_oAccessoryList.SetItemText (nIndex, LIST_STATS_VALUE, CUtils::N2S (nValue));
+		//
+		//  Average rating in this pod
+
+		nIndex = m_oAccessoryList.InsertItem (0, L"Current Pod Avg Rating");
+		
+		CIntArray arrCurPodIDs;
+		int nTotal = 0, nCurPodID = -1;
+		m_oSongManager.GetCurrentPod (nCurPodID, arrCurPodIDs);
+		for (int i = 0; i < arrCurPodIDs.GetSize (); i ++)
+		{
+			int nRating = 0;
+			m_oSongManager.GetSongRating (arrCurPodIDs[i], nRating);
+			nTotal += nRating;
+		}
+
+		float fAverage = 0;
+		if (arrCurPodIDs.GetSize () > 0)
+			fAverage = (float) nTotal / arrCurPodIDs.GetSize ();
+
+		m_oAccessoryList.SetItemText (nIndex, LIST_STATS_VALUE, CUtils::N2S (fAverage));
+
+		//
+		//  Average SoS in this pod
+
+		nIndex = m_oAccessoryList.InsertItem (0, L"Current Pod Avg SoS");
+		
+		arrCurPodIDs.SetSize (0);
+		nTotal = 0;
+		m_oSongManager.GetCurrentPod (nCurPodID, arrCurPodIDs);
+		for (int i = 0; i < arrCurPodIDs.GetSize (); i ++)
+		{
+			int nRating = 0;
+			m_oSongManager.GetSongStrengthOfSchedule (arrCurPodIDs[i], nRating);
+			nTotal += nRating;
+		}
+
+		fAverage = 0;
+		if (arrCurPodIDs.GetSize () > 0)
+			fAverage = (float) nTotal / arrCurPodIDs.GetSize ();
+
+		m_oAccessoryList.SetItemText (nIndex, LIST_STATS_VALUE, CUtils::N2S (fAverage));
+
+		//
+		//  # pods ranked
 
 		nIndex = m_oAccessoryList.InsertItem (0, L"Pods Ranked");
 		m_oSongManager.GetFinishedPodCount (nValue);
 		m_oAccessoryList.SetItemText (nIndex, LIST_STATS_VALUE, CUtils::N2S (nValue));
 
+		//
+		//  Undefeated songs
+
 		nIndex = m_oAccessoryList.InsertItem (0, L"Undefeated Songs");
 		m_oSongManager.GetUndefeatedSongCount (nValue);
 		m_oAccessoryList.SetItemText (nIndex, LIST_STATS_VALUE, CUtils::N2S (nValue));
 
+		//
+		//  Total artists
+
 		nIndex = m_oAccessoryList.InsertItem (0, L"Total Artists");
 		m_oSongManager.GetArtistCount (nValue);
 		m_oAccessoryList.SetItemText (nIndex, LIST_STATS_VALUE, CUtils::N2S (nValue));
+
+		//
+		//  
 
 		nIndex = m_oAccessoryList.InsertItem (0, L"Total Artists");
 		m_oSongManager.GetArtistCount (nValue);

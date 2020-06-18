@@ -47,6 +47,7 @@ public:
 
 	static bool		MyAtoI (CString str, int& rnValFound, bool bRequireMatchEntireString = true);
 	static CString	NumberToString (int nNumber,		bool bOutputAsHex = false, int nPadZeroTotalDigitCount = 0);
+	static CString	NumberToString (float fNumber,		int nDigitsPastZero = 2, int nPadZeroTotalDigitCount = 0);
 
 	static int		FindNumberInArray (CIntArray& rarrNumbers, int nToFind);
 
