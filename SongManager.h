@@ -63,6 +63,9 @@ public:
 
 	bool	GetFinishedPodCount		(int& rnFinishedPoolCount);
 	bool	GetUnfinishedPodCount	(int& rnUnfinishedPoolCount);
+	bool	GetArtistCount			(int& rnCount);
+
+
 	bool	GetCurrentPod			(int& rnPodID, CIntArray& rarrSongIDs);
 	bool	SetPodRankings			(int nPodID, CIntArray& rarrSongIDs, bool bMarkPodFinished = true);
 

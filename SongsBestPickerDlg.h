@@ -23,6 +23,10 @@ enum class ESongPlayStatus {
 	eStopped
 };
 
+enum class EShowingInList {
+	eGeneralStats,
+	eErrorLog
+};
 
 
 class CSongsBestPickerDlg : public CDialogEx
@@ -45,8 +49,9 @@ protected:
 	CMyListCtrl		m_oSongList;
 	CMyListCtrl		m_oSongGameResultList;
 	CMyListCtrl		m_oCurrentPodList;
-	CMyListCtrl		m_oStatsList;
+	CMyListCtrl		m_oAccessoryList;
 
+	CStringArray	m_arrErrors;
 
 	CSongManager	m_oSongManager;
 
@@ -54,6 +59,8 @@ protected:
 	int				m_nSongsSortCol			= 0;
 
 	CIntArray		m_arrActiveColumns;
+	EShowingInList	m_eWhatIsInAccessoryList		= EShowingInList::eGeneralStats;
+	
 
 	//
 	//  Handles info about what song is currently loaded into our player / editor
@@ -96,6 +103,8 @@ protected:
 	static int CALLBACK ComparePodSongRank	(LPARAM lParam1, LPARAM lParam2, LPARAM lParamSort);
 
 
+	bool	SetError (CString strError, bool bAlertUser = false, bool bRetVal = false);
+
 public:
 	void	PlaySong (CString strFileToPlay = L"");
 	void	PauseSong ();
@@ -105,7 +114,6 @@ public:
 	void	ApplyHotkeys ();
 	void	RemoveHotkeys ();
 	void	OnShowMyWindow ();
-	bool	AddHotkey (int nID, UINT nModifiers, UINT nVirtualKey, CString strNameForError);
 
 	void	OnImportFromM3UFile		();
 	void	OnAddSong				();
@@ -124,7 +132,7 @@ public:
 	void	UpdateCurrentPod			();
 	void	UpdateGameResultsForCurrentSong	(int nSongID);
 	void	UpdatePlayerStatus			();
-	void	UpdateGeneralStats			();
+	void	UpdateAccessoryListCtrl		();
 
 	void	LoadSongIntoPlayer		(int nSondID);
 	void	SaveSongInfoFromPlayer	();
@@ -159,6 +167,9 @@ public:
 
 	void	OnExportSongData ();
 	void	OnEditHotkeys ();
+	void	OnViewGeneralStats ();
+	void	OnViewErrorLog ();
+	void	OnClearErrorLog ();
 
 	//
 	//  These are for our user-configurable columns in the song list
@@ -175,7 +186,6 @@ public:
 
 
 
-	CString GetKeyName (unsigned int virtualKey);
 	void	OnHotKey(UINT nHotKeyId, UINT nKey1, UINT nKey2);
 
 	BOOL	OnCommand (WPARAM wParam, LPARAM lParam);
