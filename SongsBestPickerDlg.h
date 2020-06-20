@@ -15,6 +15,7 @@
 #include "fmod_errors.h"
 #include "MyProgressCtrl.h"
 #include "HotkeyManager.h"
+#include "EditWithIcon/IconEdit.h"
 
 enum class ESongPlayStatus {
 	eNotStarted,
@@ -48,7 +49,6 @@ protected:
 	CSystemTray		m_oTrayIcon; 
 	CMyListCtrl		m_oSongList;
 	CMyListCtrl		m_oSongGameResultList;
-	CMyListCtrl		m_oCurrentPodList;
 	CMyListCtrl		m_oAccessoryList;
 
 	CStringArray	m_arrErrors;
@@ -61,6 +61,18 @@ protected:
 	CIntArray		m_arrActiveColumns;
 	EShowingInList	m_eWhatIsInAccessoryList		= EShowingInList::eGeneralStats;
 	
+	//
+	//  Our current pod stuff
+
+	CMyListCtrl		m_oCurrentPodList;
+	CComboBox		m_oPodCombo;
+	CIconEdit		m_oTypeToFilterPod;
+	UINT_PTR		m_nTypeToFilterPodTimerId		= 0;
+	CString			m_strTypeToFilterEmptyMsg;
+	CString			m_strTypeToFilterLastText;
+	bool			m_bTypeToFilterInEmptyMode		= true;
+	bool			m_bTypeToFilterUseRegex			= true;
+	CIntArray		m_arrPodComboIDs;
 
 	//
 	//  Handles info about what song is currently loaded into our player / editor
@@ -68,10 +80,13 @@ protected:
 	int				m_nCurSongID			= -1;
 	int				m_nCurPodID				= -1;
 
+	bool			m_bCurPodFinished		= false;
+
 	CString			m_strCurSongTitle;
 	CString			m_strCurSongPathToMp3;
 	CString			m_strCurSongArtist;
 	CString			m_strCurSongAlbum;
+	CString			m_strH2HCurrentCaption;
 
 	//
 	//  Playback info
@@ -88,8 +103,8 @@ protected:
 	UINT_PTR		m_nSongPlayingStatusTimerID		= 0;
 
 	std::map<int, CString>	m_mapHotkeys;
-	bool					m_bHotkeysApplied = false;
-	CHotkeyManager	m_oHotkeyManager;
+	bool					m_bHotkeysApplied		= false;
+	CHotkeyManager			m_oHotkeyManager;
 
 protected:
 	DECLARE_MESSAGE_MAP()
@@ -128,11 +143,11 @@ public:
 	void	AddSongToSongListCtrl		(int nSongID);
 	
 	void	UpdateSongCount	();
-
-	void	UpdateCurrentPod			();
+	void	UpdateCurrentPod			(int nPodToLoad = -1);
 	void	UpdateGameResultsForCurrentSong	(int nSongID);
 	void	UpdatePlayerStatus			();
 	void	UpdateAccessoryListCtrl		();
+	void	UpdatePodCombo				();
 
 	void	LoadSongIntoPlayer		(int nSondID);
 	void	SaveSongInfoFromPlayer	();
@@ -207,6 +222,12 @@ public:
 	void	OnBnClickedBrowseForSong();
 	void	OnRClickSongList(NMHDR* pNMHDR, LRESULT* pResult);
 	void	OnDropFiles (HDROP hDropInfo);
+	
+	void	OnChangeTypeToFilterLeft ();
+	void	OnKillFocusTypeToFilter	();
+	void	OnSetFocusTypeToFilter	();
+
+
 
 	LRESULT WindowProc (UINT message, WPARAM wParam, LPARAM lParam);
 
@@ -214,5 +235,9 @@ public:
 	LRESULT OnHeaderDragCol			(WPARAM wSource, LPARAM lDest);
 
 	void	OnDblclkCurrentPodList	(NMHDR* pNMHDR, LRESULT* pResult);
-
+	void	UpdateTypeToFilterDisplay (CString strFilter);
+	void	SetTypeToFilterErrorMode (bool bError);
+	void	SetTypeToFilterState (bool bIsTypeToFilterEmpty);
+	void	OnSetFocusTypeToFilterHotkey ();
+	afx_msg void OnSelChangeComboPod();
 };

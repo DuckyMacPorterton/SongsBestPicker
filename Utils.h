@@ -50,6 +50,7 @@ public:
 	static CString	NumberToString (float fNumber,		int nDigitsPastZero = 2, int nPadZeroTotalDigitCount = 0);
 
 	static int		FindNumberInArray (CIntArray& rarrNumbers, int nToFind);
+	static bool		AreArraysEqual (CIntArray& rarrOne, CIntArray& rarrTwo);
 
 	static bool		FileExists (CString strName);
 	static bool		FindFile (CString& rstrPathToSong);

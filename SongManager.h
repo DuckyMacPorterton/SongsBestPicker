@@ -65,12 +65,22 @@ public:
 	bool	GetUnfinishedPodCount	(int& rnUnfinishedPoolCount);
 	bool	GetArtistCount			(int& rnCount);
 
+	bool	GetAllPodIDs			(CIntArray& rarrPodIDs);
 
 	bool	GetCurrentPod			(int& rnPodID, CIntArray& rarrSongIDs);
+	bool	GetPod					(int nPodID, CIntArray& rarrSongIDs, bool& rbPodFinished);
+
 	bool	SetPodRankings			(int nPodID, CIntArray& rarrSongIDs, bool bMarkPodFinished = true);
 
 	bool	GetUndefeatedSongCount	(int& rnUndefeatedSongCount);
 	bool	GetSongsNotPlayedCount	(int& rnSongsThatHaveNotPlayed);
+
+	//
+	//  For type to filter
+
+	bool	GetAllSongsMatchingFilter	(CIntArray& rarrSongIDs,	bool bUseRegex, CString strFilter);
+	bool	GetAllPodsMatchingFilter	(CIntArray& rarrPodIDs,		bool bUseRegex, CString strFilter);
+
 
 	//
 	//   Dealing with meta tags
@@ -105,7 +115,7 @@ protected:
 	FMOD::System*		m_pFmodSystem	= NULL;
 
 
-	int					m_nPoolSize = 5;	//  Our DB table design is not flexible enough to let us change this right now
+	int					m_nPodSize = 5;	//  Our DB table design is not flexible enough to let us change this right now
 
 };
 

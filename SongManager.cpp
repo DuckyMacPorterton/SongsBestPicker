@@ -1651,7 +1651,7 @@ bool CSongManager::GetFinishedPodCount (int& rnFinishedPoolCount)
 	try
 	{
 		CString strQuery;
-		strQuery.Format (L"select count(*) from %s where %s=1", TBL_SONG_PODS, DB_COL_POOL_FINISHED);
+		strQuery.Format (L"select count(*) from %s where %s=1", TBL_SONG_PODS, DB_COL_POD_FINISHED);
 		rnFinishedPoolCount = m_pDB->execScalar (strQuery);
 		return true;
 	}
@@ -1681,7 +1681,7 @@ bool CSongManager::GetUnfinishedPodCount (int& rnUnfinishedPoolCount)
 	try
 	{
 		CString strQuery;
-		strQuery.Format (L"select count(*) from %s where %s=0", TBL_SONG_PODS, DB_COL_POOL_FINISHED);
+		strQuery.Format (L"select count(*) from %s where %s=0", TBL_SONG_PODS, DB_COL_POD_FINISHED);
 		rnUnfinishedPoolCount = m_pDB->execScalar (strQuery);
 		return true;
 	}
@@ -1726,6 +1726,47 @@ bool CSongManager::GetArtistCount (int& rnCount)
 
 
 //************************************
+// Method:    GetAllPodIDs
+// FullName:  CSongManager::GetAllPodIDs
+// Access:    public 
+// Returns:   bool
+// Qualifier:
+// Parameter: CIntArray & rarrPodIDs
+//
+//
+//
+//************************************
+bool CSongManager::GetAllPodIDs (CIntArray& rarrPodIDs)
+{
+	if (NULL == m_pDB)
+		return false;
+
+	try
+	{
+		rarrPodIDs.SetSize (0);
+
+		CString strQuery;
+		strQuery.Format (L"select %s from %s order by %s ASC", DB_COL_POD_ID, TBL_SONG_PODS, DB_COL_POD_ID);
+	
+		CppSQLite3Query oQuery = m_pDB->execQuery (strQuery);
+		for (; !oQuery.eof (); oQuery.nextRow ())
+		{
+			rarrPodIDs.Add (oQuery.getIntField (0));
+		}
+
+		return true;
+	}
+	catch (CppSQLite3Exception& e) {
+		return SetError (e.errorMessage ());
+	}
+	catch (CException* e) {
+		return SetError (CUtils::GetErrorMessageFromException (e, true));
+	}
+} // end CSongManager::GetAllPodIDs
+
+
+
+//************************************
 // Method:    GetUnfinishedPoolCount
 // FullName:  CSongManager::GetUnfinishedPoolCount
 // Access:    public 
@@ -1742,7 +1783,7 @@ bool CSongManager::GetCurrentPod (int& rnPodID, CIntArray& rarrSongIDsInPod)
 	try
 	{
 		CString strQuery;
-		strQuery.Format (L"select * from %s where %s=0 limit 1", TBL_SONG_PODS, DB_COL_POOL_FINISHED);
+		strQuery.Format (L"select * from %s where %s=0 limit 1", TBL_SONG_PODS, DB_COL_POD_FINISHED);
 		CppSQLite3Query oQuery = m_pDB->execQuery (strQuery);
 		
 		if (oQuery.eof ())
@@ -1750,7 +1791,7 @@ bool CSongManager::GetCurrentPod (int& rnPodID, CIntArray& rarrSongIDsInPod)
 
 		rnPodID = oQuery.getIntField (DB_COL_POD_ID);
 
-		for (int i = 0; i < m_nPoolSize; i ++)
+		for (int i = 0; i < m_nPodSize; i ++)
 			rarrSongIDsInPod.Add (oQuery.getIntField (1 + i));	// first col is the pod ID, skip that... otherwise just count so we'll support if we allow different pod sizes later.
 
 		//
@@ -1786,7 +1827,7 @@ bool CSongManager::GetCurrentPod (int& rnPodID, CIntArray& rarrSongIDsInPod)
 				}
 			}
 
-			if (rarrSongIDsInPod.GetSize () < m_nPoolSize)
+			if (rarrSongIDsInPod.GetSize () < m_nPodSize)
 				return SetError (L"Unable to fill up pod - Sorry");
 
 			SetPodRankings (rnPodID, rarrSongIDsInPod, false); // don't mark it as finished
@@ -1801,6 +1842,51 @@ bool CSongManager::GetCurrentPod (int& rnPodID, CIntArray& rarrSongIDsInPod)
 		return SetError (CUtils::GetErrorMessageFromException (e, true));
 	}
 } // end CSongManager::GetUnfinishedPoolCount
+
+
+
+//************************************
+// Method:    GetPod
+// FullName:  CSongManager::GetPod
+// Access:    public 
+// Returns:   bool
+// Qualifier:
+// Parameter: int nPodID
+// Parameter: CIntArray & rarrSongIDs
+// Parameter: bool & rbPodFinished
+//
+//
+//
+//************************************
+bool CSongManager::GetPod (int nPodID, CIntArray& rarrSongIDs, bool& rbPodFinished)
+{
+	rarrSongIDs.SetSize (0);
+	if (NULL == m_pDB)
+		return false;
+
+	try
+	{
+		CString strQuery;
+		strQuery.Format (L"select * from %s where %s=%d", TBL_SONG_PODS, DB_COL_POD_ID, nPodID);
+		CppSQLite3Query oQuery = m_pDB->execQuery (strQuery);
+		
+		if (oQuery.eof ())
+			return false;
+
+		for (int i = 0; i < m_nPodSize; i ++)
+			rarrSongIDs.Add (oQuery.getIntField (1 + i));	// first col is the pod ID, skip that... otherwise just count so we'll support if we allow different pod sizes later.
+
+		rbPodFinished = (bool) oQuery.getIntField (DB_COL_POD_FINISHED);
+
+		return true;
+	}
+	catch (CppSQLite3Exception& e) {
+		return SetError (e.errorMessage ());
+	}
+	catch (CException* e) {
+		return SetError (CUtils::GetErrorMessageFromException (e, true));
+	}
+} // end CSongManager::GetPod
 
 
 
@@ -1836,7 +1922,7 @@ bool CSongManager::SetPodRankings (int nPodID, CIntArray& rarrSongIDs, bool bMar
 		CString strInsert;
 		strInsert.Format (L"update %s set %s=?, %s=?, %s=?, %s=?, %s=?, %s=%d where %s=?", TBL_SONG_PODS, 
 			DB_COL_SONG_1_ID, DB_COL_SONG_2_ID, DB_COL_SONG_3_ID, DB_COL_SONG_4_ID, DB_COL_SONG_5_ID,
-			DB_COL_POOL_FINISHED,  nIsPodFinished,
+			DB_COL_POD_FINISHED,  nIsPodFinished,
 			DB_COL_POD_ID);
 
 		CppSQLite3Statement stmtQuery = m_pDB->compileStatement (strInsert);
@@ -1869,7 +1955,7 @@ bool CSongManager::SetPodRankings (int nPodID, CIntArray& rarrSongIDs, bool bMar
 				{
 					float fWinnerRating = (float) nWinnerRating;
 					float fLoserRating	= (float) nLoserRating;
-					CUtils::EloRating (fWinnerRating, fLoserRating, ELO_DEFAULT_K, m_nPoolSize - nWinner, m_nPoolSize - nLoser);
+					CUtils::EloRating (fWinnerRating, fLoserRating, ELO_DEFAULT_K, m_nPodSize - nWinner, m_nPodSize - nLoser);
 
 					SetSongRating (rarrSongIDs[nWinner],	(int) fWinnerRating);
 					SetSongRating (rarrSongIDs[nLoser],		(int) fLoserRating);
@@ -1971,6 +2057,157 @@ bool CSongManager::GetSongsNotPlayedCount (int& rnSongsThatHaveNotPlayed)
 
 
 //************************************
+// Method:    GetAllSongsMatchingFilter
+// FullName:  CSongManager::GetAllSongsMatchingFilter
+// Access:    public 
+// Returns:   bool
+// Qualifier:
+// Parameter: CIntArray & rarrSongIDs
+// Parameter: bool bUseRegex
+// Parameter: CString strFilter
+//
+//
+//
+//************************************
+bool CSongManager::GetAllSongsMatchingFilter (CIntArray& rarrSongIDs, bool bUseRegex, CString strFilter)
+{
+	//
+	//  Get all pods with these songs in them
+
+	if (NULL == m_pDB)
+		return false;
+	
+	try
+	{
+		//
+		//  Regex!
+
+		CString strQuery, strToAdd, strText = L"TEXT";
+		strQuery.Format (L"select %s from %s where (", DB_COL_SONG_ID, TBL_SONGS);
+
+		for (int i = 0, nCounter = 0; VPTblSongs[i].strColumnName != 0; i ++)
+		{
+			//
+			//  Only search in text fields
+
+			if (strText.CompareNoCase (VPTblSongs[i].strDataType) != 0)
+				continue;
+
+			strToAdd.Format (L"%s like ?", VPTblSongs[i].strColumnName);
+
+			if (nCounter > 0)
+				strQuery += L" or ";
+			strQuery += strToAdd;
+			nCounter ++;
+		}
+
+		strQuery += L")";
+
+		CppSQLite3Statement stmtQuery = m_pDB->compileStatement (strQuery);
+
+		for (int i = 0, nCounter = 1; VPTblSongs[i].strColumnName != 0; i ++)
+		{
+			//
+			//  Bind our strFilter in there...
+
+			if (strText.CompareNoCase (VPTblSongs[i].strDataType) != 0)
+				continue;
+			CString strToBind = L"%" + strFilter + L"%"; 
+			stmtQuery.bind (nCounter, strToBind);
+			nCounter ++;
+		}
+
+		CppSQLite3Query oQuery = stmtQuery.execQuery ();
+		for (; !oQuery.eof (); oQuery.nextRow ())
+		{
+			rarrSongIDs.Add (oQuery.getIntField (0));
+		}
+
+		return true;
+	}
+	catch (CppSQLite3Exception& e) {
+		return SetError (e.errorMessage ());
+	}
+	catch (CException* e){
+		return SetError (CUtils::GetErrorMessageFromException (e, true));
+	}	
+} // end CSongManager::GetAllSongsMatchingFilter
+
+
+
+//************************************
+// Method:    GetAllPodsMatchingFilter
+// FullName:  CSongManager::GetAllPodsMatchingFilter
+// Access:    public 
+// Returns:   bool
+// Qualifier:
+// Parameter: CIntArray & rarrPodIDs
+// Parameter: bool bUseRegex
+// Parameter: CString strFilter
+//************************************
+bool CSongManager::GetAllPodsMatchingFilter (CIntArray& rarrPodIDs, bool bUseRegex, CString strFilter)
+{
+	CIntArray arrSongIDs;
+	if (! GetAllSongsMatchingFilter (arrSongIDs, bUseRegex, strFilter))
+		return false;
+
+	//
+	//  Get all pods with these songs in them
+
+	if (NULL == m_pDB)
+		return false;
+	
+	try
+	{
+		//
+		//  We need the song ids in a string for the queries.  We could change it
+		//  to use a temp db table for this, but for now I'm ok with this
+
+		CString strAllSongIDs = L"(";
+		for (int i = 0; i < arrSongIDs.GetSize (); i ++) {
+			if (i > 0)
+				strAllSongIDs += L", ";
+			strAllSongIDs += CUtils::N2S (arrSongIDs[i]);
+		}
+		strAllSongIDs += L")";
+
+		//
+		//  Now grab those pods
+
+		CString strQuery, strToAdd;
+		strQuery.Format (L"select %s from %s where (", DB_COL_POD_ID, TBL_SONG_PODS);
+		for (int i = 0; i < m_nPodSize; i ++)
+		{
+			if (i > 0)
+				strQuery += L" or ";
+
+			strToAdd.Format (L"%s%d in %s ", DB_COL_SONG_BASE, i + 1, strAllSongIDs);
+			strQuery += strToAdd;
+		}
+
+		strToAdd.Format (L") order by %s ASC", DB_COL_POD_ID);
+		strQuery += strToAdd;
+
+		CppSQLite3Query oQuery = m_pDB->execQuery (strQuery);
+		for (; !oQuery.eof (); oQuery.nextRow ())
+		{
+			rarrPodIDs.Add (oQuery.getIntField (0));
+		}
+
+		return true;
+	}
+	catch (CppSQLite3Exception& e) {
+		return SetError (e.errorMessage ());
+	}
+	catch (CException* e){
+		return SetError (CUtils::GetErrorMessageFromException (e, true));
+	}	
+
+} // end CSongManager::GetAllPodsMatchingFilter
+
+
+
+//************************************
 // Method:    ScheduleMoreGames
 // FullName:  CSongManager::ScheduleMoreGames
 // Access:    public 
@@ -2008,22 +2245,22 @@ bool CSongManager::ScheduleMorePods ()
 		m_pDB->execDML (L"begin transaction");
 
 		int nSongCount = (int) arrSongIDs.GetSize ();
-		if (nSongCount < m_nPoolSize)
-			m_nPoolSize = nSongCount;
+		if (nSongCount < m_nPodSize)
+			m_nPodSize = nSongCount;
 
 		//
 		//  Sweet!  They're randomized.  Just pull them out in order...  and since they're random, if
 		//  we need extras we can just pull from the front.
 
-		int nPools	= nSongCount / m_nPoolSize;
-		int nExtras = nSongCount % m_nPoolSize;
+		int nPools	= nSongCount / m_nPodSize;
+		int nExtras = nSongCount % m_nPodSize;
 
 		CString strQuery;
 		int		nSongIndex = 0;
 		for (int nPoolIndex = 0; nPoolIndex < nPools; nPoolIndex++)
 		{
 			strQuery.Format (L"insert into %s values (null, ", TBL_SONG_PODS);	// null forces auto-increment for DB_COL_POD_ID
-			for (int i = 0; i < m_nPoolSize; i++, nSongIndex++)
+			for (int i = 0; i < m_nPodSize; i++, nSongIndex++)
 			{
 				if (i > 0)
 					strQuery += L", ";
@@ -2041,7 +2278,7 @@ bool CSongManager::ScheduleMorePods ()
 		if (nExtras > 0)
 		{
 			strQuery.Format (L"insert into %s values (null, ", TBL_SONG_PODS);
-			for (int i = 0; i < m_nPoolSize; i++, nSongIndex++)
+			for (int i = 0; i < m_nPodSize; i++, nSongIndex++)
 			{
 				if (i > 0)
 					strQuery += L", ";
@@ -2054,7 +2291,7 @@ bool CSongManager::ScheduleMorePods ()
 					//  Ideally, we'll take the first song from the previously scheduled pods to fill this out.
 					//  If there aren't enough songs available, we'll use the 2nd, then 3rd, etc.
 
-					int nUseThisSongIndex = (nSongIndex % nSongCount) + ((i - 1) * m_nPoolSize);
+					int nUseThisSongIndex = (nSongIndex % nSongCount) + ((i - 1) * m_nPodSize);
 					if (nUseThisSongIndex > nSongCount)
 						nUseThisSongIndex = (nSongIndex % nSongCount);
 

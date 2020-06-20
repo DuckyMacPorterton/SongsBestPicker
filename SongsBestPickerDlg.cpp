@@ -12,6 +12,8 @@
 #include "HotkeyCommandDefs.h"
 #include "HotkeyCommand.h"
 
+#include <regex>
+
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -36,6 +38,11 @@
 
 #define MY_BIG_AMOUNT				100
 #define MY_SMALL_AMOUNT				 1
+
+
+#define VPCC_TYPE_TO_FILTER_TIMER_ID_TIMER_LEN_MS	500	
+#define VPCC_TYPE_TO_FILTER_TIMER_ID				7
+
 
 
 //
@@ -144,12 +151,14 @@ CSongsBestPickerDlg::CSongsBestPickerDlg (CWnd* pParent /*=NULL*/)
 	: CDialogEx(CSongsBestPickerDlg::IDD, pParent)
 	, m_strCurSongTitle		(L"")
 	, m_strCurSongPathToMp3	(L"")
-	, m_strSongPlaybackPos(_T(""))
-	, m_strSongPlaybackLen(_T(""))
-	, m_strCurSongArtist(_T(""))
-	, m_strCurSongAlbum(_T(""))
-
+	, m_strSongPlaybackPos	(_T(""))
+	, m_strSongPlaybackLen	(_T(""))
+	, m_strCurSongArtist	(_T(""))
+	, m_strCurSongAlbum		(_T(""))
+	, m_strH2HCurrentCaption(_T(""))
 {
+	m_strTypeToFilterEmptyMsg = L"(type regex to filter ...)";
+
 	m_hIcon = AfxGetApp()->LoadIcon(IDI_SONGS_BEST_PICKER);
 }
 
@@ -167,6 +176,9 @@ void CSongsBestPickerDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Text(pDX, IDC_EDIT_ARTIST, m_strCurSongArtist);
 	DDX_Text(pDX, IDC_EDIT_ALBUM, m_strCurSongAlbum);
 	DDX_Control(pDX, IDC_STATS_LIST, m_oAccessoryList);
+	DDX_Control(pDX, IDC_COMBO_POD_ID, m_oPodCombo);
+	DDX_Text(pDX, IDC_STATIC_H2H_CURRENT, m_strH2HCurrentCaption);
+	DDX_Control(pDX, IDC_EDIT_TYPE_TO_FILTER, m_oTypeToFilterPod);
 }
 
 BEGIN_MESSAGE_MAP(CSongsBestPickerDlg, CDialogEx)
@@ -209,6 +221,12 @@ BEGIN_MESSAGE_MAP(CSongsBestPickerDlg, CDialogEx)
 	ON_NOTIFY(LVN_ITEMCHANGED, IDC_SONG_LIST,			&CSongsBestPickerDlg::OnItemChangedSongList)
 	ON_NOTIFY(LVN_ITEMCHANGED, IDC_CURRENT_POD_LIST,	&CSongsBestPickerDlg::OnItemChangedCurrentPodList)
 
+	ON_EN_CHANGE(IDC_EDIT_TYPE_TO_FILTER,				&CSongsBestPickerDlg::OnChangeTypeToFilterLeft)
+	ON_EN_SETFOCUS(IDC_EDIT_TYPE_TO_FILTER,				&CSongsBestPickerDlg::OnSetFocusTypeToFilter)
+	ON_EN_KILLFOCUS(IDC_EDIT_TYPE_TO_FILTER,			&CSongsBestPickerDlg::OnKillFocusTypeToFilter)
+	ON_COMMAND(ID_SET_FOCUS_TYPE_TO_FILTER,				OnSetFocusTypeToFilterHotkey)
+
+
 	ON_BN_CLICKED(IDC_PLAY_SONG,	&CSongsBestPickerDlg::OnBnClickedPlaySong)
 //	ON_BN_CLICKED(IDC_PAUSE_SONG,	&CSongsBestPickerDlg::PauseSong)
 //	ON_BN_CLICKED(IDC_STOP_SONG,	&CSongsBestPickerDlg::StopSong)
@@ -226,6 +244,7 @@ BEGIN_MESSAGE_MAP(CSongsBestPickerDlg, CDialogEx)
 
 
 
+	ON_CBN_SELCHANGE(IDC_COMBO_POD_ID, &CSongsBestPickerDlg::OnSelChangeComboPod)
 END_MESSAGE_MAP()
 
 
@@ -299,6 +318,11 @@ BOOL CSongsBestPickerDlg::OnInitDialog()
 	m_oAccessoryList.InsertColumn (LIST_STATS_WHAT,		L"What?",	LVCFMT_LEFT, (int)(rcList.Width () * 0.49));
 	m_oAccessoryList.InsertColumn (LIST_STATS_VALUE,	L"Value",	LVCFMT_LEFT, (int)(rcList.Width () * 0.49));
 	m_oAccessoryList.SetExtendedStyle (m_oAccessoryList.GetExtendedStyle () | LVS_EX_FULLROWSELECT);
+
+	//
+	//  Type to filter pods!
+
+	m_oTypeToFilterPod.SetIcon  (IDI_ICON_X, true);
 
 
 	//
@@ -905,14 +929,27 @@ void CSongsBestPickerDlg::UpdateSongCount ()
 //
 //
 //************************************
-void CSongsBestPickerDlg::UpdateCurrentPod ()
+void CSongsBestPickerDlg::UpdateCurrentPod (int nPodToLoad /* = -1 */)
 {
 	int nPrevPodID = -1;
 
 	CIntArray arrSongIDs;
-	if (! m_oSongManager.GetCurrentPod (m_nCurPodID, arrSongIDs)) {
-		SetError (m_oSongManager.GetError (true));
-		return;
+
+	if (-1 == nPodToLoad)
+	{
+		if (! m_oSongManager.GetCurrentPod (m_nCurPodID, arrSongIDs)) {
+			SetError (m_oSongManager.GetError (true));
+			return;
+		}
+
+		m_bCurPodFinished = false;
+	}
+	else 
+	{
+		if (! m_oSongManager.GetPod (nPodToLoad, arrSongIDs, m_bCurPodFinished)) {
+			SetError (m_oSongManager.GetError (true));
+			return;
+		}
 	}
 
 	if (nPrevPodID != m_nCurPodID)
@@ -941,6 +978,9 @@ void CSongsBestPickerDlg::UpdateCurrentPod ()
 			LoadSongIntoPlayer (m_nCurSongID);
 		}
 	}
+
+	CWnd* pSubmit = GetDlgItem (IDC_SUBMIT_POD_RANKINGS);
+	pSubmit->EnableWindow (!m_bCurPodFinished);
 
 } // end CSongsBestPickerDlg::UpdateCurrentPod
 
@@ -1422,10 +1462,12 @@ LRESULT CSongsBestPickerDlg::OnHeaderDragCol (WPARAM wSource, LPARAM lDest)
 //************************************
 void CSongsBestPickerDlg::UpdateGameResultsForCurrentSong (int nSongID)
 {
+	UpdateData ();
+
 	m_oSongGameResultList.DeleteAllItems ();
 	if (-1 == nSongID)
 		return;
-	
+
 	CIntArray arrOpponents, arrMargins;
 	if (! m_oSongManager.GetHeadToHeadForSong (nSongID, arrOpponents, arrMargins)) {
 		SetError (m_oSongManager.GetError (true));
@@ -1452,6 +1494,11 @@ void CSongsBestPickerDlg::UpdateGameResultsForCurrentSong (int nSongID)
 		m_oSongGameResultList.SetItemData (nIndex, arrOpponents[i]);
 	}
 
+	CString strTitle;
+	m_oSongManager.GetSongTitle (nSongID, strTitle);
+	m_strH2HCurrentCaption = L"Results for " + strTitle;
+
+	UpdateData (false);
 
 } // end CSongsBestPickerDlg::UpdateStatsForCurrentSong
 
@@ -1622,6 +1669,37 @@ void CSongsBestPickerDlg::UpdateAccessoryListCtrl ()
 
 
 
+
+
+
+//************************************
+// Method:    UpdatePodCombo
+// FullName:  CSongsBestPickerDlg::UpdatePodCombo
+// Access:    public 
+// Returns:   void
+// Qualifier:
+//************************************
+void CSongsBestPickerDlg::UpdatePodCombo ()
+{
+	int nPrevSelPodID	= -1;
+	int nCurSelIndex	= m_oPodCombo.GetCurSel ();
+	if (-1 != nCurSelIndex)
+		nPrevSelPodID = (int) m_oPodCombo.GetItemData (nCurSelIndex);
+
+	m_oPodCombo.ResetContent ();
+	for (int i = 0; i < m_arrPodComboIDs.GetSize (); i ++)
+	{
+		int nIndex = m_oPodCombo.AddString (L"Pod " + CUtils::N2S (m_arrPodComboIDs[i]));
+		m_oPodCombo.SetItemData (nIndex, m_arrPodComboIDs[i]);
+
+		if (nPrevSelPodID == m_arrPodComboIDs[i])
+			m_oPodCombo.SetCurSel (nIndex);
+	}
+
+	if ((-1 == nPrevSelPodID) && (m_oPodCombo.GetCount () > 0))
+		m_oPodCombo.SetCurSel (0);
+
+} // end CSongsBestPickerDlg::UpdatePodCombo
 
 
 
@@ -1958,12 +2036,25 @@ bool CSongsBestPickerDlg::SetPrevSongActive ()
 void CSongsBestPickerDlg::OnTimer (UINT_PTR nIDEvent) 
 {
 
-	if (m_nSongPlayingStatusTimerID == nIDEvent)
+	if (nIDEvent == m_nSongPlayingStatusTimerID)
 	{
 		KillTimer (m_nSongPlayingStatusTimerID);
 		UpdatePlayerStatus ();
 		m_nSongPlayingStatusTimerID = SetTimer (SONG_STATUS_TIMER_ID, SONG_STATUS_TIMER_MS, NULL);
+		return;
+	}
 
+	else if (nIDEvent == m_nTypeToFilterPodTimerId)
+	{
+		KillTimer (m_nTypeToFilterPodTimerId);
+
+		CString strFilter;
+		m_oTypeToFilterPod.GetWindowText (strFilter);
+		
+		if (strFilter != m_strTypeToFilterEmptyMsg)
+			UpdateTypeToFilterDisplay (strFilter);
+
+		return;
 	}
 
 	__super::OnTimer (nIDEvent);
@@ -1972,6 +2063,13 @@ void CSongsBestPickerDlg::OnTimer (UINT_PTR nIDEvent)
 
 
 
+//************************************
+// Method:    OnShowMyWindow
+// FullName:  CSongsBestPickerDlg::OnShowMyWindow
+// Access:    public 
+// Returns:   void
+// Qualifier:
+//************************************
 void CSongsBestPickerDlg::OnShowMyWindow ()
 {
 	if (IsWindowVisible () && (this == GetForegroundWindow ()))
@@ -1979,13 +2077,6 @@ void CSongsBestPickerDlg::OnShowMyWindow ()
 	else
 		m_oTrayIcon.MaximiseFromTray (this);
 }
-
-
-
-
-
-
-
 
 
 
@@ -3108,4 +3199,216 @@ void CSongsBestPickerDlg::OnDropFiles (HDROP hDropInfo)
 //		AfxMessageBox (strError);
 
 	DragFinish(hDropInfo);
+}
+
+
+
+
+
+
+
+///////////////////////////////////////////////////////////////////////////
+//
+//  When the user types in a type to filter, we don't immediately update
+//  the filtered display.  What we want to do is set a timer and update
+//  after that runs out.  That way if they type multiple characters quickly,
+//  we won't lag after the first one (which will tend to match lots of items).
+//
+//
+void CSongsBestPickerDlg::OnChangeTypeToFilterLeft()
+{
+	//
+	//  Push the existing timer back.  We want to wait until a lag
+	//  in their typing to update things
+
+	KillTimer (m_nTypeToFilterPodTimerId);
+	m_nTypeToFilterPodTimerId = SetTimer (VPCC_TYPE_TO_FILTER_TIMER_ID, VPCC_TYPE_TO_FILTER_TIMER_ID_TIMER_LEN_MS, NULL);
+
+} // end change in type to filter edit left
+
+
+
+
+
+//************************************
+// Method:    OnSetFocusTypeToFilterLeft
+// FullName:  CSongsBestPickerDlg::OnSetFocusTypeToFilterLeft
+// Access:    public 
+// Returns:   void
+// Qualifier:
+//************************************
+void CSongsBestPickerDlg::OnSetFocusTypeToFilter ()
+{
+//	CString s;
+//	m_oTypeToFilterPod.GetWindowText (s);
+//	s.Trim ();
+
+	if (m_bTypeToFilterInEmptyMode)
+		SetTypeToFilterState (false);
+} // end OnSetFocusTypeToFilter 
+
+
+//************************************
+// Method:    OnKillFocusTypeToFilter
+// FullName:  CSongsBestPickerDlg::OnKillFocusTypeToFilter
+// Access:    public 
+// Returns:   void
+// Qualifier:
+//************************************
+void CSongsBestPickerDlg::OnKillFocusTypeToFilter ()
+{
+	CString s;
+	m_oTypeToFilterPod.GetWindowText (s);
+	s.Trim ();
+
+	if (s.IsEmpty ())
+		SetTypeToFilterState (true);
+} // end OnKillFocusTypeToFilter
+
+
+
+
+
+//************************************
+// Method:    SetTypeToFilterErrorMode
+// FullName:  CCleanupConfirmNewDlg::SetTypeToFilterErrorMode
+// Access:    public 
+// Returns:   void
+// Qualifier:
+// Parameter: bool bError
+// Parameter: HWND hListCtrlWnd
+//************************************
+void CSongsBestPickerDlg::SetTypeToFilterErrorMode (bool bError)
+{
+	if (bError)
+		m_oTypeToFilterPod.SetIcon  (IDI_EXCLAMATION_PT, true);
+	else
+		m_oTypeToFilterPod.SetIcon  (IDI_ICON_X, true);
+}
+
+
+/////////////////////////////////////////////////////////////////////////
+//
+// Set Type To Filter Font
+//
+//  Before they type anything, we want a dim gray text.  Once they
+//  type we want nice bold black
+//
+//
+void CSongsBestPickerDlg::SetTypeToFilterState (bool bIsTypeToFilterEmpty)
+{
+	if (bIsTypeToFilterEmpty)
+	{
+		m_oTypeToFilterPod.SetWindowText (m_strTypeToFilterEmptyMsg);
+		m_bTypeToFilterInEmptyMode	= true;
+	}
+	else
+	{
+		m_oTypeToFilterPod.SetWindowText (L"");
+		m_bTypeToFilterInEmptyMode	= false;
+	}
+} // end SetTypeToFilterFont
+
+
+//************************************
+// Method:    OnSetFocusTypeToFilterHotkey
+// FullName:  CSongsBestPickerDlg::OnSetFocusTypeToFilterHotkey
+// Access:    public 
+// Returns:   void
+// Qualifier:
+//************************************
+void CSongsBestPickerDlg::OnSetFocusTypeToFilterHotkey ()
+{
+	m_oTypeToFilterPod.SetFocus ();
+}
+
+
+//////////////////////////////////////////////////////////////////////
+//
+//  UpdateTypeToFilterDisplay
+//
+//  What we do is filter the available pods in the dropdown combo
+//
+void CSongsBestPickerDlg::UpdateTypeToFilterDisplay (CString strFilter)
+{
+	static int nTypeToFilterRecursionCounter = 0;
+	CRecursionCounterAuto RecursionCounter (&nTypeToFilterRecursionCounter);
+	if (RecursionCounter.GetRecursionDepth () > 1)
+		return;
+
+	try
+	{
+		m_strTypeToFilterLastText = strFilter;
+
+		if (strFilter.IsEmpty ())
+		{
+			//
+			//  Not filtering.  Populate the combo
+
+			m_oSongManager.GetAllPodIDs (m_arrPodComboIDs);
+			return;
+		} // end if nothing to filter on
+
+		//
+		//  We are filtering.  Figure out which pods belong.  We apply our strFilter to 
+		//  all fields in all songs in each pod
+
+		CIntArray arrMatchingPods;
+		if (! m_oSongManager.GetAllPodsMatchingFilter (arrMatchingPods, m_bTypeToFilterUseRegex, strFilter)) {
+			SetError (m_oSongManager.GetError (true));
+			return;
+		}
+
+		//
+		//  Do we need to update?
+
+		if (CUtils::AreArraysEqual (arrMatchingPods, m_arrPodComboIDs))
+			return;
+
+		//
+		//   Update our combo
+
+		m_arrPodComboIDs.SetSize (arrMatchingPods.GetSize ());
+		for (int i = 0; i < arrMatchingPods.GetSize (); i ++)
+			m_arrPodComboIDs[i] = arrMatchingPods[i];
+
+		UpdatePodCombo ();
+	}
+	catch (std::exception& e)
+	{
+		SetError (CUtils::UTF8toUTF16 (e.what ()));
+		return;
+	}
+	catch (CException* e)
+	{
+		SetError (CUtils::GetErrorMessageFromException (e, true));
+		return;
+	}
+} // end update type to filter display 
+
+
+
+
+//************************************
+// Method:    OnSelChangeComboPod
+// FullName:  CSongsBestPickerDlg::OnSelChangeComboPod
+// Access:    public 
+// Returns:   void
+// Qualifier:
+//************************************
+void CSongsBestPickerDlg::OnSelChangeComboPod ()
+{
+	int nCurIndex = m_oPodCombo.GetCurSel ();
+	if (-1 == nCurIndex)
+		return;
+
+	int nSelPodID = (int) m_oPodCombo.GetItemData (nCurIndex);
+	if (nSelPodID == m_nCurPodID)
+		return;
+
+	//
+	//  We have to load the new pod in...
+
+	UpdateCurrentPod (nSelPodID);
+
 }

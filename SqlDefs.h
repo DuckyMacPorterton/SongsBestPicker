@@ -81,13 +81,15 @@ static TableDefinitionStruct VPTblSongHeadToHead[] = {
 //#define TBL_SONG_PODS_VER	1
 #define TBL_SONG_PODS_VER	2	// Added PodID
 
+#define DB_COL_SONG_BASE				L"Song"			//  So, all song columns start with this plus a number
+
 //#define DB_COL_POD_ID					L"PodID"			// Each grouping of 5 songs gets an ID
 //#define DB_COL_SONG_1_ID				L"Song1"		// Already defined above
 //#define DB_COL_SONG_2_ID				L"Song2"		// Already defined above
 #define DB_COL_SONG_3_ID				L"Song3"
 #define DB_COL_SONG_4_ID				L"Song4"
 #define DB_COL_SONG_5_ID				L"Song5"
-#define DB_COL_POOL_FINISHED			L"Finished"
+#define DB_COL_POD_FINISHED				L"Finished"
 
 static TableDefinitionStruct VPTblCurrentSchedule[] = {
 	{true,	S_INDEX_NONE,	DB_COL_POD_ID,					L"INTEGER",	VP_DEFAULT_UNUSED},
@@ -96,7 +98,7 @@ static TableDefinitionStruct VPTblCurrentSchedule[] = {
 	{false,	S_INDEX_INDEX,	DB_COL_SONG_3_ID,				L"INTEGER",	-1},
 	{false,	S_INDEX_INDEX,	DB_COL_SONG_4_ID,				L"INTEGER",	-1},
 	{false,	S_INDEX_INDEX,	DB_COL_SONG_5_ID,				L"INTEGER",	-1},
-	{false, S_INDEX_NONE,	DB_COL_POOL_FINISHED,			L"INTEGER",  0},
+	{false, S_INDEX_NONE,	DB_COL_POD_FINISHED,			L"INTEGER",  0},
 	{0,		0,		0,							0,					0}
 };
 

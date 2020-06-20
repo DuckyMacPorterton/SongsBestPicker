@@ -935,6 +935,32 @@ int CUtils::FindNumberInArray (CIntArray& rarrNumbers, int nToFind)
 
 
 
+//************************************
+// Method:    AreArraysEqual
+// FullName:  CUtils::AreArraysEqual
+// Access:    public static 
+// Returns:   bool
+// Qualifier:
+// Parameter: CIntArray & rarrOne
+// Parameter: CIntArray & rarrTwo
+//************************************
+bool CUtils::AreArraysEqual (CIntArray& rarrOne, CIntArray& rarrTwo)
+{
+	if (rarrOne.GetSize () != rarrTwo.GetSize ())
+		return false;
+
+	for (int i = 0; i < rarrOne.GetSize (); i ++)
+	{
+		if (rarrOne[i] != rarrTwo[i])
+			return false;
+	}
+
+	return true;
+
+} // end CUtils::AreArraysEqual
+
+
+
 //////////////////////////////////////////////////////////////////////
 //
 //    M Y   A T O   I 

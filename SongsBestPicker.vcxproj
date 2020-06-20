@@ -192,6 +192,7 @@
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="EditWithIcon\IconEdit.h" />
     <ClInclude Include="HotkeyCommand.h" />
     <ClInclude Include="HotkeyCommandDefs.h" />
     <ClInclude Include="HotkeyManagementDlg.h" />
@@ -225,6 +226,7 @@
     <ClInclude Include="VirtKeys.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="EditWithIcon\IconEdit.cpp" />
     <ClCompile Include="HotkeyCommand.cpp" />
     <ClCompile Include="HotkeyManagementDlg.cpp" />
     <ClCompile Include="HotkeyManager.cpp" />
@@ -264,7 +266,9 @@
     <None Include="res\SongsBestPicker.rc2" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="res\icoEx.ico" />
     <Image Include="res\icon1.ico" />
+    <Image Include="res\iconX.ico" />
     <Image Include="res\Music.ico" />
     <Image Include="res\SongsBestPicker.ico" />
   </ItemGroup>
