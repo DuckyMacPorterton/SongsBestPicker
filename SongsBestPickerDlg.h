@@ -240,4 +240,6 @@ public:
 	void	SetTypeToFilterState (bool bIsTypeToFilterEmpty);
 	void	OnSetFocusTypeToFilterHotkey ();
 	afx_msg void OnSelChangeComboPod();
+	afx_msg void OnBnClickedButtonPrevPod();
+	afx_msg void OnBnClickedButtonNextPod();
 };

@@ -157,7 +157,7 @@ CSongsBestPickerDlg::CSongsBestPickerDlg (CWnd* pParent /*=NULL*/)
 	, m_strCurSongAlbum		(_T(""))
 	, m_strH2HCurrentCaption(_T(""))
 {
-	m_strTypeToFilterEmptyMsg = L"(type regex to filter ...)";
+	m_strTypeToFilterEmptyMsg = L"(type to filter ...)";
 
 	m_hIcon = AfxGetApp()->LoadIcon(IDI_SONGS_BEST_PICKER);
 }
@@ -240,11 +240,9 @@ BEGIN_MESSAGE_MAP(CSongsBestPickerDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_SAVE_SONG_CHANGES,		&CSongsBestPickerDlg::SaveSongInfoFromPlayer)
 	ON_NOTIFY(NM_DBLCLK, IDC_CURRENT_POD_LIST,	&CSongsBestPickerDlg::OnDblclkCurrentPodList)
 
-
-
-
-
 	ON_CBN_SELCHANGE(IDC_COMBO_POD_ID, &CSongsBestPickerDlg::OnSelChangeComboPod)
+	ON_BN_CLICKED(IDC_BUTTON_PREV_POD, &CSongsBestPickerDlg::OnBnClickedButtonPrevPod)
+	ON_BN_CLICKED(IDC_BUTTON_NEXT_POD, &CSongsBestPickerDlg::OnBnClickedButtonNextPod)
 END_MESSAGE_MAP()
 
 
@@ -374,6 +372,8 @@ BOOL CSongsBestPickerDlg::OnInitDialog()
 	//  Make sure we have songs scheduled into pools for competition
 
 	m_oSongManager.ScheduleMorePods ();
+//	UpdatePodCombo ();
+	UpdateTypeToFilterDisplay (L"");
 	UpdateCurrentPod ();
 
 	if (m_eSongPlayingStatus == ESongPlayStatus::ePlaying)
@@ -950,6 +950,8 @@ void CSongsBestPickerDlg::UpdateCurrentPod (int nPodToLoad /* = -1 */)
 			SetError (m_oSongManager.GetError (true));
 			return;
 		}
+
+		m_nCurPodID = nPodToLoad;
 	}
 
 	if (nPrevPodID != m_nCurPodID)
@@ -979,8 +981,15 @@ void CSongsBestPickerDlg::UpdateCurrentPod (int nPodToLoad /* = -1 */)
 		}
 	}
 
+	//
+	//  If we haven't selected anything, select the current one
+
 	CWnd* pSubmit = GetDlgItem (IDC_SUBMIT_POD_RANKINGS);
 	pSubmit->EnableWindow (!m_bCurPodFinished);
+
+	if (nPrevPodID != m_nCurPodID)
+		UpdateAccessoryListCtrl ();	//  New stats!
+
 
 } // end CSongsBestPickerDlg::UpdateCurrentPod
 
@@ -1580,19 +1589,20 @@ void CSongsBestPickerDlg::UpdateAccessoryListCtrl ()
 
 		nIndex = m_oAccessoryList.InsertItem (0, L"Current Pod Avg Rating");
 		
-		CIntArray arrCurPodIDs;
-		int nTotal = 0, nCurPodID = -1;
-		m_oSongManager.GetCurrentPod (nCurPodID, arrCurPodIDs);
-		for (int i = 0; i < arrCurPodIDs.GetSize (); i ++)
+		CIntArray arrCurPodSongIDs;
+		int		nTotal = 0;
+		bool	bPodFinished = false;
+		m_oSongManager.GetPod (m_nCurPodID, arrCurPodSongIDs, bPodFinished);
+		for (int i = 0; i < arrCurPodSongIDs.GetSize (); i ++)
 		{
 			int nRating = 0;
-			m_oSongManager.GetSongRating (arrCurPodIDs[i], nRating);
+			m_oSongManager.GetSongRating (arrCurPodSongIDs[i], nRating);
 			nTotal += nRating;
 		}
 
 		float fAverage = 0;
-		if (arrCurPodIDs.GetSize () > 0)
-			fAverage = (float) nTotal / arrCurPodIDs.GetSize ();
+		if (arrCurPodSongIDs.GetSize () > 0)
+			fAverage = (float) nTotal / arrCurPodSongIDs.GetSize ();
 
 		m_oAccessoryList.SetItemText (nIndex, LIST_STATS_VALUE, CUtils::N2S (fAverage));
 
@@ -1600,20 +1610,17 @@ void CSongsBestPickerDlg::UpdateAccessoryListCtrl ()
 		//  Average SoS in this pod
 
 		nIndex = m_oAccessoryList.InsertItem (0, L"Current Pod Avg SoS");
-		
-		arrCurPodIDs.SetSize (0);
 		nTotal = 0;
-		m_oSongManager.GetCurrentPod (nCurPodID, arrCurPodIDs);
-		for (int i = 0; i < arrCurPodIDs.GetSize (); i ++)
+		for (int i = 0; i < arrCurPodSongIDs.GetSize (); i ++)
 		{
 			int nRating = 0;
-			m_oSongManager.GetSongStrengthOfSchedule (arrCurPodIDs[i], nRating);
+			m_oSongManager.GetSongStrengthOfSchedule (arrCurPodSongIDs[i], nRating);
 			nTotal += nRating;
 		}
 
 		fAverage = 0;
-		if (arrCurPodIDs.GetSize () > 0)
-			fAverage = (float) nTotal / arrCurPodIDs.GetSize ();
+		if (arrCurPodSongIDs.GetSize () > 0)
+			fAverage = (float) nTotal / arrCurPodSongIDs.GetSize ();
 
 		m_oAccessoryList.SetItemText (nIndex, LIST_STATS_VALUE, CUtils::N2S (fAverage));
 
@@ -1686,17 +1693,33 @@ void CSongsBestPickerDlg::UpdatePodCombo ()
 	if (-1 != nCurSelIndex)
 		nPrevSelPodID = (int) m_oPodCombo.GetItemData (nCurSelIndex);
 
+	//
+	//  Our current pod is always on here and always first
+
+	CIntArray	arrSongIDs;
+	int			nCurPodID = -1;
+	m_oSongManager.GetCurrentPod (nCurPodID, arrSongIDs);
+	CString		strCurrent; strCurrent.Format (L"Pod %d (Current Pod)", nCurPodID);
+
 	m_oPodCombo.ResetContent ();
+
+	int nIndex = m_oPodCombo.AddString (strCurrent);
+	m_oPodCombo.SetItemData (nIndex, nCurPodID);
+
+	bool bSelected = false;
+
 	for (int i = 0; i < m_arrPodComboIDs.GetSize (); i ++)
 	{
 		int nIndex = m_oPodCombo.AddString (L"Pod " + CUtils::N2S (m_arrPodComboIDs[i]));
 		m_oPodCombo.SetItemData (nIndex, m_arrPodComboIDs[i]);
 
-		if (nPrevSelPodID == m_arrPodComboIDs[i])
+		if (! bSelected && (nPrevSelPodID == m_arrPodComboIDs[i])) {
 			m_oPodCombo.SetCurSel (nIndex);
+			bSelected = true;	 // we do this so we'll select the top "Current Pod" choice if our current pod is in here twice
+		}
 	}
 
-	if ((-1 == nPrevSelPodID) && (m_oPodCombo.GetCount () > 0))
+	if (!bSelected && (m_oPodCombo.GetCount () > 0))
 		m_oPodCombo.SetCurSel (0);
 
 } // end CSongsBestPickerDlg::UpdatePodCombo
@@ -2547,7 +2570,7 @@ int CSongsBestPickerDlg::SortCompareSongListCtrl (LPARAM lParam1, LPARAM lParam2
 		CString str1 = pDlg->GetSongTitle (nSongID1);
 		CString str2 = pDlg->GetSongTitle (nSongID2);
 
-		return nOrderMultiplier * str1.CompareNoCase(str2);
+		return str1.CompareNoCase(str2); // We always do secondary sort ascending
 	}
 
 
@@ -3346,6 +3369,7 @@ void CSongsBestPickerDlg::UpdateTypeToFilterDisplay (CString strFilter)
 			//  Not filtering.  Populate the combo
 
 			m_oSongManager.GetAllPodIDs (m_arrPodComboIDs);
+			UpdatePodCombo ();
 			return;
 		} // end if nothing to filter on
 
@@ -3366,7 +3390,7 @@ void CSongsBestPickerDlg::UpdateTypeToFilterDisplay (CString strFilter)
 			return;
 
 		//
-		//   Update our combo
+		//   Update our combo.  
 
 		m_arrPodComboIDs.SetSize (arrMatchingPods.GetSize ());
 		for (int i = 0; i < arrMatchingPods.GetSize (); i ++)
@@ -3411,4 +3435,18 @@ void CSongsBestPickerDlg::OnSelChangeComboPod ()
 
 	UpdateCurrentPod (nSelPodID);
 
+}
+
+
+
+
+void CSongsBestPickerDlg::OnBnClickedButtonPrevPod()
+{
+	// TODO: Add your control notification handler code here
+}
+
+
+void CSongsBestPickerDlg::OnBnClickedButtonNextPod()
+{
+	// TODO: Add your control notification handler code here
 }
