@@ -43,6 +43,11 @@
 #define VPCC_TYPE_TO_FILTER_TIMER_ID_TIMER_LEN_MS	500	
 #define VPCC_TYPE_TO_FILTER_TIMER_ID				7
 
+//
+//  Weird slider crap
+
+#define REAL_TO_SLIDER(x)	(100-x)
+#define SLIDER_TO_REAL(x)	(100-x)
 
 
 //
@@ -179,6 +184,7 @@ void CSongsBestPickerDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_COMBO_POD_ID, m_oPodCombo);
 	DDX_Text(pDX, IDC_STATIC_H2H_CURRENT, m_strH2HCurrentCaption);
 	DDX_Control(pDX, IDC_EDIT_TYPE_TO_FILTER, m_oTypeToFilterPod);
+	DDX_Control(pDX, IDC_SLIDER_VOLUME, m_oVolumeSlider);
 }
 
 BEGIN_MESSAGE_MAP(CSongsBestPickerDlg, CDialogEx)
@@ -243,6 +249,9 @@ BEGIN_MESSAGE_MAP(CSongsBestPickerDlg, CDialogEx)
 	ON_CBN_SELCHANGE(IDC_COMBO_POD_ID, &CSongsBestPickerDlg::OnSelChangeComboPod)
 	ON_BN_CLICKED(IDC_BUTTON_PREV_POD, &CSongsBestPickerDlg::OnBnClickedButtonPrevPod)
 	ON_BN_CLICKED(IDC_BUTTON_NEXT_POD, &CSongsBestPickerDlg::OnBnClickedButtonNextPod)
+	
+	ON_WM_VSCROLL()
+
 END_MESSAGE_MAP()
 
 
@@ -343,6 +352,11 @@ BOOL CSongsBestPickerDlg::OnInitDialog()
 	else
 		UpdateSongList (true);	// true to init columns
 
+
+	m_oVolumeSlider.SetRange (0, 100, true);
+	m_oVolumeSlider.SetPos (REAL_TO_SLIDER (100));
+
+
 	//
 	//  Let's allow ourselves to minimize to system tray
 
@@ -361,6 +375,7 @@ BOOL CSongsBestPickerDlg::OnInitDialog()
 	//  Put the window where they had it before
 
 	RestoreWindowPosition ();
+
 
 
 	//
@@ -504,6 +519,7 @@ void CSongsBestPickerDlg::PlaySong (CString strFileToPlay /* = L"" */)
 	}
 
 	result = m_pPlaybackSystem->playSound (m_pCurSong, 0, false, &m_pPlaybackChannel);
+	m_pPlaybackChannel->setVolume ((float) SLIDER_TO_REAL (m_oVolumeSlider.GetPos ()) / 100);
 	m_eSongPlayingStatus = ESongPlayStatus::ePlaying;
 
 	UINT nSongLenMS = 0;
@@ -1580,9 +1596,10 @@ void CSongsBestPickerDlg::UpdateAccessoryListCtrl ()
 		//
 		//  # songs
 
+		int nSongCount = 0;
 		nIndex = m_oAccessoryList.InsertItem (0, L"Total Songs");
-		m_oSongManager.GetSongCount (nValue);
-		m_oAccessoryList.SetItemText (nIndex, LIST_STATS_VALUE, CUtils::N2S (nValue));
+		m_oSongManager.GetSongCount (nSongCount);
+		m_oAccessoryList.SetItemText (nIndex, LIST_STATS_VALUE, CUtils::N2S (nSongCount));
 
 		//
 		//  Average rating in this pod
@@ -1639,19 +1656,19 @@ void CSongsBestPickerDlg::UpdateAccessoryListCtrl ()
 		m_oAccessoryList.SetItemText (nIndex, LIST_STATS_VALUE, CUtils::N2S (nValue));
 
 		//
+		//  Games played per song
+
+		nIndex = m_oAccessoryList.InsertItem (0, L"Avg Games per Song");
+		m_oSongManager.GetTotalHeadToHeadCount (nValue);
+		if (0 != nSongCount)
+			m_oAccessoryList.SetItemText (nIndex, LIST_STATS_VALUE, CUtils::N2S ((float)(2*nValue) / nSongCount));
+
+		//
 		//  Total artists
 
 		nIndex = m_oAccessoryList.InsertItem (0, L"Total Artists");
 		m_oSongManager.GetArtistCount (nValue);
 		m_oAccessoryList.SetItemText (nIndex, LIST_STATS_VALUE, CUtils::N2S (nValue));
-
-		//
-		//  
-
-		nIndex = m_oAccessoryList.InsertItem (0, L"Total Artists");
-		m_oSongManager.GetArtistCount (nValue);
-		m_oAccessoryList.SetItemText (nIndex, LIST_STATS_VALUE, CUtils::N2S (nValue));
-		break;
 	}
 
 	case EShowingInList::eErrorLog:
@@ -2843,6 +2860,23 @@ void CSongsBestPickerDlg::RestoreWindowPosition ()
 	CUtils::EnsureWindowIsVisible (rcWnd);
 	MoveWindow (rcWnd);
 
+	//
+	//  Some other settings we save...
+
+	if (m_oSongManager.GetOtherValue (L"volume",	strVal))
+	{
+		int nVolume = 100;
+		if (CUtils::MyAtoI (strVal, nVolume))
+		{
+			m_oVolumeSlider.SetPos (REAL_TO_SLIDER (nVolume));
+			if (NULL != m_pPlaybackChannel)
+			{
+				float fVol = (float) nVolume / 100;
+				m_pPlaybackChannel->setVolume (fVol);
+			}
+		}
+	}
+
 } // end CSongsBestPickerDlg::RestoreWindowPosition
 
 
@@ -2870,6 +2904,12 @@ void CSongsBestPickerDlg::SaveWindowPosition ()
 	m_oSongManager.SetOtherValue (L"RecordWidth",		CUtils::N2S (m_oSongList.GetColumnWidth (LIST_SONG_COL_WONLOSS)));
 	m_oSongManager.SetOtherValue (L"RatingWidth",		CUtils::N2S (m_oSongList.GetColumnWidth (LIST_SONG_COL_RATING)));
 	m_oSongManager.SetOtherValue (L"PathToMp3Width",	CUtils::N2S (m_oSongList.GetColumnWidth (LIST_SONG_COL_MP3)));
+
+	//
+	//  Might as well save volume
+
+	CString strVolume = CUtils::N2S (SLIDER_TO_REAL (m_oVolumeSlider.GetPos ()));
+	m_oSongManager.SetOtherValue (L"Volume", strVolume);
 
 	//
 	//  Let's save the column positions from the song list
@@ -3449,4 +3489,20 @@ void CSongsBestPickerDlg::OnBnClickedButtonPrevPod()
 void CSongsBestPickerDlg::OnBnClickedButtonNextPod()
 {
 	// TODO: Add your control notification handler code here
+}
+
+
+
+void CSongsBestPickerDlg::OnVScroll (UINT nSBCode, UINT nPos, CScrollBar* pScrollBar)
+{
+	if (pScrollBar->GetSafeHwnd () == m_oVolumeSlider.GetSafeHwnd ())
+	{
+		//
+		//  Well, our numbers seem to go up as the slider goes down.  I haven't found
+		//  the style / setting to invert that.  I'm tired of looking.  I'll do it manually.
+
+		int nSBPos = SLIDER_TO_REAL (m_oVolumeSlider.GetPos ());	//  Invert our values
+		float fVol = (float) nSBPos / 100;
+		m_pPlaybackChannel->setVolume (fVol);
+	}
 }

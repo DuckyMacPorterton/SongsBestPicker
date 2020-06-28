@@ -2057,6 +2057,39 @@ bool CSongManager::GetSongsNotPlayedCount (int& rnSongsThatHaveNotPlayed)
 
 
 //************************************
+// Method:    GetTotalHeadToHeadCount
+// FullName:  CSongManager::GetTotalHeadToHeadCount
+// Access:    public 
+// Returns:   bool
+// Qualifier:
+// Parameter: int & rnTotalHeadToHead
+//
+//
+//
+//************************************
+bool CSongManager::GetTotalHeadToHeadCount (int& rnTotalHeadToHead)
+{
+	if (NULL == m_pDB)
+		return false;
+
+	try
+	{
+		CString strQuery;
+		strQuery.Format (L"select count(*) from %s", TBL_SONG_HEAD_TO_HEAD);
+		rnTotalHeadToHead = m_pDB->execScalar (strQuery);
+		return true;
+	}
+	catch (CppSQLite3Exception& e) {
+		return SetError (e.errorMessage ());
+	}
+	catch (CException* e) {
+		return SetError (CUtils::GetErrorMessageFromException (e, true));
+	}
+} // end CSongManager::GetTotalHeadToHeadCount
+
+
+
+//************************************
 // Method:    GetAllSongsMatchingFilter
 // FullName:  CSongManager::GetAllSongsMatchingFilter
 // Access:    public 

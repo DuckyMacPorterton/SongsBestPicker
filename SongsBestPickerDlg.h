@@ -105,6 +105,7 @@ protected:
 	std::map<int, CString>	m_mapHotkeys;
 	bool					m_bHotkeysApplied		= false;
 	CHotkeyManager			m_oHotkeyManager;
+	CSliderCtrl				m_oVolumeSlider;
 
 protected:
 	DECLARE_MESSAGE_MAP()
@@ -227,7 +228,7 @@ public:
 	void	OnKillFocusTypeToFilter	();
 	void	OnSetFocusTypeToFilter	();
 
-
+	void	OnVScroll (UINT nSBCode, UINT nPos, CScrollBar* pScrollBar);
 
 	LRESULT WindowProc (UINT message, WPARAM wParam, LPARAM lParam);
 

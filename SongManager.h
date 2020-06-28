@@ -75,6 +75,8 @@ public:
 	bool	GetUndefeatedSongCount	(int& rnUndefeatedSongCount);
 	bool	GetSongsNotPlayedCount	(int& rnSongsThatHaveNotPlayed);
 
+	bool	GetTotalHeadToHeadCount (int& rnTotalHeadToHead);
+
 	//
 	//  For type to filter
 
