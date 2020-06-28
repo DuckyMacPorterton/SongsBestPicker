@@ -1711,7 +1711,7 @@ bool CSongManager::GetArtistCount (int& rnCount)
 	try
 	{
 		CString strQuery;
-		strQuery.Format (L"select count (distinct %s) from %s", DB_COL_SONG_ARTIST, TBL_SONG_PODS);
+		strQuery.Format (L"select count (distinct %s) from %s", DB_COL_SONG_ARTIST, TBL_SONGS);
 		rnCount = m_pDB->execScalar (strQuery);
 		return true;
 	}
