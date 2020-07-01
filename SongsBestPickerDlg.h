@@ -58,6 +58,9 @@ protected:
 	bool			m_bSongsSortAscending	= true;
 	int				m_nSongsSortCol			= 0;
 
+	bool			m_bGamesSortAscending	= true;
+	int				m_nGamesSortCol			= 0;
+
 	CIntArray		m_arrActiveColumns;
 	EShowingInList	m_eWhatIsInAccessoryList		= EShowingInList::eGeneralStats;
 	
@@ -116,7 +119,8 @@ protected:
 	HCURSOR			OnQueryDragIcon();
 
 	static int CALLBACK SortCompareSongListCtrl (LPARAM lParam1, LPARAM lParam2, LPARAM lParamSort);
-	static int CALLBACK ComparePodSongRank	(LPARAM lParam1, LPARAM lParam2, LPARAM lParamSort);
+	static int CALLBACK SortCompareGameResult	(LPARAM lParam1, LPARAM lParam2, LPARAM lParamSort);
+	static int CALLBACK ComparePodSongRank		(LPARAM lParam1, LPARAM lParam2, LPARAM lParamSort);
 
 
 	bool	SetError (CString strError, bool bAlertUser = false, bool bRetVal = false);
@@ -197,6 +201,9 @@ public:
 
 	void	ShowSongListColumnChooser ();
 
+	void	SortColSongList		(int nCol);
+	void	SortColGameResult	(int nCol);
+
 	//
 	//  and back to your regularly scheduled program...
 
@@ -217,7 +224,7 @@ public:
 
 	void	OnItemChangedSongList(NMHDR* pNMHDR, LRESULT* pResult);
 	void	OnBnClickedPlaySong();
-	void	OnSongHeaderDblClick(NMHDR* pNMHDR, LRESULT* pResult);
+	void	OnHeaderClick (NMHDR* pNMHDR, LRESULT* pResult);
 	void	OnItemChangedCurrentPodList(NMHDR* pNMHDR, LRESULT* pResult);
 	void	OnBnClickedSubmitPodRankings();
 	void	OnBnClickedBrowseForSong();

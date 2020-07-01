@@ -24,8 +24,9 @@
 #define LIST_POD_COL_ARTIST		2
 
 #define LIST_GAMES_COL_OPPONENT	0
-#define LIST_GAMES_COL_WONLOSS	1
-#define LIST_GAMES_COL_MARGIN	2
+#define LIST_GAMES_COL_RATING	1
+#define LIST_GAMES_COL_WONLOSS	2
+#define LIST_GAMES_COL_MARGIN	3
 
 #define LIST_STATS_WHAT			0
 #define LIST_STATS_VALUE		1
@@ -237,8 +238,7 @@ BEGIN_MESSAGE_MAP(CSongsBestPickerDlg, CDialogEx)
 //	ON_BN_CLICKED(IDC_PAUSE_SONG,	&CSongsBestPickerDlg::PauseSong)
 //	ON_BN_CLICKED(IDC_STOP_SONG,	&CSongsBestPickerDlg::StopSong)
 
-//	ON_NOTIFY(HDN_ITEMDBLCLICK, 0,				&CSongsBestPickerDlg::OnSongHeaderDblClick)
-	ON_NOTIFY(HDN_ITEMCLICK, 0,					&CSongsBestPickerDlg::OnSongHeaderDblClick)
+	ON_NOTIFY(HDN_ITEMCLICK, 0,					&CSongsBestPickerDlg::OnHeaderClick)
 
 	ON_BN_CLICKED(IDC_SUBMIT_POD_RANKINGS,		&CSongsBestPickerDlg::OnBnClickedSubmitPodRankings)
 	ON_BN_CLICKED(IDC_BROWSE_FOR_SONG,			&CSongsBestPickerDlg::OnBnClickedBrowseForSong)
@@ -314,9 +314,10 @@ BOOL CSongsBestPickerDlg::OnInitDialog()
 	//  Head to head results for a particular song
 
 	m_oSongGameResultList.GetClientRect (rcList);
-	m_oSongGameResultList.InsertColumn (LIST_GAMES_COL_OPPONENT,		L"Opponent",	LVCFMT_LEFT,	(int) (rcList.Width () * 0.5));
-	m_oSongGameResultList.InsertColumn (LIST_GAMES_COL_WONLOSS,		L"WonLoss",		LVCFMT_CENTER,	(int) (rcList.Width () * 0.3));
-	m_oSongGameResultList.InsertColumn (LIST_GAMES_COL_MARGIN,		L"Margin",		LVCFMT_CENTER,	(int) (rcList.Width () * 0.18));
+	m_oSongGameResultList.InsertColumn (LIST_GAMES_COL_OPPONENT,	L"Opponent",	LVCFMT_LEFT,	(int) (rcList.Width () * 0.53));
+	m_oSongGameResultList.InsertColumn (LIST_GAMES_COL_RATING,		L"Rat",			LVCFMT_CENTER,	(int) (rcList.Width () * 0.15));
+	m_oSongGameResultList.InsertColumn (LIST_GAMES_COL_WONLOSS,		L"Win?",		LVCFMT_CENTER,	(int) (rcList.Width () * 0.15));
+	m_oSongGameResultList.InsertColumn (LIST_GAMES_COL_MARGIN,		L"+/-",			LVCFMT_CENTER,	(int) (rcList.Width () * 0.15));
 
 	//
 	//  Some various stats
@@ -1412,6 +1413,7 @@ void CSongsBestPickerDlg::ShowSongListColumnChooser ()
 
 
 
+
 //************************************
 // Method:    OnHeaderDragCol
 // FullName:  CSongsBestPickerDlg::OnHeaderDragCol
@@ -1504,8 +1506,10 @@ void CSongsBestPickerDlg::UpdateGameResultsForCurrentSong (int nSongID)
 
 	for (int i = 0; i < arrOpponents.GetSize (); i ++)
 	{
+		int		nOppRating = 0;
 		CString strOpponent, strWonLoss;
-		m_oSongManager.GetSongTitle (arrOpponents[i], strOpponent);
+		m_oSongManager.GetSongTitle (arrOpponents[i],	strOpponent);
+		m_oSongManager.GetSongRating (arrOpponents[i],	nOppRating);
 
 		if (arrMargins[i] > 0)
 			strWonLoss = L"Won";
@@ -1514,6 +1518,7 @@ void CSongsBestPickerDlg::UpdateGameResultsForCurrentSong (int nSongID)
 
 		int nIndex = m_oSongGameResultList.InsertItem (i, strOpponent);
 		m_oSongGameResultList.SetItemText (nIndex, LIST_GAMES_COL_WONLOSS,	strWonLoss);
+		m_oSongGameResultList.SetItemText (nIndex, LIST_GAMES_COL_RATING,	CUtils::N2S (nOppRating));
 		m_oSongGameResultList.SetItemText (nIndex, LIST_GAMES_COL_MARGIN,	CUtils::NumberToString (arrMargins[i]));
 
 		m_oSongGameResultList.SetItemData (nIndex, arrOpponents[i]);
@@ -1524,6 +1529,9 @@ void CSongsBestPickerDlg::UpdateGameResultsForCurrentSong (int nSongID)
 	m_strH2HCurrentCaption = L"Results for " + strTitle;
 
 	UpdateData (false);
+
+	m_oSongGameResultList.SortItems (SortCompareGameResult, (DWORD_PTR) this);
+
 
 } // end CSongsBestPickerDlg::UpdateStatsForCurrentSong
 
@@ -2349,30 +2357,91 @@ void CSongsBestPickerDlg::OnBnClickedPlaySong ()
 
 
 
-void CSongsBestPickerDlg::OnSongHeaderDblClick(NMHDR* pNMHDR, LRESULT* pResult)
+void CSongsBestPickerDlg::OnHeaderClick(NMHDR* pNMHDR, LRESULT* pResult)
 {
 	LPNMHEADER phdr = reinterpret_cast<LPNMHEADER>(pNMHDR);
 
-	if (phdr->iItem == m_nSongsSortCol)
+	if (phdr->hdr.hwndFrom == m_oSongList.GetHeaderCtrl ()->GetSafeHwnd ())
+		SortColSongList (phdr->iItem);
+	else if (phdr->hdr.hwndFrom == m_oSongGameResultList.GetHeaderCtrl ()->GetSafeHwnd ())
+		SortColGameResult (phdr->iItem);
+
+} // end on song header dbl click
+
+
+
+
+
+
+//************************************
+// Method:    SortColSongList
+// FullName:  CSongsBestPickerDlg::SortColSongList
+// Access:    public 
+// Returns:   void
+// Qualifier:
+// Parameter: int nCol
+//************************************
+void CSongsBestPickerDlg::SortColSongList (int nCol)
+{
+	if (nCol == m_nSongsSortCol)
 		m_bSongsSortAscending = !m_bSongsSortAscending;
 	else
 	{
 		//
 		//  Sort win pct or rating descending by default
 
-		int nColType = GetColumnType (phdr->iItem);
+		int nColType = GetColumnType (nCol);
 		if (-1 == nColType)
 			m_bSongsSortAscending = true;
 		else
 			m_bSongsSortAscending = garrSongColsAval[nColType].bDefaultSortAscending;
 	}
 
-	m_nSongsSortCol = phdr->iItem;
+	m_nSongsSortCol = nCol;
 
 	CWaitCursor wc;
 	m_oSongList.SortItems (SortCompareSongListCtrl, (DWORD_PTR) this);
-	*pResult = 0;
-} // end on song header dbl click
+
+} // end CSongsBestPickerDlg::SortColSongList
+
+
+
+//************************************
+// Method:    SortColGameResult
+// FullName:  CSongsBestPickerDlg::SortColHeadToHead
+// Access:    public 
+// Returns:   void
+// Qualifier:
+// Parameter: int nCol
+//************************************
+void CSongsBestPickerDlg::SortColGameResult (int nCol)
+{
+	if (nCol == m_nGamesSortCol)
+		m_bGamesSortAscending = !m_bGamesSortAscending;
+	else
+	{
+		//
+		//  Sort win pct or rating descending by default
+
+		switch (nCol)
+		{
+		case LIST_GAMES_COL_RATING:
+		case LIST_GAMES_COL_MARGIN:
+			m_bGamesSortAscending = false;
+			break;
+
+		default:
+			m_bGamesSortAscending = true;
+		}
+	}
+
+	m_nGamesSortCol = nCol;
+
+	CWaitCursor wc;
+	m_oSongGameResultList.SortItems (SortCompareGameResult, (DWORD_PTR) this);
+
+} // end CSongsBestPickerDlg::SortColHeadToHead
+
 
 
 
@@ -2587,7 +2656,10 @@ int CSongsBestPickerDlg::SortCompareSongListCtrl (LPARAM lParam1, LPARAM lParam2
 		CString str1 = pDlg->GetSongTitle (nSongID1);
 		CString str2 = pDlg->GetSongTitle (nSongID2);
 
-		return str1.CompareNoCase(str2); // We always do secondary sort ascending
+		if (pDlg->m_nSongsSortCol != LIST_SONG_COL_TITLE)
+			nOrderMultiplier = 1;	//  If we're a secondary sort col, we're always ascending.
+
+		return nOrderMultiplier * str1.CompareNoCase(str2); // We always do secondary sort ascending
 	}
 
 
@@ -2595,6 +2667,129 @@ int CSongsBestPickerDlg::SortCompareSongListCtrl (LPARAM lParam1, LPARAM lParam2
 
 } // end compare items
 
+
+
+
+//************************************
+// Method:    SortCompareGameResult
+// FullName:  CSongsBestPickerDlg::SortCompareGameResult
+// Access:    protected static 
+// Returns:   int CALLBACK
+// Qualifier:
+// Parameter: LPARAM lParam1
+// Parameter: LPARAM lParam2
+// Parameter: LPARAM lParamSort
+//
+//
+//************************************
+int CALLBACK CSongsBestPickerDlg::SortCompareGameResult (LPARAM lParam1, LPARAM lParam2, LPARAM lParamSort)
+{
+	//  It's passing in the GetItemData number to us...  we're sorting on that
+	//  anyway.
+
+	int nSongID1 = (int) lParam1;
+	int nSongID2 = (int) lParam2;
+
+	CSongsBestPickerDlg* pDlg = (CSongsBestPickerDlg*) lParamSort;
+
+	int nOrderMultiplier = 1;
+	if (! pDlg->m_bGamesSortAscending)
+		nOrderMultiplier = -1;
+
+	//
+	//  Sort differently based on which column we're sorting
+
+	switch (pDlg->m_nGamesSortCol)
+	{
+	case LIST_GAMES_COL_RATING:
+	{
+		int nSong1Rating = 0, nSong2Rating = 0;
+
+		pDlg->GetSongRating (nSongID1, nSong1Rating);
+		pDlg->GetSongRating (nSongID2, nSong2Rating);
+
+		if (nSong1Rating < nSong2Rating)
+			return nOrderMultiplier * -1;
+		if (nSong1Rating > nSong2Rating)
+			return nOrderMultiplier * 1;
+
+		//
+		//  Otherwise return the title compare
+		break;
+	}
+
+	case LIST_GAMES_COL_WONLOSS:
+	{
+		CString strVal1, strVal2;
+
+		int nIndex = pDlg->m_oSongGameResultList.FindByItemData (nSongID1);
+		if (-1 != nIndex) {
+			strVal1 = pDlg->m_oSongGameResultList.GetItemText (nIndex, LIST_GAMES_COL_MARGIN);
+		}
+
+		nIndex = pDlg->m_oSongGameResultList.FindByItemData (nSongID2);
+		if (-1 != nIndex) {
+			strVal2 = pDlg->m_oSongGameResultList.GetItemText (nIndex, LIST_GAMES_COL_MARGIN);
+		}
+
+		int nResult = strVal1.CompareNoCase (strVal2);
+		if (0 != nResult)
+			return nOrderMultiplier * nResult;
+
+		//
+		//  Otherwise return the title compare
+		break;
+	}
+
+	case LIST_GAMES_COL_MARGIN:
+	{
+		CString strVal;
+		int nMargin1 = 0, nMargin2 = 0;
+
+		int nIndex = pDlg->m_oSongGameResultList.FindByItemData (nSongID1);
+		if (-1 != nIndex) {
+			strVal = pDlg->m_oSongGameResultList.GetItemText (nIndex, LIST_GAMES_COL_MARGIN);
+			CUtils::MyAtoI (strVal, nMargin1);
+		}
+
+		nIndex = pDlg->m_oSongGameResultList.FindByItemData (nSongID2);
+		if (-1 != nIndex) {
+			strVal = pDlg->m_oSongGameResultList.GetItemText (nIndex, LIST_GAMES_COL_MARGIN);
+			CUtils::MyAtoI (strVal, nMargin2);
+		}
+
+		if (nMargin1 < nMargin2)
+			return nOrderMultiplier * -1;
+		if (nMargin1 > nMargin2)
+			return nOrderMultiplier * 1;
+
+		//
+		//  Otherwise return the title compare
+		break;
+	}
+	} // end switch
+
+	//
+	//  Title compare is our backup sort for every column.   That's why
+	//  it's not part of the if...else structure
+
+//	if (LIST_GAMES_COL_OPPONENT == pDlg->m_nSongsSortCol)
+	{
+		//
+		//  Sorting on name column...  this is either alpha or by classification order
+
+		CString str1 = pDlg->GetSongTitle (nSongID1);
+		CString str2 = pDlg->GetSongTitle (nSongID2);
+
+		if (pDlg->m_nSongsSortCol != LIST_GAMES_COL_OPPONENT)
+			nOrderMultiplier = 1;	//  If we're a secondary sort col, we're always ascending.
+
+		return nOrderMultiplier * str1.CompareNoCase(str2); // We always do secondary sort ascending
+	}
+
+
+	return 0;
+} // end CSongsBestPickerDlg::SortCompareGameResult
 
 
 
