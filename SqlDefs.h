@@ -32,7 +32,8 @@ struct TableDefinitionStruct
 //#define TBL_SONGS_VER			1
 //#define TBL_SONGS_VER			2	// Added tag info, artist, title, album
 //#define TBL_SONGS_VER			3	// Removed song name
-#define TBL_SONGS_VER			4	// Added strength of schedul
+//#define TBL_SONGS_VER			4	// Added strength of schedule
+#define TBL_SONGS_VER			5	// Added Active
 
 #define DB_COL_SONG_ID				L"ID"
 #define DB_COL_PATH_TO_MP3			L"PathToMp3"
@@ -41,6 +42,7 @@ struct TableDefinitionStruct
 #define DB_COL_SONG_ALBUM			L"Album"
 #define DB_COL_SONG_RATING			L"Rating"
 #define DB_COL_SONG_STRENGTH_OF_SCHEDULE	L"StrengthOfSchedule"
+#define DB_COL_SONG_ACTIVE			L"Active"
 
 static TableDefinitionStruct VPTblSongs[] = {
 	{true,	S_INDEX_NONE,	DB_COL_SONG_ID,				L"INTEGER",	VP_DEFAULT_UNUSED},
@@ -48,8 +50,10 @@ static TableDefinitionStruct VPTblSongs[] = {
 	{false,	S_INDEX_NONE,	DB_COL_SONG_ARTIST,			L"TEXT",	VP_DEFAULT_UNUSED},
 	{false,	S_INDEX_NONE,	DB_COL_SONG_TITLE,			L"TEXT",	VP_DEFAULT_UNUSED},
 	{false,	S_INDEX_NONE,	DB_COL_SONG_ALBUM,			L"TEXT",	VP_DEFAULT_UNUSED},
-	{false, S_INDEX_NONE,	DB_COL_SONG_RATING,			L"INTEGER",	1000},
-	{false, S_INDEX_NONE,	DB_COL_SONG_STRENGTH_OF_SCHEDULE,			L"INTEGER",	1000},
+	{false, S_INDEX_NONE,	DB_COL_SONG_RATING,			L"INTEGER",			1000},
+	{false, S_INDEX_NONE,	DB_COL_SONG_STRENGTH_OF_SCHEDULE,	L"INTEGER",	1000},
+	{false, S_INDEX_NONE,	DB_COL_SONG_ACTIVE,			L"INTEGER",			1},
+
 	{0,		0,		0,							0,					0}
 };
 

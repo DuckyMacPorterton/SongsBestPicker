@@ -90,6 +90,9 @@ protected:
 	CString			m_strCurSongArtist;
 	CString			m_strCurSongAlbum;
 	CString			m_strH2HCurrentCaption;
+	BOOL			m_bSongIsStillInCompetition	= true;
+	BOOL			m_bUpdateResultsForPodSel;
+
 
 	//
 	//  Playback info
@@ -149,12 +152,12 @@ public:
 	
 	void	UpdateSongCount	();
 	void	UpdateCurrentPod			(int nPodToLoad = -1);
-	void	UpdateGameResultsForCurrentSong	(int nSongID);
+	void	UpdateGameResultsForSong	(int nSongID);
 	void	UpdatePlayerStatus			();
 	void	UpdateAccessoryListCtrl		();
 	void	UpdatePodCombo				();
 
-	void	LoadSongIntoPlayer		(int nSondID);
+	void	LoadSongIntoPlayer		(int nSondID, bool bShowGameResults = true);
 	void	SaveSongInfoFromPlayer	();
 	void	MakePlayerInfoEditable	(bool bEditable);
 
@@ -163,6 +166,7 @@ public:
 	CString	GetSongAlbum			(int nSongID);
 	CString	GetSongPathToMp3		(int nSongID);
 	int		GetCurrentPodSongRank	(int nSongID);
+	BOOL	GetSongStillInCompetition (int nSongID);
 
 	bool	GetWonLossRecord	(int nSongID, int& rnWon, int& rnLost);
 	bool	GetSongRating		(int nSongID, int& rnRating);
@@ -250,4 +254,7 @@ public:
 	afx_msg void OnSelChangeComboPod();
 	afx_msg void OnBnClickedButtonPrevPod();
 	afx_msg void OnBnClickedButtonNextPod();
+
+	void OnBnClickedDefault ();
+
 };

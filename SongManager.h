@@ -43,10 +43,10 @@ public:
 
 	bool	GetSongCount	(int& rnSongCount);
 	bool	GetNextSong		(CString& rstrSongTitle, CString& rstrSongArtist, CString& rstrSongAlbum, CString& rstrPathToMp3, int& rnSongID, int nPrevSongID = -1);
-	bool	GetSongDetails	(int nSongID, CString& rstrSongTitle, CString& rstrSongArtist, CString& rstrSongAlbum, CString& rstrPathToMp3);
+	bool	GetSongDetails	(int nSongID, CString& rstrSongTitle, CString& rstrSongArtist, CString& rstrSongAlbum, CString& rstrPathToMp3, BOOL& rbSongStillInCompetition);
 	bool	GetSongTitle	(int nSongID, CString& rstrSongTitle);
 
-	bool	SetSongDetails	(int nSongID, CString strSongTitle, CString strSongArtist, CString strSongAlbum, CString strPathToMp3);
+	bool	SetSongDetails	(int nSongID, CString strSongTitle, CString strSongArtist, CString strSongAlbum, CString strPathToMp3, BOOL bSongStillInCompetition);
 
 	bool	GetSongRating	(int nSongID, int& rnSongRating);
 	bool	SetSongRating	(int nSongID, int nSongRating);

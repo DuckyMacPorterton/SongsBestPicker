@@ -1161,7 +1161,7 @@ bool CSongManager::GetNextSong(CString& rstrSongTitle, CString& rstrSongArtist, 
 //
 //
 //************************************
-bool CSongManager::GetSongDetails (int nSongID, CString& rstrSongTitle, CString& rstrSongArtist, CString& rstrSongAlbum, CString& rstrPathToMp3)
+bool CSongManager::GetSongDetails (int nSongID, CString& rstrSongTitle, CString& rstrSongArtist, CString& rstrSongAlbum, CString& rstrPathToMp3, BOOL& rbSongStillInCompetition)
 {
 	if (NULL == m_pDB)
 		return false;
@@ -1179,6 +1179,7 @@ bool CSongManager::GetSongDetails (int nSongID, CString& rstrSongTitle, CString&
 		rstrSongArtist	= query.getStringField	(DB_COL_SONG_ARTIST);
 		rstrSongAlbum	= query.getStringField	(DB_COL_SONG_ALBUM);
 		rstrPathToMp3	= query.getStringField	(DB_COL_PATH_TO_MP3);
+		rbSongStillInCompetition = query.getIntField (DB_COL_SONG_ACTIVE);
 		return true;
 	}
 	catch (CppSQLite3Exception& e) {
@@ -1243,7 +1244,7 @@ bool CSongManager::GetSongTitle (int nSongID, CString& rstrSongTitle)
 //
 //
 //************************************
-bool CSongManager::SetSongDetails (int nSongID, CString strSongTitle, CString strSongArtist, CString strSongAlbum, CString strPathToMp3)
+bool CSongManager::SetSongDetails (int nSongID, CString strSongTitle, CString strSongArtist, CString strSongAlbum, CString strPathToMp3, BOOL bSongStillInCompetition)
 {
 	if (NULL == m_pDB)
 		return false;
@@ -1251,8 +1252,8 @@ bool CSongManager::SetSongDetails (int nSongID, CString strSongTitle, CString st
 	try
 	{
 		CString strInsert;
-		strInsert.Format (L"update %s set %s=?, %s=?, %s=?, %s=? where %s=?", TBL_SONGS, 
-			DB_COL_SONG_TITLE, DB_COL_SONG_ARTIST, DB_COL_SONG_ALBUM, DB_COL_PATH_TO_MP3, DB_COL_SONG_ID);
+		strInsert.Format (L"update %s set %s=?, %s=?, %s=?, %s=?, %s=? where %s=?", TBL_SONGS, 
+			DB_COL_SONG_TITLE, DB_COL_SONG_ARTIST, DB_COL_SONG_ALBUM, DB_COL_PATH_TO_MP3, DB_COL_SONG_ACTIVE, DB_COL_SONG_ID);
 
 		CppSQLite3Statement stmtQuery = m_pDB->compileStatement (strInsert);
 
@@ -1260,7 +1261,8 @@ bool CSongManager::SetSongDetails (int nSongID, CString strSongTitle, CString st
 		stmtQuery.bind (2, strSongArtist);
 		stmtQuery.bind (3, strSongAlbum);
 		stmtQuery.bind (4, strPathToMp3);
-		stmtQuery.bind (5, nSongID);
+		stmtQuery.bind (5, bSongStillInCompetition);
+		stmtQuery.bind (6, nSongID);
 		stmtQuery.execDML ();
 		return true;
 	}
@@ -1574,7 +1576,7 @@ bool CSongManager::GetAllSongsInRandomOrder (CIntArray& rarrSongIDs)
 		rarrSongIDs.SetSize (0);
 
 		CString strQuery;
-		strQuery.Format (L"select %s from %s order by random()", DB_COL_SONG_ID, TBL_SONGS);
+		strQuery.Format (L"select %s from %s where %s=1 order by random()", DB_COL_SONG_ID, TBL_SONGS, DB_COL_SONG_ACTIVE);
 	
 		CppSQLite3Query oQuery = m_pDB->execQuery (strQuery);
 		for (; !oQuery.eof (); oQuery.nextRow ())
@@ -1776,6 +1778,14 @@ bool CSongManager::GetAllPodIDs (CIntArray& rarrPodIDs)
 //************************************
 bool CSongManager::GetCurrentPod (int& rnPodID, CIntArray& rarrSongIDsInPod)
 {
+	//
+	//  Allow a single recursive call, but not more than one...
+
+	static int nTypeToFilterRecursionCounter = 0;
+	CRecursionCounterAuto RecursionCounter (&nTypeToFilterRecursionCounter);
+	if (RecursionCounter.GetRecursionDepth () > 2)
+		return false;
+
 	rarrSongIDsInPod.SetSize (0);
 	if (NULL == m_pDB)
 		return false;
@@ -1787,7 +1797,14 @@ bool CSongManager::GetCurrentPod (int& rnPodID, CIntArray& rarrSongIDsInPod)
 		CppSQLite3Query oQuery = m_pDB->execQuery (strQuery);
 		
 		if (oQuery.eof ())
+		{
+			//
+			//  Uh-oh, no pods left.  Schedule some more.
+
+			if (ScheduleMorePods ())
+				return GetCurrentPod (rnPodID, rarrSongIDsInPod);
 			return false;
+		}
 
 		rnPodID = oQuery.getIntField (DB_COL_POD_ID);
 

@@ -79,6 +79,7 @@ struct ColumnDefinitionStruct
 #define LIST_SONG_COL_RATING	4
 #define LIST_SONG_COL_MP3		5
 #define LIST_SONG_COL_SOS		6
+#define LIST_SONG_COL_ACTIVE	7
 
 static ColumnDefinitionStruct garrSongColsAval[] = {
 	{LIST_SONG_COL_TITLE,		L"Title",	LVCFMT_LEFT,	(float) 0.24,	true},
@@ -88,6 +89,7 @@ static ColumnDefinitionStruct garrSongColsAval[] = {
 	{LIST_SONG_COL_RATING,		L"Rating",	LVCFMT_CENTER,	(float) 0.08,	false},
 	{LIST_SONG_COL_MP3,			L"MP3",		LVCFMT_LEFT,	(float) 0.10,	true},
 	{LIST_SONG_COL_SOS,			L"SoS",		LVCFMT_CENTER,	(float) 0.10,	false},
+	{LIST_SONG_COL_ACTIVE,		L"Active",	LVCFMT_CENTER,	(float) 0.05,	false},
 };
 
 #define SONG_LIST_AVAILABLE_COLUMN_COUNT (sizeof (garrSongColsAval) / sizeof (ColumnDefinitionStruct))
@@ -162,6 +164,8 @@ CSongsBestPickerDlg::CSongsBestPickerDlg (CWnd* pParent /*=NULL*/)
 	, m_strCurSongArtist	(_T(""))
 	, m_strCurSongAlbum		(_T(""))
 	, m_strH2HCurrentCaption(_T(""))
+	, m_bUpdateResultsForPodSel(FALSE)
+	, m_bSongIsStillInCompetition(FALSE)
 {
 	m_strTypeToFilterEmptyMsg = L"(type to filter ...)";
 
@@ -175,7 +179,7 @@ void CSongsBestPickerDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_SONG_GAMES_LIST, m_oSongGameResultList);
 	DDX_Control(pDX, IDC_CURRENT_POD_LIST, m_oCurrentPodList);
 	DDX_Text(pDX, IDC_EDIT1, m_strCurSongTitle);
-	DDX_Text(pDX, IDC_EDIT2, m_strCurSongPathToMp3);
+	DDX_Text(pDX, IDC_EDIT_PATH_TO_MP3, m_strCurSongPathToMp3);
 	DDX_Text(pDX, IDC_SONG_POS, m_strSongPlaybackPos);
 	DDX_Text(pDX, IDC_SONG_LENGTH, m_strSongPlaybackLen);
 	DDX_Control(pDX, IDC_PROGRESS1, m_oSongPlayingProgress);
@@ -186,6 +190,8 @@ void CSongsBestPickerDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Text(pDX, IDC_STATIC_H2H_CURRENT, m_strH2HCurrentCaption);
 	DDX_Control(pDX, IDC_EDIT_TYPE_TO_FILTER, m_oTypeToFilterPod);
 	DDX_Control(pDX, IDC_SLIDER_VOLUME, m_oVolumeSlider);
+	DDX_Check(pDX, IDC_CHECK_UPDATE_RESULTS_FOR_POD, m_bUpdateResultsForPodSel);
+	DDX_Check(pDX, IDC_CHECK_SONG_ACTIVE, m_bSongIsStillInCompetition);
 }
 
 BEGIN_MESSAGE_MAP(CSongsBestPickerDlg, CDialogEx)
@@ -250,6 +256,8 @@ BEGIN_MESSAGE_MAP(CSongsBestPickerDlg, CDialogEx)
 	ON_BN_CLICKED(IDC_BUTTON_PREV_POD, &CSongsBestPickerDlg::OnBnClickedButtonPrevPod)
 	ON_BN_CLICKED(IDC_BUTTON_NEXT_POD, &CSongsBestPickerDlg::OnBnClickedButtonNextPod)
 	
+	ON_BN_CLICKED(IDC_BUTTON_DEFAULT, OnBnClickedDefault)
+
 	ON_WM_VSCROLL()
 
 END_MESSAGE_MAP()
@@ -853,10 +861,12 @@ void CSongsBestPickerDlg::UpdateSongListSpecificSong (int nSongID, CString strTi
 		return;
 	}
 
+#ifdef needThis
 	if (strTitle.IsEmpty ())
 	{
 		m_oSongManager.GetSongDetails (nSongID, strTitle, strArtist, strAlbum, strPathToMp3);
 	}
+#endif
 
 	CString strToDisplay;
 	for (int nCol = 0; nCol < m_arrActiveColumns.GetSize (); nCol++)
@@ -981,7 +991,8 @@ void CSongsBestPickerDlg::UpdateCurrentPod (int nPodToLoad /* = -1 */)
 	for (int i = 0; i < arrSongIDs.GetSize (); i ++)
 	{
 		CString strSongTitle, strSongArtist, strSongAlbum, strPathToMp3;
-		m_oSongManager.GetSongDetails (arrSongIDs[i], strSongTitle, strSongArtist, strSongAlbum, strPathToMp3);
+		BOOL	bSongStillInCompetition = false;
+		m_oSongManager.GetSongDetails (arrSongIDs[i], strSongTitle, strSongArtist, strSongAlbum, strPathToMp3, bSongStillInCompetition);
 
 		if (-1 == m_nCurSongID)
 			m_nCurSongID = arrSongIDs[i];
@@ -1212,6 +1223,14 @@ bool CSongsBestPickerDlg::GetDisplayStringForCol (int nSongID, int nColIndex, CS
 		rstrDisplayString = CUtils::N2S (nSoS);
 		return true;
 	}
+	case LIST_SONG_COL_ACTIVE:
+	{
+		if (GetSongStillInCompetition (nSongID))
+			rstrDisplayString = L"1";
+		else
+			rstrDisplayString = L"0";
+		return true;
+	}
 
 	default:
 		return false;
@@ -1300,6 +1319,13 @@ bool CSongsBestPickerDlg::GetColumnSetupInfo (int nColIndex, int& rnColType, CSt
 		rstrColName = L"SoS";
 		rnFormat = LVCFMT_LEFT;
 		rnWidth = (int) ((double) rcSongList.Width () * 0.10);
+	}
+	case LIST_SONG_COL_ACTIVE:
+	{
+		rnColType = LIST_SONG_COL_ACTIVE;
+		rstrColName = L"Act";
+		rnFormat = LVCFMT_CENTER;
+		rnWidth = (int) ((double) rcSongList.Width () * 0.05);
 	}
 
 	default:
@@ -1487,13 +1513,17 @@ LRESULT CSongsBestPickerDlg::OnHeaderDragCol (WPARAM wSource, LPARAM lDest)
 //
 //
 //************************************
-void CSongsBestPickerDlg::UpdateGameResultsForCurrentSong (int nSongID)
+void CSongsBestPickerDlg::UpdateGameResultsForSong (int nSongID)
 {
 	UpdateData ();
 
 	m_oSongGameResultList.DeleteAllItems ();
 	if (-1 == nSongID)
+	{
+		m_strH2HCurrentCaption = L"";
+		UpdateData (false);
 		return;
+	}
 
 	CIntArray arrOpponents, arrMargins;
 	if (! m_oSongManager.GetHeadToHeadForSong (nSongID, arrOpponents, arrMargins)) {
@@ -2031,7 +2061,7 @@ bool CSongsBestPickerDlg::SetNextSongActive ()
 
 	m_oCurrentPodList.SelectItem (m_oCurrentPodList.FindByItemData (nNextSongID));
 
-	LoadSongIntoPlayer (nNextSongID);
+	LoadSongIntoPlayer (nNextSongID, false);
 	PlaySong ();	// No arg plays the current song... which we just loaded
 	return true;
 
@@ -2053,17 +2083,35 @@ bool CSongsBestPickerDlg::SetPrevSongActive ()
 	int nListCtrlIndex	= m_oCurrentPodList.GetFirstSelectedItem ();
 	if (-1 != nListCtrlIndex)
 		m_oCurrentPodList.UnselectItem (nListCtrlIndex);
+	//
+	//  Remember, we go in order the songs are in the database, NOT the current
+	//  ranking of the pod.  
 
-	int nNextToSelect	= m_oCurrentPodList.GetNextItem (nListCtrlIndex, LVNI_ABOVE);
-	
-	int nSongID = -1;
-	if (-1 != nNextToSelect) {
-		nSongID = (int) m_oCurrentPodList.GetItemData (nNextToSelect);
+	CIntArray arrCurrentPodSongIDs;
+	if (! m_oSongManager.GetCurrentPod (m_nCurPodID, arrCurrentPodSongIDs))
+		return SetError (m_oSongManager.GetError (true));
+
+	int nNextSongID = -1;
+	for (int i = 0; i < arrCurrentPodSongIDs.GetSize (); i ++)
+	{
+		if (arrCurrentPodSongIDs[i] == m_nCurSongID)
+		{
+			//
+			//  Aha!
+
+			if (i > 0)
+				nNextSongID = arrCurrentPodSongIDs[i - 1];
+			else if (arrCurrentPodSongIDs.GetSize () > 0)
+				nNextSongID = (int)arrCurrentPodSongIDs[arrCurrentPodSongIDs.GetSize () - 1];
+			else
+				return false;
+		}
 	}
 
-	m_oCurrentPodList.SelectItem (nNextToSelect, true);
+	m_oCurrentPodList.SelectItem (m_oCurrentPodList.FindByItemData (nNextSongID));
 
-	LoadSongIntoPlayer (nSongID);
+	LoadSongIntoPlayer (nNextSongID, false);
+	PlaySong ();	// No arg plays the current song... which we just loaded
 	return true;
 
 } // end CSongsBestPickerDlg::SetPrevSongActive
@@ -2161,7 +2209,7 @@ void CSongsBestPickerDlg::OnItemChangedSongList (NMHDR* pNMHDR, LRESULT* pResult
 			nSongID = -1;
 		else {
 			nSongID = (int)m_oSongList.GetItemData (nListCtrlIndex);
-			UpdateGameResultsForCurrentSong (nSongID);
+			UpdateGameResultsForSong (nSongID);
 		} // end if we have a valid song to check out
 
 #ifdef LoadSongsFromMainList
@@ -2196,6 +2244,10 @@ void CSongsBestPickerDlg::OnItemChangedCurrentPodList(NMHDR* pNMHDR, LRESULT* pR
 
 	if ((pNMLV->uChanged & LVIF_STATE) && (pNMLV->uNewState & LVIS_SELECTED))
 	{
+		UpdateData ();
+		if (! m_bUpdateResultsForPodSel)
+			return;
+
 		//
 		//  Woohoo!  We have a newly selected item.
 
@@ -2205,7 +2257,7 @@ void CSongsBestPickerDlg::OnItemChangedCurrentPodList(NMHDR* pNMHDR, LRESULT* pR
 			nSongID = -1;
 		else {
 			nSongID = (int)m_oCurrentPodList.GetItemData (nListCtrlIndex);
-			UpdateGameResultsForCurrentSong (nSongID);
+			UpdateGameResultsForSong (nSongID);
 		} // end if we have a valid song to check out
 	}
 
@@ -2251,7 +2303,7 @@ void CSongsBestPickerDlg::OnDblclkCurrentPodList(NMHDR* pNMHDR, LRESULT* pResult
 // Qualifier:
 // Parameter: int nSondID
 //************************************
-void CSongsBestPickerDlg::LoadSongIntoPlayer (int nSongID)
+void CSongsBestPickerDlg::LoadSongIntoPlayer (int nSongID, bool bShowGameResults /* = true */)
 {
 	UpdateData ();
 	MakePlayerInfoEditable (false);
@@ -2270,14 +2322,15 @@ void CSongsBestPickerDlg::LoadSongIntoPlayer (int nSongID)
 	}
 	else
 	{
-		m_oSongManager.GetSongDetails (nSongID, m_strCurSongTitle, m_strCurSongArtist, m_strCurSongAlbum, m_strCurSongPathToMp3);
+		m_oSongManager.GetSongDetails (nSongID, m_strCurSongTitle, m_strCurSongArtist, m_strCurSongAlbum, m_strCurSongPathToMp3, m_bSongIsStillInCompetition);
 	}
 
 	UpdateData (false);
 
-//	UpdateCurrentPod			(nSongID);	// NOT the list ctrl index
-	UpdateGameResultsForCurrentSong	(nSongID);	// NOT the list ctrl index
-
+//	if (bShowGameResults)
+//		UpdateGameResultsForCurrentSong	(nSongID);	// NOT the list ctrl index
+//	else
+		UpdateGameResultsForSong	(-1);		// Clears the game results list
 
 } // end load song into player
 
@@ -2302,8 +2355,8 @@ void CSongsBestPickerDlg::SaveSongInfoFromPlayer ()
 	m_strCurSongArtist.Trim ();
 	m_strCurSongPathToMp3.Trim ();
 
-	m_oSongManager.SetSongDetails	(m_nCurSongID, m_strCurSongTitle, m_strCurSongArtist, m_strCurSongAlbum, m_strCurSongPathToMp3);
-	UpdateSongListSpecificSong		(m_nCurSongID, m_strCurSongTitle, m_strCurSongArtist, m_strCurSongAlbum, m_strCurSongPathToMp3);
+	m_oSongManager.SetSongDetails	(m_nCurSongID, m_strCurSongTitle, m_strCurSongArtist, m_strCurSongAlbum, m_strCurSongPathToMp3, m_bSongIsStillInCompetition);
+	UpdateSongListSpecificSong		(m_nCurSongID); // , m_strCurSongTitle, m_strCurSongArtist, m_strCurSongAlbum, m_strCurSongPathToMp3);
 
 	MakePlayerInfoEditable (false);
 
@@ -2323,11 +2376,12 @@ void CSongsBestPickerDlg::SaveSongInfoFromPlayer ()
 void CSongsBestPickerDlg::MakePlayerInfoEditable (bool bEditable)
 {
 	GetDlgItem (IDC_EDIT1)->EnableWindow (bEditable);
-	GetDlgItem (IDC_EDIT2)->EnableWindow (bEditable);
+	GetDlgItem (IDC_EDIT_PATH_TO_MP3)->EnableWindow (true); // bEditable);	//  So I can always copy out path
 	GetDlgItem (IDC_EDIT_ARTIST)->EnableWindow (bEditable);
 	GetDlgItem (IDC_EDIT_ALBUM)->EnableWindow (bEditable);
 	GetDlgItem (IDC_BROWSE_FOR_SONG)->EnableWindow (bEditable);
 	GetDlgItem (IDC_SAVE_SONG_CHANGES)->EnableWindow (bEditable);
+	GetDlgItem (IDC_CHECK_SONG_ACTIVE)->EnableWindow (bEditable);
 
 } // end CSongsBestPickerDlg::MakePlayerInfoEditable
 
@@ -2626,6 +2680,19 @@ int CSongsBestPickerDlg::SortCompareSongListCtrl (LPARAM lParam1, LPARAM lParam2
 
 		return nOrderMultiplier * str1.CompareNoCase(str2);
 	}
+	case LIST_SONG_COL_ACTIVE:
+	{
+		BOOL b1 = pDlg->GetSongStillInCompetition (nSongID1);
+		BOOL b2 = pDlg->GetSongStillInCompetition (nSongID2);
+
+		if (b1 != b2)
+			return nOrderMultiplier * (b1 < b2);
+
+		//
+		//  Otherwise return the title compare
+		break;
+	}
+
 	case LIST_SONG_COL_SOS:
 	{
 		int nSong1SoS = 0, nSong2SoS = 0;
@@ -2804,7 +2871,8 @@ int CALLBACK CSongsBestPickerDlg::SortCompareGameResult (LPARAM lParam1, LPARAM 
 CString CSongsBestPickerDlg::GetSongTitle (int nSongID)
 {
 	CString strSongTitle, strPathToMp3, strSongArtist, strSongAlbum;
-	if (! m_oSongManager.GetSongDetails	(nSongID, strSongTitle, strSongArtist, strSongAlbum, strPathToMp3)) {
+	BOOL	bSongStillInCompetition = false;
+	if (! m_oSongManager.GetSongDetails	(nSongID, strSongTitle, strSongArtist, strSongAlbum, strPathToMp3, bSongStillInCompetition)) {
 		SetError (m_oSongManager.GetError (true));
 		return L"";
 	}
@@ -2812,6 +2880,31 @@ CString CSongsBestPickerDlg::GetSongTitle (int nSongID)
 	return strSongTitle;
 
 } // end CSongsBestPickerDlg::GetSongNameByID
+
+
+
+//************************************
+// Method:    GetSongStillInCompetition
+// FullName:  CSongsBestPickerDlg::GetSongStillInCompetition
+// Access:    public 
+// Returns:   BOOL
+// Qualifier:
+// Parameter: int nSongID
+//************************************
+BOOL CSongsBestPickerDlg::GetSongStillInCompetition (int nSongID)
+{
+	CString strSongTitle, strPathToMp3, strSongArtist, strSongAlbum;
+	BOOL	bSongStillInCompetition = false;
+	if (! m_oSongManager.GetSongDetails	(nSongID, strSongTitle, strSongArtist, strSongAlbum, strPathToMp3, bSongStillInCompetition)) {
+		SetError (m_oSongManager.GetError (true));
+		return false;
+	}
+
+	return bSongStillInCompetition;
+
+} // end CSongsBestPickerDlg::GetSongStillInCompetition
+
+
 
 
 
@@ -2829,7 +2922,8 @@ CString CSongsBestPickerDlg::GetSongTitle (int nSongID)
 CString CSongsBestPickerDlg::GetSongArtist (int nSongID)
 {
 	CString strSongTitle, strPathToMp3, strSongArtist, strSongAlbum;
-	if (! m_oSongManager.GetSongDetails	(nSongID, strSongTitle, strSongArtist, strSongAlbum, strPathToMp3)) {
+	BOOL	bSongStillInCompetition = false;
+	if (! m_oSongManager.GetSongDetails	(nSongID, strSongTitle, strSongArtist, strSongAlbum, strPathToMp3, bSongStillInCompetition)) {
 		SetError (m_oSongManager.GetError (true));
 		return L"";
 	}
@@ -2854,7 +2948,8 @@ CString CSongsBestPickerDlg::GetSongArtist (int nSongID)
 CString CSongsBestPickerDlg::GetSongAlbum (int nSongID)
 {
 	CString strSongTitle, strPathToMp3, strSongArtist, strSongAlbum;
-	if (! m_oSongManager.GetSongDetails	(nSongID, strSongTitle, strSongArtist, strSongAlbum, strPathToMp3)) {
+	BOOL	bSongStillInCompetition = false;
+	if (! m_oSongManager.GetSongDetails	(nSongID, strSongTitle, strSongArtist, strSongAlbum, strPathToMp3, bSongStillInCompetition)) {
 		SetError (m_oSongManager.GetError (true));
 		return L"";
 	}
@@ -2876,7 +2971,8 @@ CString CSongsBestPickerDlg::GetSongAlbum (int nSongID)
 CString CSongsBestPickerDlg::GetSongPathToMp3 (int nSongID)
 {
 	CString strSongTitle, strPathToMp3, strSongArtist, strSongAlbum;
-	if (! m_oSongManager.GetSongDetails	(nSongID, strSongTitle, strSongArtist, strSongAlbum, strPathToMp3)) {
+	BOOL	bSongStillInCompetition = false;
+	if (! m_oSongManager.GetSongDetails	(nSongID, strSongTitle, strSongArtist, strSongAlbum, strPathToMp3, bSongStillInCompetition)) {
 		SetError (m_oSongManager.GetError (true));
 		return L"";
 	}
@@ -3685,6 +3781,22 @@ void CSongsBestPickerDlg::OnBnClickedButtonNextPod()
 {
 	// TODO: Add your control notification handler code here
 }
+
+
+
+//************************************
+// Method:    OnBnClickedDefault
+// FullName:  CSongsBestPickerDlg::OnBnClickedDefault
+// Access:    public 
+// Returns:   void
+// Qualifier:
+//************************************
+void CSongsBestPickerDlg::OnBnClickedDefault ()
+{
+	//
+	//  Do nothing
+
+} // end CSongsBestPickerDlg::OnBnClickedDefault
 
 
 
