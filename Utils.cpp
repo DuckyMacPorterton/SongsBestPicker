@@ -1298,3 +1298,131 @@ CString CUtils::GetKeyName (unsigned int virtualKey)
     }
 #endif
 }
+
+
+
+////////////////////////////////////////////////////////////////////////
+//
+//  C O P Y   T E X T   T O   C L I P B O A R D
+//
+//  Stores str on the clipboard.
+//
+//  Returns true if successful, false otherwise
+//
+bool CUtils::CopyTextToClipboard (CString str, bool bSilent /* = false */)
+{
+	HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, sizeof (TCHAR) * (str.GetLength() + 1));
+	if (NULL == hMem)
+		return false;
+
+	TCHAR* lpDest = (TCHAR *)GlobalLock(hMem);
+	if (NULL == lpDest)
+		return false;
+
+	_tcscpy (lpDest, str);
+	GlobalUnlock(hMem);
+				
+	//try to open the clipboard
+
+
+	int bOpened = false;
+	for (int i = 0; i < 10; i ++)
+	{
+		if (OpenClipboard (NULL))
+		{
+			bOpened = true;
+			break;
+		}
+
+		SleepMsg (50);
+	}
+
+	if (! bOpened)
+	{
+		if (! bSilent)
+			AfxMessageBox (L"Cannot open the Clipboard");
+		return FALSE;
+	}
+				
+	// Remove the current Clipboard contents
+	if( !EmptyClipboard() )
+	{
+		if (! bSilent)
+			AfxMessageBox (L"Cannot empty the Clipboard");
+		return FALSE;
+	}
+				
+	//export records to clipboard
+#ifdef _UNICODE
+	UINT nFormat = CF_UNICODETEXT;
+#else
+	UINT nFormat = CF_TEXT;
+#endif
+
+	if ( ::SetClipboardData (nFormat, hMem) == NULL ) // CF_TEXT
+	{
+		if (! bSilent)
+			AfxMessageBox (L"Unable to set Clipboard data");
+		CloseClipboard();
+		return FALSE;
+	}
+				
+	//close clipboard
+	CloseClipboard();
+
+	return true;
+
+} // end copy text to clipboard
+
+
+
+
+
+
+
+
+
+
+
+//////////////////////////////////////////////////////////////////////
+//
+//    C O P Y   T E X T   F R O M   C L I P B O A R D 
+//
+//  If there's text on the clipboard, sends it back in rStr.
+//  
+//  Returns true if we find something, false if 
+//
+bool CUtils::CopyTextFromClipboard (CString& rStr, bool bSilent /* = false */)
+{
+	UINT nTextFormat = CF_TEXT;
+#ifdef _UNICODE
+	nTextFormat = CF_UNICODETEXT;
+#endif
+
+	if (!IsClipboardFormatAvailable (nTextFormat)) 
+		return false; 
+	if (!OpenClipboard (NULL)) 
+		return false; 
+
+	bool bFoundText = false;
+
+	HANDLE hglb = GetClipboardData (nTextFormat); 
+	if (hglb != NULL) 
+	{ 
+		LPTSTR lptstrClipboard = (LPTSTR) GlobalLock(hglb); 
+		if (lptstrClipboard != NULL) 
+		{ 
+			rStr = lptstrClipboard;
+			bFoundText = true;
+
+			GlobalUnlock(hglb); 
+		} 
+	} 
+
+	CloseClipboard(); 
+	return bFoundText; 
+
+} // end CopyTextFromClipboard
+
+
+

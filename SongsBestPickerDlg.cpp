@@ -229,6 +229,7 @@ BEGIN_MESSAGE_MAP(CSongsBestPickerDlg, CDialogEx)
 	ON_COMMAND(ID_VIEW_GENERALSTATS,	OnViewGeneralStats)
 	ON_COMMAND(ID_VIEW_ERRORLOGS,		OnViewErrorLog)
 	ON_COMMAND(ID_VIEW_CLEARERRORLOG,	OnClearErrorLog)
+	ON_COMMAND(ID_COPY_SONG_MP3,		OnCopySongMp3)
 
 	ON_WM_TIMER()
 	ON_NOTIFY(LVN_ITEMCHANGED, IDC_SONG_LIST,			&CSongsBestPickerDlg::OnItemChangedSongList)
@@ -3600,6 +3601,34 @@ void CSongsBestPickerDlg::OnSetFocusTypeToFilter ()
 	if (m_bTypeToFilterInEmptyMode)
 		SetTypeToFilterState (false);
 } // end OnSetFocusTypeToFilter 
+
+
+//************************************
+// Method:    OnCopySongMp3
+// FullName:  CSongsBestPickerDlg::OnCopySongMp3
+// Access:    public 
+// Returns:   void
+// Qualifier:
+//************************************
+void CSongsBestPickerDlg::OnCopySongMp3 ()
+{
+	int nCurListCtrlIndex = m_oSongList.GetFirstSelectedItem ();
+	if (-1 == nCurListCtrlIndex)
+		return;
+
+	int nSongID = (int) m_oSongList.GetItemData (nCurListCtrlIndex);
+	if (-1 == nSongID)
+		return;
+
+	CString strTitle, strArtist, strAlbum, strPathToMp3;
+	BOOL	bStillinCompetition;
+
+	m_oSongManager.GetSongDetails (nSongID, strTitle, strArtist, strAlbum, strPathToMp3, bStillinCompetition);
+
+	CUtils::CopyTextToClipboard (strPathToMp3);
+
+} // end CSongsBestPickerDlg::OnCopySongMp3
+
 
 
 //************************************

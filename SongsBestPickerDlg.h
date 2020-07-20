@@ -239,6 +239,8 @@ public:
 	void	OnKillFocusTypeToFilter	();
 	void	OnSetFocusTypeToFilter	();
 
+	void	OnCopySongMp3 ();
+
 	void	OnVScroll (UINT nSBCode, UINT nPos, CScrollBar* pScrollBar);
 
 	LRESULT WindowProc (UINT message, WPARAM wParam, LPARAM lParam);

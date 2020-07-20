@@ -55,6 +55,10 @@ public:
 	static bool		FileExists (CString strName);
 	static bool		FindFile (CString& rstrPathToSong);
 
+	static bool		CopyTextToClipboard (CString str, bool bSilent = false);
+	static bool		CopyTextFromClipboard (CString& rStr, bool bSilent = false);
+
+
 	static CString	GetHotkeyText (UINT nKey, UINT nModifiers);
 	static CString	GetKeyName(UINT vk);
 
