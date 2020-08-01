@@ -167,6 +167,7 @@ public:
 	CString	GetSongPathToMp3		(int nSongID);
 	int		GetCurrentPodSongRank	(int nSongID);
 	BOOL	GetSongStillInCompetition (int nSongID);
+	int		GetListCtrlIndex		(int nSongID);
 
 	bool	GetWonLossRecord	(int nSongID, int& rnWon, int& rnLost);
 	bool	GetSongRating		(int nSongID, int& rnRating);
@@ -198,7 +199,7 @@ public:
 	//
 	//  These are for our user-configurable columns in the song list
 
-	bool	GetDisplayStringForCol	(int nSongID, int nColIndex, CString& rstrDisplayString);
+	bool	GetDisplayStringForCol	(int nSongID, int nColIndex, CString& rstrDisplayString, int nListCtrlIndex = -1, bool* pbCache = NULL);
 	bool	GetColumnSetupInfo		(int nColIndex, int& rnColType, CString& rstrColName, int& rnFormat, int& rnWidth);
 	int		GetColumnType			(int nColIndex);
 	bool	SwapColumns				(int nSwapFrom, int nSwapTo);
@@ -211,13 +212,10 @@ public:
 	//
 	//  and back to your regularly scheduled program...
 
-
-
 	void	OnHotKey(UINT nHotKeyId, UINT nKey1, UINT nKey2);
-
 	BOOL	OnCommand (WPARAM wParam, LPARAM lParam);
 
-
+	void	OnGetDispInfo (NMHDR* pNMHDR, LRESULT* pResult);
 	LRESULT	OnTrayNotification (WPARAM wParam, LPARAM lParam);
 	void	OnTimer (UINT_PTR nIDEvent);
 	BOOL	PreTranslateMessage (MSG* pMsg);

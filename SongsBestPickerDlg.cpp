@@ -80,6 +80,7 @@ struct ColumnDefinitionStruct
 #define LIST_SONG_COL_MP3		5
 #define LIST_SONG_COL_SOS		6
 #define LIST_SONG_COL_ACTIVE	7
+#define LIST_SONG_LIST_CTRL_INDEX	8
 
 static ColumnDefinitionStruct garrSongColsAval[] = {
 	{LIST_SONG_COL_TITLE,		L"Title",	LVCFMT_LEFT,	(float) 0.24,	true},
@@ -90,6 +91,7 @@ static ColumnDefinitionStruct garrSongColsAval[] = {
 	{LIST_SONG_COL_MP3,			L"MP3",		LVCFMT_LEFT,	(float) 0.10,	true},
 	{LIST_SONG_COL_SOS,			L"SoS",		LVCFMT_CENTER,	(float) 0.10,	false},
 	{LIST_SONG_COL_ACTIVE,		L"Active",	LVCFMT_CENTER,	(float) 0.05,	false},
+	{LIST_SONG_LIST_CTRL_INDEX,	L"#",		LVCFMT_RIGHT,	(float) 0.04,	true},
 };
 
 #define SONG_LIST_AVAILABLE_COLUMN_COUNT (sizeof (garrSongColsAval) / sizeof (ColumnDefinitionStruct))
@@ -232,7 +234,9 @@ BEGIN_MESSAGE_MAP(CSongsBestPickerDlg, CDialogEx)
 	ON_COMMAND(ID_COPY_SONG_MP3,		OnCopySongMp3)
 
 	ON_WM_TIMER()
-	ON_NOTIFY(LVN_ITEMCHANGED, IDC_SONG_LIST,			&CSongsBestPickerDlg::OnItemChangedSongList)
+
+	ON_NOTIFY(LVN_GETDISPINFO,	IDC_SONG_LIST,			&CSongsBestPickerDlg::OnGetDispInfo)
+	ON_NOTIFY(LVN_ITEMCHANGED,	IDC_SONG_LIST,			&CSongsBestPickerDlg::OnItemChangedSongList)
 	ON_NOTIFY(LVN_ITEMCHANGED, IDC_CURRENT_POD_LIST,	&CSongsBestPickerDlg::OnItemChangedCurrentPodList)
 
 	ON_EN_CHANGE(IDC_EDIT_TYPE_TO_FILTER,				&CSongsBestPickerDlg::OnChangeTypeToFilterLeft)
@@ -341,7 +345,6 @@ BOOL CSongsBestPickerDlg::OnInitDialog()
 
 	m_oTypeToFilterPod.SetIcon  (IDI_ICON_X, true);
 
-
 	//
 	//  Our playback system
 	
@@ -366,7 +369,6 @@ BOOL CSongsBestPickerDlg::OnInitDialog()
 	m_oVolumeSlider.SetRange (0, 100, true);
 	m_oVolumeSlider.SetPos (REAL_TO_SLIDER (100));
 
-
 	//
 	//  Let's allow ourselves to minimize to system tray
 
@@ -385,8 +387,6 @@ BOOL CSongsBestPickerDlg::OnInitDialog()
 	//  Put the window where they had it before
 
 	RestoreWindowPosition ();
-
-
 
 	//
 	//  Start a timer to keep tabs on things
@@ -487,6 +487,63 @@ void CSongsBestPickerDlg::OnBnClickedCancel()
 	m_oTrayIcon.MinimiseToTray (this);	
 //	OnBnClickedOk ();
 }
+
+
+
+//////////////////////////////////////////////////////////////////////
+//
+//    O N   G E T   D I S P   I N F O
+//
+//  This is where the list control asks us what's actually at a 
+//  given index.  Lucky for us we've kept track.
+//
+void CSongsBestPickerDlg::OnGetDispInfo(NMHDR* pNMHDR, LRESULT* pResult)
+{
+	LV_DISPINFO*	pDispInfo	= reinterpret_cast<LV_DISPINFO*> (pNMHDR);
+	LV_ITEM*		pItem		= &(pDispInfo->item);
+
+	int nListCtrlIndex	= pItem->iItem;
+	int nColumn			= pItem->iSubItem;
+
+	//
+	//  Now give it whatever info it's looking for
+
+	if (pItem->mask & LVIF_TEXT)
+	{
+		//
+		//  Now find the string for this item and display it
+
+		bool	bCache = true;
+		CString strToDisplay;
+		GetDisplayStringForCol ((int) pDispInfo->item.lParam, nColumn, strToDisplay, nListCtrlIndex, &bCache);
+
+		//
+		//  So now we have out string to display, display it...  but only out
+		//  to the length the control is ready to take
+
+		_tcsncpy(pItem->pszText, strToDisplay, (size_t)pItem->cchTextMax - 1);
+		pItem->pszText[pItem->cchTextMax - 1] = TCHAR (NULL);
+
+		if (bCache)
+			pItem->mask |= LVIF_DI_SETITEM;
+
+	}
+
+	*pResult = 0;
+
+} // end OnGetDispInfo
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 //************************************
@@ -829,14 +886,28 @@ void CSongsBestPickerDlg::AddSongToSongListCtrl (int nSongID)
 {
 	CString strToDisplay;
 	GetDisplayStringForCol (nSongID, 0, strToDisplay);
+
+//#define OldWays
+#ifndef OldWays
+	LV_ITEM Item;
+	Item.lParam	  = (LPARAM) nSongID;		
+	Item.pszText  = LPSTR_TEXTCALLBACK;		// using callbacks to get the text
+	Item.mask	  = LVIF_TEXT | LVIF_PARAM;	// lParam and pszText fields active
+	Item.iItem	  = m_oSongList.GetItemCount ();			// position to insert new item
+	Item.iSubItem = 0;
+
+	m_oSongList.InsertItem (&Item);
+#else
+
 	int nIndex = m_oSongList.InsertItem (m_oSongList.GetItemCount (), strToDisplay);
 	m_oSongList.SetItemData (nIndex, nSongID);
 
 	for (int nCol = 1; nCol < m_arrActiveColumns.GetSize (); nCol++)
 	{
-		if (GetDisplayStringForCol (nSongID, nCol, strToDisplay))
+		if (GetDisplayStringForCol (nSongID, nCol, strToDisplay, nIndex))
 			m_oSongList.SetItemText (nIndex, nCol, strToDisplay);
 	}
+#endif
 } // end CSongsBestPickerDlg::AddSongToSongListCtrl
 
 
@@ -872,7 +943,7 @@ void CSongsBestPickerDlg::UpdateSongListSpecificSong (int nSongID, CString strTi
 	CString strToDisplay;
 	for (int nCol = 0; nCol < m_arrActiveColumns.GetSize (); nCol++)
 	{
-		if (GetDisplayStringForCol (nSongID,			nCol, strToDisplay))
+		if (GetDisplayStringForCol (nSongID,			nCol, strToDisplay, nListCtrlIndex))
 			m_oSongList.SetItemText (nListCtrlIndex,	nCol, strToDisplay);
 	}
 
@@ -897,7 +968,7 @@ void CSongsBestPickerDlg::UpdateSongListWonLossSpecificSong (int nSongID)
 	CString strToDisplay;
 	for (int nCol = 0; nCol < m_arrActiveColumns.GetSize (); nCol++)
 	{
-		if (GetDisplayStringForCol (nSongID,			nCol, strToDisplay))
+		if (GetDisplayStringForCol (nSongID,			nCol, strToDisplay, nListCtrlIndex))
 			m_oSongList.SetItemText (nListCtrlIndex,	nCol, strToDisplay);
 	}
 
@@ -1151,7 +1222,9 @@ void CSongsBestPickerDlg::OnExportSongData ()
 		{
 			pOutFile->WriteString (L"\t");
 
-			if (GetDisplayStringForCol (nLastID, nCol, strToDisplay))
+			int nListCtrlIndex = m_oSongList.FindByItemData (nLastID);
+
+			if (GetDisplayStringForCol (nLastID, nCol, strToDisplay, nListCtrlIndex))
 				pOutFile->WriteString (strToDisplay);
 		}
 		pOutFile->WriteString (L"\n");
@@ -1173,10 +1246,13 @@ void CSongsBestPickerDlg::OnExportSongData ()
 // Parameter: int nColIndex
 // Parameter: CString & rstrDisplayString
 //************************************
-bool CSongsBestPickerDlg::GetDisplayStringForCol (int nSongID, int nColIndex, CString& rstrDisplayString)
+bool CSongsBestPickerDlg::GetDisplayStringForCol (int nSongID, int nColIndex, CString& rstrDisplayString, int nListCtrlIndex /* = -1 */, bool* pbCache /* = NULL */)
 {
 	if (nColIndex < 0 || nColIndex >= m_arrActiveColumns.GetSize ())
 		return false;
+
+	if (NULL != pbCache)
+		*pbCache = true;
 
 	switch (m_arrActiveColumns[nColIndex])
 	{
@@ -1232,6 +1308,22 @@ bool CSongsBestPickerDlg::GetDisplayStringForCol (int nSongID, int nColIndex, CS
 			rstrDisplayString = L"0";
 		return true;
 	}
+	case LIST_SONG_LIST_CTRL_INDEX:
+	{
+		if (-1 == nListCtrlIndex)
+			rstrDisplayString = L"";
+		else
+			rstrDisplayString = CUtils::N2S (nListCtrlIndex + 1);
+
+		//
+		//  We don't cache this one
+
+		if (NULL != pbCache)
+			*pbCache = false;
+
+		return true;
+	}
+
 
 	default:
 		return false;
@@ -1285,6 +1377,7 @@ bool CSongsBestPickerDlg::GetColumnSetupInfo (int nColIndex, int& rnColType, CSt
 		rstrColName = L"Artist";
 		rnFormat = LVCFMT_LEFT;
 		rnWidth = (int) ((double) rcSongList.Width () * 0.24);
+		return true;
 	}
 	case LIST_SONG_COL_ALBUM:
 	{
@@ -1292,6 +1385,7 @@ bool CSongsBestPickerDlg::GetColumnSetupInfo (int nColIndex, int& rnColType, CSt
 		rstrColName = L"Album";
 		rnFormat = LVCFMT_LEFT;
 		rnWidth = (int) ((double) rcSongList.Width () * 0.15);
+		return true;
 	}
 	case LIST_SONG_COL_WONLOSS:
 	{
@@ -1299,6 +1393,7 @@ bool CSongsBestPickerDlg::GetColumnSetupInfo (int nColIndex, int& rnColType, CSt
 		rstrColName = L"Record";
 		rnFormat = LVCFMT_CENTER;
 		rnWidth = (int) ((double) rcSongList.Width () * 0.09);
+		return true;
 	}
 	case LIST_SONG_COL_RATING:
 	{
@@ -1306,6 +1401,7 @@ bool CSongsBestPickerDlg::GetColumnSetupInfo (int nColIndex, int& rnColType, CSt
 		rstrColName = L"Rating";
 		rnFormat = LVCFMT_CENTER;
 		rnWidth = (int) ((double) rcSongList.Width () * 0.08);
+		return true;
 	}
 	case LIST_SONG_COL_MP3:
 	{
@@ -1313,6 +1409,7 @@ bool CSongsBestPickerDlg::GetColumnSetupInfo (int nColIndex, int& rnColType, CSt
 		rstrColName = L"MP3";
 		rnFormat = LVCFMT_LEFT;
 		rnWidth = (int) ((double) rcSongList.Width () * 0.10);
+		return true;
 	}
 	case LIST_SONG_COL_SOS:
 	{
@@ -1320,6 +1417,7 @@ bool CSongsBestPickerDlg::GetColumnSetupInfo (int nColIndex, int& rnColType, CSt
 		rstrColName = L"SoS";
 		rnFormat = LVCFMT_LEFT;
 		rnWidth = (int) ((double) rcSongList.Width () * 0.10);
+		return true;
 	}
 	case LIST_SONG_COL_ACTIVE:
 	{
@@ -1327,7 +1425,17 @@ bool CSongsBestPickerDlg::GetColumnSetupInfo (int nColIndex, int& rnColType, CSt
 		rstrColName = L"Act";
 		rnFormat = LVCFMT_CENTER;
 		rnWidth = (int) ((double) rcSongList.Width () * 0.05);
+		return true;
 	}
+	case LIST_SONG_LIST_CTRL_INDEX:
+	{
+		rnColType = LIST_SONG_LIST_CTRL_INDEX;
+		rstrColName = L"#";
+		rnFormat = LVCFMT_RIGHT;
+		rnWidth = (int) ((double) rcSongList.Width () * 0.04);
+		return true;
+	}
+
 
 	default:
 		return false;
@@ -1555,9 +1663,12 @@ void CSongsBestPickerDlg::UpdateGameResultsForSong (int nSongID)
 		m_oSongGameResultList.SetItemData (nIndex, arrOpponents[i]);
 	}
 
+	int nOurRating = 0;
+	m_oSongManager.GetSongRating (nSongID, nOurRating);
+
 	CString strTitle;
 	m_oSongManager.GetSongTitle (nSongID, strTitle);
-	m_strH2HCurrentCaption = L"Results for " + strTitle;
+	m_strH2HCurrentCaption = L"Results for " + strTitle + L" (" + CUtils::N2S (nOurRating) + L")";
 
 	UpdateData (false);
 
@@ -2694,6 +2805,14 @@ int CSongsBestPickerDlg::SortCompareSongListCtrl (LPARAM lParam1, LPARAM lParam2
 		break;
 	}
 
+	case LIST_SONG_LIST_CTRL_INDEX:
+	{
+		int nIndex1 = pDlg->GetListCtrlIndex (nSongID1);
+		int nIndex2 = pDlg->GetListCtrlIndex (nSongID2);
+
+		return nOrderMultiplier * (nIndex1 < nIndex2);
+	}
+
 	case LIST_SONG_COL_SOS:
 	{
 		int nSong1SoS = 0, nSong2SoS = 0;
@@ -2906,6 +3025,22 @@ BOOL CSongsBestPickerDlg::GetSongStillInCompetition (int nSongID)
 } // end CSongsBestPickerDlg::GetSongStillInCompetition
 
 
+
+
+
+//************************************
+// Method:    GetListCtrlIndex
+// FullName:  CSongsBestPickerDlg::GetListCtrlIndex
+// Access:    public 
+// Returns:   int
+// Qualifier:
+// Parameter: int nSongID
+//************************************
+int CSongsBestPickerDlg::GetListCtrlIndex (int nSongID)
+{
+	return m_oSongList.FindByItemData (nSongID);
+
+} // end CSongsBestPickerDlg::GetListCtrlIndex
 
 
 
