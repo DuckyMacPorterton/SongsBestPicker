@@ -29,9 +29,13 @@ enum class EShowingInList {
 	eErrorLog
 };
 
+class CSongListSortCompare;
+
 
 class CSongsBestPickerDlg : public CDialogEx
 {
+	friend CSongListSortCompare;
+
 public:
 	CSongsBestPickerDlg (CWnd* pParent = NULL);
 
@@ -113,6 +117,18 @@ protected:
 	CHotkeyManager			m_oHotkeyManager;
 	CSliderCtrl				m_oVolumeSlider;
 
+	//
+	//  Let's make our song list virtual
+
+	CIntVector		m_vecListCtrlIndexToSongId;
+	CIntIntMap		m_mapSongIdToListCtrlIndex;
+
+	int		GetSongIdFromListCtrlIndex	(int nListCtrlIndex);
+	int		GetListCtrlIndexFromSongId	(int nSongId);
+
+	bool	SetSongPlacementInListCtrl	(int nSongId, int nListCtrlIndex);
+	void	SetListCtrlItemCount		(int nListCtrlItemCount);
+
 protected:
 	DECLARE_MESSAGE_MAP()
 
@@ -146,7 +162,7 @@ public:
 	void	OnResetSongStatistics	();
 
 	void	UpdateSongList				(bool bInitCols = false);
-	void	UpdateSongListSpecificSong	(int nSongID, CString strTitle = L"", CString strArtist = L"", CString strAlbum = L"", CString strPathToMp3 = L"");
+	void	UpdateSongListSpecificSong	(int nSongID);
 	void	UpdateSongListWonLossSpecificSong (int nSongID);
 	void	AddSongToSongListCtrl		(int nSongID);
 	
@@ -167,7 +183,6 @@ public:
 	CString	GetSongPathToMp3		(int nSongID);
 	int		GetCurrentPodSongRank	(int nSongID);
 	BOOL	GetSongStillInCompetition (int nSongID);
-	int		GetListCtrlIndex		(int nSongID);
 
 	bool	GetWonLossRecord	(int nSongID, int& rnWon, int& rnLost);
 	bool	GetSongRating		(int nSongID, int& rnRating);

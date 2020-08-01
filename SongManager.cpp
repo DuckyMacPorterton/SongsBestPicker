@@ -1149,6 +1149,45 @@ bool CSongManager::GetNextSong(CString& rstrSongTitle, CString& rstrSongArtist, 
 
 
 //************************************
+// Method:    GetNextSong
+// FullName:  CSongManager::GetNextSong
+// Access:    public 
+// Returns:   bool
+// Qualifier:
+// Parameter: int & rnSongID
+// Parameter: int nPrevSongID
+//
+//
+//
+//************************************
+bool CSongManager::GetNextSong (int& rnSongID, int nPrevSongID /*= -1*/)
+{
+	if (NULL == m_pDB)
+		return false;
+
+	try
+	{
+		CString strQuery;
+		strQuery.Format (L"select * from %s where %s > %d order by %s limit 1", TBL_SONGS, DB_COL_SONG_ID, nPrevSongID, DB_COL_SONG_ID);
+	
+		CppSQLite3Query query = m_pDB->execQuery (strQuery);
+		if (query.eof ())
+			return false;
+
+		rnSongID		= query.getIntField		(DB_COL_SONG_ID);
+		return true;
+	}
+	catch (CppSQLite3Exception& e) {
+		return SetError (e.errorMessage ());
+	}
+	catch (CException* e) {
+		return SetError (CUtils::GetErrorMessageFromException (e, true));
+	}
+} // end CSongManager::GetNextSong
+
+
+
+//************************************
 // Method:    GetSongDetails
 // FullName:  CSongManager::GetSongDetails
 // Access:    public 

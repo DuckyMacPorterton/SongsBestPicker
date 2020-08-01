@@ -42,6 +42,7 @@ public:
 	bool	GetHeadToHeadForSong	(int nSongID, CIntArray&rarrOpponents, CIntArray& rarrMargins);
 
 	bool	GetSongCount	(int& rnSongCount);
+	bool	GetNextSong		(int& rnSongID, int nPrevSongID = -1);
 	bool	GetNextSong		(CString& rstrSongTitle, CString& rstrSongArtist, CString& rstrSongAlbum, CString& rstrPathToMp3, int& rnSongID, int nPrevSongID = -1);
 	bool	GetSongDetails	(int nSongID, CString& rstrSongTitle, CString& rstrSongArtist, CString& rstrSongAlbum, CString& rstrPathToMp3, BOOL& rbSongStillInCompetition);
 	bool	GetSongTitle	(int nSongID, CString& rstrSongTitle);

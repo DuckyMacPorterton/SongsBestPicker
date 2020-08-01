@@ -268,7 +268,98 @@ BEGIN_MESSAGE_MAP(CSongsBestPickerDlg, CDialogEx)
 END_MESSAGE_MAP()
 
 
-// CDougHotkeysDlg message handlers
+
+//************************************
+// Method:    SetListCtrlItemCount
+// FullName:  CSongsBestPickerDlg::SetListCtrlItemCount
+// Access:    protected 
+// Returns:   void
+// Qualifier:
+// Parameter: int nListCtrlItemCount
+//************************************
+void CSongsBestPickerDlg::SetListCtrlItemCount (int nListCtrlItemCount)
+{
+	m_vecListCtrlIndexToSongId.resize (max (0, nListCtrlItemCount));
+	m_oSongList.SetItemCountEx (max (0, nListCtrlItemCount)); // has to be after changing size of m_arrListCtrlIndexToSongId
+}
+
+
+//************************************
+// Method:    GetSongIdFromListCtrlIndex
+// FullName:  CSongsBestPickerDlg::GetSongIdFromListCtrlIndex
+// Access:    protected 
+// Returns:   int
+// Qualifier:
+// Parameter: int nListCtrlIndex
+//************************************
+int CSongsBestPickerDlg::GetSongIdFromListCtrlIndex (int nListCtrlIndex)
+{
+	if (nListCtrlIndex < 0 || nListCtrlIndex >= m_vecListCtrlIndexToSongId.size ())
+		return -1;
+
+	return m_vecListCtrlIndexToSongId[nListCtrlIndex];
+
+} // end CSongsBestPickerDlg::GetSongIdFromListCtrlIndex
+
+
+
+//************************************
+// Method:    GetListCtrlIndexFromSongId
+// FullName:  CSongsBestPickerDlg::GetListCtrlIndexFromSongId
+// Access:    protected 
+// Returns:   int
+// Qualifier:
+// Parameter: int nSongId
+//************************************
+int CSongsBestPickerDlg::GetListCtrlIndexFromSongId (int nSongId)
+{
+	auto it = m_mapSongIdToListCtrlIndex.find (nSongId);
+	if (it == m_mapSongIdToListCtrlIndex.end ())
+		return -1;
+
+	return it->second;
+
+} // end CSongsBestPickerDlg::GetListCtrlIndexFromSongId
+
+
+
+//************************************
+// Method:    SetSongPlacementInListCtrl
+// FullName:  CSongsBestPickerDlg::SetSongPlacementInListCtrl
+// Access:    protected 
+// Returns:   void
+// Qualifier:
+// Parameter: int nSongId
+// Parameter: int nListCtrlIndex
+//************************************
+bool CSongsBestPickerDlg::SetSongPlacementInListCtrl (int nSongId, int nListCtrlIndex)
+{
+	if ((nSongId < 0) || (nListCtrlIndex < 0))
+		return false;
+
+	//
+	//  Make sure our arrays are big enough...  and any uninitialized spots show
+	//  as uninitialized.
+
+	if (nListCtrlIndex >= m_vecListCtrlIndexToSongId.size ())
+	{
+		int nOldSize = (int) m_vecListCtrlIndexToSongId.size ();
+		m_vecListCtrlIndexToSongId.resize (nListCtrlIndex + 1);
+		for (int i = nOldSize; i < nListCtrlIndex; i ++)
+			m_vecListCtrlIndexToSongId[i] = -1;
+	}
+
+	//
+	//  And actually set our data
+
+	m_vecListCtrlIndexToSongId[nListCtrlIndex]	= nSongId;
+	m_mapSongIdToListCtrlIndex[nSongId]			= nListCtrlIndex;
+
+	return true;
+
+} // end CSongsBestPickerDlg::SetSongPlacementInListCtrl
+
+
 
 BOOL CSongsBestPickerDlg::OnInitDialog()
 {
@@ -504,6 +595,7 @@ void CSongsBestPickerDlg::OnGetDispInfo(NMHDR* pNMHDR, LRESULT* pResult)
 
 	int nListCtrlIndex	= pItem->iItem;
 	int nColumn			= pItem->iSubItem;
+	int nSongId			= GetSongIdFromListCtrlIndex (nListCtrlIndex);
 
 	//
 	//  Now give it whatever info it's looking for
@@ -515,7 +607,7 @@ void CSongsBestPickerDlg::OnGetDispInfo(NMHDR* pNMHDR, LRESULT* pResult)
 
 		bool	bCache = true;
 		CString strToDisplay;
-		GetDisplayStringForCol ((int) pDispInfo->item.lParam, nColumn, strToDisplay, nListCtrlIndex, &bCache);
+		GetDisplayStringForCol (nSongId, nColumn, strToDisplay, nListCtrlIndex, &bCache);
 
 		//
 		//  So now we have out string to display, display it...  but only out
@@ -826,46 +918,22 @@ void CSongsBestPickerDlg::UpdateSongList (bool bInitCols /* = false */)
 	}
 
 	//
-	//  For now, assume we'll have few enough songs that we don't need
-	//  to do a virtual list control
-	//
-	//  Though to make it look good when we update our stats, we might want to.
-	//  That or make our update more targeted.
+	//  Now that we're virtual it's pretty straightforward
 
-	int		nLastID		= -1;
-	CString strSongTitle, strSongArtist, strSongAlbum, strPathToMp3, strWonLoss;
-	int		nSongCount	= 0, nWins = 0, nLosses = 0;
-
+	int	nSongCount	= 0;
 	if (! m_oSongManager.GetSongCount (nSongCount)) {
 		SetError (m_oSongManager.GetError (true));
 		return;
 	}
 
-	//
-	//  Clear it out
-
-	m_oSongList.SetRedraw (false);
-	m_oSongList.DeleteAllItems ();
-
-	//
-	// Load 'em up!
-
-	for (int i = 0; i < nSongCount; i ++)
+	int nSongID = -1, nListCtrlIndex = -1;
+	while (m_oSongManager.GetNextSong (nSongID, nSongID))
 	{
-		if (! m_oSongManager.GetNextSong (strSongTitle, strSongArtist, strSongAlbum, strPathToMp3, nLastID, nLastID))
-		{
-			SetError (m_oSongManager.GetError (true));
-			m_oSongList.DeleteAllItems ();
-			m_oSongList.SetRedraw (true);
-			m_oSongList.UpdateWindow ();
-			return;
-		}
+		nListCtrlIndex ++;
+		SetSongPlacementInListCtrl (nSongID, nListCtrlIndex);
+	}
 
-		AddSongToSongListCtrl (nLastID);
-
-	} // end loop through songs
-
-	m_oSongList.SetRedraw (true);
+	SetListCtrlItemCount (nSongCount);
 	m_oSongList.UpdateWindow ();
 
 	UpdateSongCount ();
@@ -884,30 +952,10 @@ void CSongsBestPickerDlg::UpdateSongList (bool bInitCols /* = false */)
 //************************************
 void CSongsBestPickerDlg::AddSongToSongListCtrl (int nSongID)
 {
-	CString strToDisplay;
-	GetDisplayStringForCol (nSongID, 0, strToDisplay);
+	int nPrevSize = m_oSongList.GetItemCount ();
+	SetListCtrlItemCount (nPrevSize + 1);
+	SetSongPlacementInListCtrl (nSongID, nPrevSize);	//  Put it at the end... 
 
-//#define OldWays
-#ifndef OldWays
-	LV_ITEM Item;
-	Item.lParam	  = (LPARAM) nSongID;		
-	Item.pszText  = LPSTR_TEXTCALLBACK;		// using callbacks to get the text
-	Item.mask	  = LVIF_TEXT | LVIF_PARAM;	// lParam and pszText fields active
-	Item.iItem	  = m_oSongList.GetItemCount ();			// position to insert new item
-	Item.iSubItem = 0;
-
-	m_oSongList.InsertItem (&Item);
-#else
-
-	int nIndex = m_oSongList.InsertItem (m_oSongList.GetItemCount (), strToDisplay);
-	m_oSongList.SetItemData (nIndex, nSongID);
-
-	for (int nCol = 1; nCol < m_arrActiveColumns.GetSize (); nCol++)
-	{
-		if (GetDisplayStringForCol (nSongID, nCol, strToDisplay, nIndex))
-			m_oSongList.SetItemText (nIndex, nCol, strToDisplay);
-	}
-#endif
 } // end CSongsBestPickerDlg::AddSongToSongListCtrl
 
 
@@ -921,9 +969,9 @@ void CSongsBestPickerDlg::AddSongToSongListCtrl (int nSongID)
 // Qualifier:
 // Parameter: int nSongID
 //************************************
-void CSongsBestPickerDlg::UpdateSongListSpecificSong (int nSongID, CString strTitle /* = L"" */, CString strArtist /* = L"" */, CString strAlbum /* = L"" */, CString strPathToMp3 /* = L"" */)
+void CSongsBestPickerDlg::UpdateSongListSpecificSong (int nSongID)
 {
-	int nListCtrlIndex = m_oSongList.FindByItemData (nSongID);
+	int nListCtrlIndex = GetListCtrlIndexFromSongId (nSongID);
 	if (-1 == nListCtrlIndex)
 	{
 		//
@@ -933,19 +981,10 @@ void CSongsBestPickerDlg::UpdateSongListSpecificSong (int nSongID, CString strTi
 		return;
 	}
 
-#ifdef needThis
-	if (strTitle.IsEmpty ())
-	{
-		m_oSongManager.GetSongDetails (nSongID, strTitle, strArtist, strAlbum, strPathToMp3);
-	}
-#endif
+	//
+	//  Otherwise just tell it to redraw - updated data will come automatically from OnGetDispInfo
 
-	CString strToDisplay;
-	for (int nCol = 0; nCol < m_arrActiveColumns.GetSize (); nCol++)
-	{
-		if (GetDisplayStringForCol (nSongID,			nCol, strToDisplay, nListCtrlIndex))
-			m_oSongList.SetItemText (nListCtrlIndex,	nCol, strToDisplay);
-	}
+	m_oSongList.RedrawItems (nListCtrlIndex, nListCtrlIndex);
 
 } // end CSongsBestPickerDlg::UpdateSongListSpecificSong
 
@@ -961,6 +1000,9 @@ void CSongsBestPickerDlg::UpdateSongListSpecificSong (int nSongID, CString strTi
 //************************************
 void CSongsBestPickerDlg::UpdateSongListWonLossSpecificSong (int nSongID)
 {
+	UpdateSongListSpecificSong (nSongID);
+
+#ifdef Oldway
 	int nListCtrlIndex = m_oSongList.FindByItemData (nSongID);
 	if (-1 == nListCtrlIndex)
 		return;
@@ -971,7 +1013,7 @@ void CSongsBestPickerDlg::UpdateSongListWonLossSpecificSong (int nSongID)
 		if (GetDisplayStringForCol (nSongID,			nCol, strToDisplay, nListCtrlIndex))
 			m_oSongList.SetItemText (nListCtrlIndex,	nCol, strToDisplay);
 	}
-
+#endif
 } // end CSongsBestPickerDlg::UpdateSongListWonLossSpecificSong
 
 
@@ -2539,6 +2581,194 @@ void CSongsBestPickerDlg::OnHeaderClick(NMHDR* pNMHDR, LRESULT* pResult)
 
 
 
+
+
+class CSongListSortCompare
+{
+public:
+	CSongListSortCompare (CSongsBestPickerDlg* pMainDlg, bool bAscending, int nColToSort) { m_pMainDlg = pMainDlg; m_bAscending = bAscending; m_nColToSort = nColToSort; };
+
+	bool operator()(int nSongID1, int nSongID2) const
+	{
+		//
+		//  Get what we need to do our comparison
+
+		bool bResult = false;
+
+		int nOrderMultiplier = 1;
+		if (!m_bAscending)
+			nOrderMultiplier = -1;
+
+		//
+		//  Sort differently based on which column we're sorting
+
+		switch (m_pMainDlg->GetColumnType (m_pMainDlg->m_nSongsSortCol))
+		{
+		case LIST_SONG_COL_ARTIST:
+		{
+			//
+			//  Sorting on name column...  this is either alpha or by classification order
+
+			CString str1 = m_pMainDlg->GetSongArtist (nSongID1);
+			CString str2 = m_pMainDlg->GetSongArtist (nSongID2);
+
+			int nResult = str1.CompareNoCase (str2);
+			if (0 != nResult)
+				return (m_bAscending ? (nResult < 0) : (nResult > 0));
+			//
+			//  Otherwise return the title compare
+			break;
+		}
+		case LIST_SONG_COL_ALBUM:
+		{
+			//
+			//  Sorting on name column...  this is either alpha or by classification order
+
+			CString str1 = m_pMainDlg->GetSongAlbum (nSongID1);
+			CString str2 = m_pMainDlg->GetSongAlbum (nSongID2);
+
+			int nResult = str1.CompareNoCase (str2);
+			if (0 != nResult)
+				return (m_bAscending ? (nResult < 0) : (nResult > 0));
+			//
+			//  Otherwise return the title compare
+			break;
+		}
+
+		case LIST_SONG_COL_WONLOSS:
+		{
+			//
+			//  Sorting on confidence
+
+			int nSong1Wins = 0, nSong1Losses = 0;
+			int nSong2Wins = 0, nSong2Losses = 0;
+
+			m_pMainDlg->GetWonLossRecord (nSongID1, nSong1Wins, nSong1Losses);
+			m_pMainDlg->GetWonLossRecord (nSongID2, nSong2Wins, nSong2Losses);
+
+			float fWinPct1 = 0, fWinPct2 = 0;
+			if (nSong1Wins + nSong1Losses > 0)
+				fWinPct1 = ((float)nSong1Wins / (nSong1Wins + nSong1Losses));
+			if (nSong2Wins + nSong2Losses > 0)
+				fWinPct2 = ((float)nSong2Wins / (nSong2Wins + nSong2Losses));
+
+			if (fWinPct1 < fWinPct2)
+				return (m_bAscending ? true : false);
+			if (fWinPct1 > fWinPct2)
+				return (m_bAscending ? false: true);
+
+			//
+			//  If win pct is the same, reward or punish # of wins / losses
+
+			if (nSong1Wins > nSong2Wins)
+				return (m_bAscending ? true : false);
+			if (nSong2Wins > nSong1Wins)
+				return (m_bAscending ? false: true);
+
+			if (nSong1Losses > nSong2Losses)
+				return (m_bAscending ? true : false);
+			if (nSong2Losses > nSong1Losses)
+				return (m_bAscending ? false: true);
+
+			//
+			//  Otherwise return the title compare
+			break;
+		}
+		case LIST_SONG_COL_RATING:
+		{
+			int nSong1Rating = 0, nSong2Rating = 0;
+
+			m_pMainDlg->GetSongRating (nSongID1, nSong1Rating);
+			m_pMainDlg->GetSongRating (nSongID2, nSong2Rating);
+
+			if (nSong1Rating < nSong2Rating)
+				return (m_bAscending ? true : false);
+			if (nSong1Rating > nSong2Rating)
+				return (m_bAscending ? false: true);
+
+			//
+			//  Otherwise return the title compare
+			break;
+		}
+		case LIST_SONG_COL_MP3:
+		{
+			CString str1 = m_pMainDlg->GetSongPathToMp3 (nSongID1);
+			CString str2 = m_pMainDlg->GetSongPathToMp3 (nSongID2);
+
+			int nResult = str1.CompareNoCase (str2);
+			if (0 != nResult)
+				return (m_bAscending ? (nResult < 0) : (nResult > 0));
+			//
+			//  Otherwise return the title compare
+			break;
+		}
+		case LIST_SONG_COL_ACTIVE:
+		{
+			BOOL b1 = m_pMainDlg->GetSongStillInCompetition (nSongID1);
+			BOOL b2 = m_pMainDlg->GetSongStillInCompetition (nSongID2);
+
+			if (b1 != b2)
+				return (m_bAscending ? b1 < b2 : b1 > b2);
+
+			//
+			//  Otherwise return the title compare
+			break;
+		}
+
+		case LIST_SONG_LIST_CTRL_INDEX:
+		{
+			int nIndex1 = m_pMainDlg->GetListCtrlIndexFromSongId (nSongID1);
+			int nIndex2 = m_pMainDlg->GetListCtrlIndexFromSongId (nSongID2);
+
+			return (m_bAscending ? nIndex1 < nIndex2 : nIndex1 > nIndex2);
+		}
+
+		case LIST_SONG_COL_SOS:
+		{
+			int nSong1SoS = 0, nSong2SoS = 0;
+
+			m_pMainDlg->GetSongStrengthOfSchedule (nSongID1, nSong1SoS);
+			m_pMainDlg->GetSongStrengthOfSchedule (nSongID2, nSong2SoS);
+
+			if (nSong1SoS < nSong2SoS)
+				return (m_bAscending ? true : false);
+			if (nSong1SoS > nSong2SoS)
+				return (m_bAscending ? false: true);
+
+			//
+			//  Otherwise return the title compare
+			break;
+		}
+		} // end switch
+
+		//
+		//  Title compare is our backup sort for every column.   That's why
+		//  it's not part of the if...else structure
+
+	//	if (LIST_SONG_COL_TITLE == m_pMainDlg->m_nSongsSortCol)
+		{
+			//
+			//  Sorting on name column...  this is either alpha or by classification order
+
+			CString str1 = m_pMainDlg->GetSongTitle (nSongID1);
+			CString str2 = m_pMainDlg->GetSongTitle (nSongID2);
+
+			bool bUsAscending = m_bAscending;
+			if (m_pMainDlg->m_nSongsSortCol != LIST_SONG_COL_TITLE)
+				bUsAscending = 1;	//  If we're a secondary sort col, we're always ascending.
+
+			int nResult = str1.CompareNoCase (str2);
+			return (bUsAscending ? (nResult < 0) : (nResult > 0));
+		}
+	} // end operator()
+
+protected:
+	CSongsBestPickerDlg*	m_pMainDlg		= NULL;;
+	bool					m_bAscending	= false;
+	int						m_nColToSort	= 0;
+}; // end CCleanupConfirmSortCompare
+
+
 //************************************
 // Method:    SortColSongList
 // FullName:  CSongsBestPickerDlg::SortColSongList
@@ -2566,7 +2796,19 @@ void CSongsBestPickerDlg::SortColSongList (int nCol)
 	m_nSongsSortCol = nCol;
 
 	CWaitCursor wc;
-	m_oSongList.SortItems (SortCompareSongListCtrl, (DWORD_PTR) this);
+	std::sort (m_vecListCtrlIndexToSongId.begin (), m_vecListCtrlIndexToSongId.end (), CSongListSortCompare (this, m_bSongsSortAscending, m_nSongsSortCol) );
+
+	//
+	//  Now update our SongID => ListCtrl lookup
+
+	for (int i = 0; i < m_vecListCtrlIndexToSongId.size (); i ++)
+	{
+		int nSongID = m_vecListCtrlIndexToSongId[i];
+		m_mapSongIdToListCtrlIndex[nSongID] = i;
+	}
+
+	m_oSongList.Invalidate ();
+	m_oSongList.RedrawWindow ();
 
 } // end CSongsBestPickerDlg::SortColSongList
 
@@ -2682,177 +2924,6 @@ bool CSongsBestPickerDlg::SetError (CString strError, bool bAlertUser /* = false
 	return bRetVal;
 
 } // end CSongsBestPickerDlg::SetError
-
-
-
-int CSongsBestPickerDlg::SortCompareSongListCtrl (LPARAM lParam1, LPARAM lParam2, LPARAM lParamSort)
-{
-	//  It's passing in the GetItemData number to us...  we're sorting on that
-	//  anyway.
-
-	int nSongID1 = (int) lParam1;
-	int nSongID2 = (int) lParam2;
-
-	CSongsBestPickerDlg* pDlg = (CSongsBestPickerDlg*) lParamSort;
-
-	int nOrderMultiplier = 1;
-	if (! pDlg->m_bSongsSortAscending)
-		nOrderMultiplier = -1;
-
-	//
-	//  Sort differently based on which column we're sorting
-
-	switch (pDlg->GetColumnType (pDlg->m_nSongsSortCol))
-	{
-	case LIST_SONG_COL_ARTIST:
-	{
-		//
-		//  Sorting on name column...  this is either alpha or by classification order
-
-		CString str1 = pDlg->GetSongArtist (nSongID1);
-		CString str2 = pDlg->GetSongArtist (nSongID2);
-
-		int nResult = str1.CompareNoCase (str2);
-		if (0 != nResult)
-			return nOrderMultiplier * str1.CompareNoCase(str2);
-		//
-		//  Otherwise return the title compare
-		break;
-	}
-	case LIST_SONG_COL_ALBUM:
-	{
-		//
-		//  Sorting on name column...  this is either alpha or by classification order
-
-		CString str1 = pDlg->GetSongAlbum (nSongID1);
-		CString str2 = pDlg->GetSongAlbum (nSongID2);
-
-		return nOrderMultiplier * str1.CompareNoCase(str2);
-	}
-
-	case LIST_SONG_COL_WONLOSS: 
-	{
-		//
-		//  Sorting on confidence
-
-		int nSong1Wins = 0, nSong1Losses = 0;
-		int nSong2Wins = 0, nSong2Losses = 0;
-
-		pDlg->GetWonLossRecord (nSongID1, nSong1Wins, nSong1Losses);
-		pDlg->GetWonLossRecord (nSongID2, nSong2Wins, nSong2Losses);
-
-		float fWinPct1 = 0, fWinPct2 = 0;
-		if (nSong1Wins + nSong1Losses > 0)
-			fWinPct1 = ((float)nSong1Wins / (nSong1Wins + nSong1Losses));
-		if (nSong2Wins + nSong2Losses > 0)
-			fWinPct2 = ((float)nSong2Wins / (nSong2Wins + nSong2Losses));
-
-		if (fWinPct1 < fWinPct2)
-			return nOrderMultiplier * -1;
-		if (fWinPct1 > fWinPct2)
-			return nOrderMultiplier * 1;
-
-		//
-		//  If win pct is the same, reward or punish # of wins / losses
-
-		if (nSong1Wins > nSong2Wins)
-			return 1 * nOrderMultiplier;
-		if (nSong2Wins > nSong1Wins)
-			return -1 * nOrderMultiplier;
-
-		if (nSong1Losses > nSong2Losses)
-			return 1 * nOrderMultiplier;
-		if (nSong2Losses > nSong1Losses)
-			return -1 * nOrderMultiplier;
-
-		//
-		//  Otherwise return the title compare
-		break;
-	}
-	case LIST_SONG_COL_RATING:
-	{
-		int nSong1Rating = 0, nSong2Rating = 0;
-
-		pDlg->GetSongRating (nSongID1, nSong1Rating);
-		pDlg->GetSongRating (nSongID2, nSong2Rating);
-
-		if (nSong1Rating < nSong2Rating)
-			return nOrderMultiplier * -1;
-		if (nSong1Rating > nSong2Rating)
-			return nOrderMultiplier * 1;
-
-		//
-		//  Otherwise return the title compare
-		break;
-	}
-	case LIST_SONG_COL_MP3:
-	{
-		CString str1 = pDlg->GetSongPathToMp3 (nSongID1);
-		CString str2 = pDlg->GetSongPathToMp3 (nSongID2);
-
-		return nOrderMultiplier * str1.CompareNoCase(str2);
-	}
-	case LIST_SONG_COL_ACTIVE:
-	{
-		BOOL b1 = pDlg->GetSongStillInCompetition (nSongID1);
-		BOOL b2 = pDlg->GetSongStillInCompetition (nSongID2);
-
-		if (b1 != b2)
-			return nOrderMultiplier * (b1 < b2);
-
-		//
-		//  Otherwise return the title compare
-		break;
-	}
-
-	case LIST_SONG_LIST_CTRL_INDEX:
-	{
-		int nIndex1 = pDlg->GetListCtrlIndex (nSongID1);
-		int nIndex2 = pDlg->GetListCtrlIndex (nSongID2);
-
-		return nOrderMultiplier * (nIndex1 < nIndex2);
-	}
-
-	case LIST_SONG_COL_SOS:
-	{
-		int nSong1SoS = 0, nSong2SoS = 0;
-
-		pDlg->GetSongStrengthOfSchedule (nSongID1, nSong1SoS);
-		pDlg->GetSongStrengthOfSchedule (nSongID2, nSong2SoS);
-
-		if (nSong1SoS < nSong2SoS)
-			return nOrderMultiplier * -1;
-		if (nSong1SoS > nSong2SoS)
-			return nOrderMultiplier * 1;
-
-		//
-		//  Otherwise return the title compare
-		break;
-	}
-	} // end switch
-
-	//
-	//  Title compare is our backup sort for every column.   That's why
-	//  it's not part of the if...else structure
-
-//	if (LIST_SONG_COL_TITLE == pDlg->m_nSongsSortCol)
-	{
-		//
-		//  Sorting on name column...  this is either alpha or by classification order
-
-		CString str1 = pDlg->GetSongTitle (nSongID1);
-		CString str2 = pDlg->GetSongTitle (nSongID2);
-
-		if (pDlg->m_nSongsSortCol != LIST_SONG_COL_TITLE)
-			nOrderMultiplier = 1;	//  If we're a secondary sort col, we're always ascending.
-
-		return nOrderMultiplier * str1.CompareNoCase(str2); // We always do secondary sort ascending
-	}
-
-
-	return 0;
-
-} // end compare items
 
 
 
@@ -3023,24 +3094,6 @@ BOOL CSongsBestPickerDlg::GetSongStillInCompetition (int nSongID)
 	return bSongStillInCompetition;
 
 } // end CSongsBestPickerDlg::GetSongStillInCompetition
-
-
-
-
-
-//************************************
-// Method:    GetListCtrlIndex
-// FullName:  CSongsBestPickerDlg::GetListCtrlIndex
-// Access:    public 
-// Returns:   int
-// Qualifier:
-// Parameter: int nSongID
-//************************************
-int CSongsBestPickerDlg::GetListCtrlIndex (int nSongID)
-{
-	return m_oSongList.FindByItemData (nSongID);
-
-} // end CSongsBestPickerDlg::GetListCtrlIndex
 
 
 
@@ -3678,7 +3731,7 @@ void CSongsBestPickerDlg::OnDropFiles (HDROP hDropInfo)
 
 		int nNewSongID = -1;
 		if (m_oSongManager.AddSong (nNewSongID, strTitle, strPathToMp3, strArtist, strAlbum))
-			UpdateSongListSpecificSong (nNewSongID, strTitle, strArtist, strAlbum, strPathToMp3);
+			UpdateSongListSpecificSong (nNewSongID);
 		else
 			SetError (m_oSongManager.GetError (true));
 
