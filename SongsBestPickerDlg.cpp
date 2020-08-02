@@ -2362,7 +2362,7 @@ void CSongsBestPickerDlg::OnItemChangedSongList (NMHDR* pNMHDR, LRESULT* pResult
 		if (-1 == nListCtrlIndex) 
 			nSongID = -1;
 		else {
-			nSongID = (int)m_oSongList.GetItemData (nListCtrlIndex);
+			nSongID  = GetSongIdFromListCtrlIndex (nListCtrlIndex);
 			UpdateGameResultsForSong (nSongID);
 		} // end if we have a valid song to check out
 
@@ -3246,7 +3246,7 @@ void CSongsBestPickerDlg::OnDeleteSongFromList ()
 	if (IDYES != AfxMessageBox (L"Do you really want to delete the song: " + strSong + L"\r\n\r\nThis will only remove the song from this software, not delete it from your disk", MB_YESNO | MB_DEFBUTTON2))
 		return;
 
-	int nSongID = (int) m_oSongList.GetItemData (nSelectedSong);
+	int nSongID  = GetSongIdFromListCtrlIndex (nSelectedSong);
 	if (! m_oSongManager.DeleteSong (nSongID))
 	{
 		SetError (L"Error deleting song: " + m_oSongManager.GetError (true), true);
@@ -3279,7 +3279,7 @@ void CSongsBestPickerDlg::OnEditSongInfo ()
 	if (-1 == nCurListCtrlIndex)
 		return;
 
-	int nSongID = (int) m_oSongList.GetItemData (nCurListCtrlIndex);
+	int nSongID = GetSongIdFromListCtrlIndex (nCurListCtrlIndex);
 	LoadSongIntoPlayer (nSongID);
 	MakePlayerInfoEditable (true);	// Have to call this after load song into player
 
@@ -3300,7 +3300,7 @@ void CSongsBestPickerDlg::OnPlaySongFromSongList ()
 	if (-1 == nSelectedSong)
 		return;
 
-	int nSongID = (int) m_oSongList.GetItemData (nSelectedSong);
+	int nSongID = GetSongIdFromListCtrlIndex (nSelectedSong);
 	LoadSongIntoPlayer (nSongID);
 	PlaySong ();
 
@@ -3804,7 +3804,7 @@ void CSongsBestPickerDlg::OnCopySongMp3 ()
 	if (-1 == nCurListCtrlIndex)
 		return;
 
-	int nSongID = (int) m_oSongList.GetItemData (nCurListCtrlIndex);
+	int nSongID = GetSongIdFromListCtrlIndex (nCurListCtrlIndex);
 	if (-1 == nSongID)
 		return;
 
