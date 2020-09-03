@@ -14,3 +14,4 @@ This runs those through a modified ELO rating algorithm that includes a Margin o
 
 Over time, you'll get interesting song ratings that sometimes surprise you.
 
+The absurdly awful name for this project ("SongsBestPicker") came because I knew when I looked for it in my directory of projects, "Songs", would be what I was thinking.  So I started it with Songs and the rest of that ever-so-poetic name justed flowed out, like sewage from an overturned port-a-john.
