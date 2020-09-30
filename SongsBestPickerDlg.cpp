@@ -13,6 +13,8 @@
 #include "HotkeyCommand.h"
 
 #include <regex>
+#include "AboutBoxDlg.h"
+#include "SplashWindow.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -152,7 +154,9 @@ BOOL CSongsBestPickerDlg::PreTranslateMessage (MSG* pMsg)
 //		OnKeyUp (0, 0, 0);
 	}
 
-
+	if (CSplashWindow::PreTranslateAppMessage(pMsg))
+        return TRUE;
+  
 	return CDialog::PreTranslateMessage(pMsg);
 }
 
@@ -232,6 +236,8 @@ BEGIN_MESSAGE_MAP(CSongsBestPickerDlg, CDialogEx)
 	ON_COMMAND(ID_VIEW_ERRORLOGS,		OnViewErrorLog)
 	ON_COMMAND(ID_VIEW_CLEARERRORLOG,	OnClearErrorLog)
 	ON_COMMAND(ID_COPY_SONG_MP3,		OnCopySongMp3)
+
+	ON_COMMAND(ID_ABOUT_ABOUTSONGSBESTPICKER, OnAbout)
 
 	ON_WM_TIMER()
 
@@ -380,6 +386,8 @@ BOOL CSongsBestPickerDlg::OnInitDialog()
 	ChangeWindowMessageFilter (WM_DROPFILES,	MSGFLT_ADD);
 	ChangeWindowMessageFilter (WM_COPYDATA,		MSGFLT_ADD);
 	ChangeWindowMessageFilter (0x0049,			MSGFLT_ADD);
+
+	CSplashWindow::ShowSplashScreen (this, L"", 4000);
 
 	//
 	//  Set the default columns, if we haven't already
@@ -4014,6 +4022,27 @@ void CSongsBestPickerDlg::OnBnClickedDefault ()
 	//  Do nothing
 
 } // end CSongsBestPickerDlg::OnBnClickedDefault
+
+
+
+//************************************
+// Method:    OnAbout
+// FullName:  CSongsBestPickerDlg::OnAbout
+// Access:    public 
+// Returns:   void
+// Qualifier:
+//
+//
+//
+//************************************
+void CSongsBestPickerDlg::OnAbout ()
+{
+//	CAboutBoxDlg dlg;
+//	dlg.DoModal ();
+
+	CSplashWindow::ShowSplashScreen (this, L"");
+
+} // end CSongsBestPickerDlg::OnAbout
 
 
 

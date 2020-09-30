@@ -5,6 +5,8 @@
 #include <mciapi.h>
 #include "typedefs.h"
 
+class CVersionInfo;
+
 class CUtils
 {
 public:
@@ -76,6 +78,9 @@ public:
 	static bool	    EnsureWindowIsVisible (CRect& rc);
 
 
+	static	CString		GetProductVersion ();
+	static	bool		GetProductVersionDetails (CVersionInfo* pVersionInfo);
+	static	CString		GetExeName (bool bReturnFullPath = false);
 };
 
 #define N2S		NumberToString

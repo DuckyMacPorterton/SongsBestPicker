@@ -272,4 +272,6 @@ public:
 
 	void OnBnClickedDefault ();
 
+	void OnAbout ();
+
 };

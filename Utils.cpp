@@ -3,6 +3,7 @@
 #include <direct.h>
 #include "MultiMon/Monitors.h"
 #include "MultiMon/MultiMonitor.h"
+#include "ModuleVersion.h"
 
 
 //////////////////////////////////////////////////////////////////////
@@ -1426,3 +1427,75 @@ bool CUtils::CopyTextFromClipboard (CString& rStr, bool bSilent /* = false */)
 
 
 
+
+
+
+//////////////////////////////////////////////////////////////////////
+//
+//    G E T   P R O D U C T   V E R S I O N 
+//
+//
+CString CUtils::GetProductVersion ()
+{
+	CVersionInfo VI;
+	if (! GetProductVersionDetails (&VI))
+		return L"Error Getting Product Version";
+
+	CString strVersion = VI.GetVersionString ();
+	return strVersion;
+
+} // end GetProductVersion
+
+
+//////////////////////////////////////////////////////////////////////
+//
+//    G E T   P R O D U C T   V E R S I O N   D E T A I L S 
+//
+//
+bool CUtils::GetProductVersionDetails (CVersionInfo* pVersionInfo)
+{
+	if (NULL == pVersionInfo)
+		return false;
+
+	CString strExeName = GetExeName ();
+
+	CModuleVersion ver;
+	if (! ver.GetFileVersionInfo (strExeName))
+		return false;
+
+	int nMajorVersion	= HIWORD(ver.dwFileVersionMS);
+	int nMinorVersion	= LOWORD(ver.dwFileVersionMS);
+
+	int nBuildCode		= HIWORD(ver.dwFileVersionLS);
+	int nExtra			= LOWORD(ver.dwFileVersionLS);
+
+	pVersionInfo->SetVersionInfo (nMajorVersion, nMinorVersion, nBuildCode, nExtra);
+
+	return true;
+
+} // end GetProductVersionDetails
+
+
+
+//////////////////////////////////////////////////////////////////////
+//
+//    G E T   E X E   N A M E 
+//
+//
+/* static */ CString CUtils::GetExeName (bool bReturnFullPath /* = false */)
+{
+	TCHAR toasPath[MAX_PATH];
+	::GetModuleFileName (NULL, toasPath, MAX_PATH); // returns full path including filename
+
+	CString strFullPath = toasPath;
+
+	if (bReturnFullPath)
+		return strFullPath;
+
+	int nLastBS = strFullPath.ReverseFind ('\\');
+	if (-1 == nLastBS)
+		return strFullPath;
+
+	return strFullPath.Mid (nLastBS + 1);
+
+} // end GetExeName

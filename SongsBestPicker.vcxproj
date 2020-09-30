@@ -192,18 +192,21 @@
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="AboutBoxDlg.h" />
     <ClInclude Include="EditWithIcon\IconEdit.h" />
     <ClInclude Include="HotkeyCommand.h" />
     <ClInclude Include="HotkeyCommandDefs.h" />
     <ClInclude Include="HotkeyManagementDlg.h" />
     <ClInclude Include="HotkeyManager.h" />
     <ClInclude Include="HScrollListBox.h" />
+    <ClInclude Include="ModuleVersion.h" />
     <ClInclude Include="MultiMon\MonitorDC.h" />
     <ClInclude Include="MultiMon\Monitors.h" />
     <ClInclude Include="MultiMon\MultiMonitor.h" />
     <ClInclude Include="MyListCtrlHeader.h" />
     <ClInclude Include="MyProgressCtrl.h" />
     <ClInclude Include="MyListCtrl.h" />
+    <ClInclude Include="SplashWindow.h" />
     <ClInclude Include="SqlDefs.h" />
     <ClInclude Include="Song.h" />
     <ClInclude Include="SongManager.h" />
@@ -226,11 +229,13 @@
     <ClInclude Include="VirtKeys.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="AboutBoxDlg.cpp" />
     <ClCompile Include="EditWithIcon\IconEdit.cpp" />
     <ClCompile Include="HotkeyCommand.cpp" />
     <ClCompile Include="HotkeyManagementDlg.cpp" />
     <ClCompile Include="HotkeyManager.cpp" />
     <ClCompile Include="HScrollListBox.cpp" />
+    <ClCompile Include="ModuleVersion.cpp" />
     <ClCompile Include="MultiMon\MonitorDC.cpp" />
     <ClCompile Include="MultiMon\Monitors.cpp" />
     <ClCompile Include="MultiMon\MultiMonitor.cpp" />
@@ -239,6 +244,7 @@
     <ClCompile Include="MyListCtrl.cpp" />
     <ClCompile Include="Song.cpp" />
     <ClCompile Include="SongManager.cpp" />
+    <ClCompile Include="SplashWindow.cpp" />
     <ClCompile Include="SQLite\CppSQLite3-Unicode.cpp" />
     <ClCompile Include="SQLite\sqlite3.c">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
