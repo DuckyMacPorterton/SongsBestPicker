@@ -2,7 +2,7 @@ I wanted to figure out what my top 100 songs are, but I realized that sometimes 
 
 I decided the only way to really know what my favorite songs are is to do it empirically.
 
-You enter your songs (files must be locally accessible).  This randomly groups then into pods of 5 songs and plays them for you.
+You enter your songs (files must be locally accessible).  This randomly groups them into pods of 5 songs and plays them for you.
 
 You put them in order from 1 to 5, favorite to least favorite.
 
