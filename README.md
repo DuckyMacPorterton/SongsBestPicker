@@ -1,6 +1,6 @@
 I wanted to figure out what my top 100 songs are, but I realized that sometimes I like, "Friend of the Devil," more than, "Alice's Restaurant," and sometimes it's the other way.
 
-I decided the only way to really know what my favorite songs are is to do it empiracally.
+I decided the only way to really know what my favorite songs are is to do it empirically.
 
 You enter your songs (files must be locally accessible).  This randomly groups then into pods of 5 songs and plays them for you.
 
