@@ -2397,9 +2397,10 @@ bool CSongManager::ScheduleMorePods ()
 
 			strQuery += L", 0);";
 			m_pDB->execDML (strQuery);
-			m_pDB->execDML (L"commit transaction");
 
 		} // end if we have an extra pool to finish up
+
+		m_pDB->execDML (L"commit transaction");
 
 		return true;
 	}
