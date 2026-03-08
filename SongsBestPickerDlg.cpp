@@ -4040,7 +4040,12 @@ void CSongsBestPickerDlg::OnAbout ()
 //	CAboutBoxDlg dlg;
 //	dlg.DoModal ();
 
-	CSplashWindow::ShowSplashScreen (this, L"");
+	unsigned int nVersion = 0;
+	m_pPlaybackSystem->getVersion (&nVersion);
+
+	CString s; s.Format (L"FMOD version %d", &nVersion);
+
+	CSplashWindow::ShowSplashScreen (this,s);
 
 } // end CSongsBestPickerDlg::OnAbout
 
